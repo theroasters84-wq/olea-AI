@@ -28,15 +28,30 @@ class Xrhsths(vasi.Model, UserMixin):
     id = vasi.Column(vasi.Integer, primary_key=True)
     email = vasi.Column(vasi.String(120), unique=True, nullable=False)
     kwdikos = vasi.Column(vasi.String(60), nullable=False)
+    ktimata = vasi.relationship('Ktima', backref='idioktitis', lazy=True)
 
     def __repr__(self):
         return f"Xrhsths('{self.email}')"
+
+# Μοντέλο Κτήματος (Field Model)
+class Ktima(vasi.Model):
+    __tablename__ = 'ktimata'
+    
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    onoma_ktimatos = vasi.Column(vasi.String(100), nullable=False)
+    geografiko_mikos = vasi.Column(vasi.Float, nullable=False)
+    geografiko_platos = vasi.Column(vasi.Float, nullable=False)
+    xrhsths_id = vasi.Column(vasi.Integer, vasi.ForeignKey('xrhstes.id'), nullable=False)
+
+    def __repr__(self):
+        return f"Ktima('{self.onoma_ktimatos}')"
 
 # Routes
 @efarmogi.route('/')
 @login_required
 def arxikh():
-    return render_template('arxiki.html', xrhsths=current_user)
+    ktimata = current_user.ktimata
+    return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
 
 @efarmogi.route('/eggrafi', methods=['GET', 'POST'])
 def eggrafi():
@@ -80,6 +95,24 @@ def eisodos():
             return "Λάθος email ή κωδικός"
 
     return render_template('eisodos.html')
+
+@efarmogi.route('/neo_ktima', methods=['GET', 'POST'])
+@login_required
+def neo_ktima():
+    if request.method == 'POST':
+        onoma = request.form.get('onoma_ktimatos')
+        mikos = request.form.get('geografiko_mikos')
+        platos = request.form.get('geografiko_platos')
+        
+        if onoma and mikos and platos:
+            try:
+                neo = Ktima(onoma_ktimatos=onoma, geografiko_mikos=float(mikos), geografiko_platos=float(platos), idioktitis=current_user)
+                vasi.session.add(neo)
+                vasi.session.commit()
+                return redirect(url_for('arxikh'))
+            except ValueError:
+                return "Σφάλμα στις συντεταγμένες."
+    return render_template('neo_ktima.html')
 
 @efarmogi.route('/eksodos')
 def eksodos():

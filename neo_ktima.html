@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Προσθήκη Νέου Κτήματος - Olea AI</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 400px; width: 100%; margin-bottom: 20px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h2>Προσθήκη Νέου Κτήματος</h2>
+    <p>Κάντε κλικ πάνω στον χάρτη για να επιλέξετε την τοποθεσία του ελαιοπερίβολου.</p>
+    
+    <div id="map"></div>
+
+    <form method="POST" action="/neo_ktima">
+        <label for="onoma_ktimatos">Όνομα Κτήματος:</label><br>
+        <input type="text" id="onoma_ktimatos" name="onoma_ktimatos" required placeholder="π.χ. Κτήμα Παπαδόπουλου"><br><br>
+
+        <input type="hidden" id="geografiko_mikos" name="geografiko_mikos">
+        <input type="hidden" id="geografiko_platos" name="geografiko_platos">
+
+        <input type="submit" value="Αποθήκευση Κτήματος">
+    </form>
+    <br>
+    <a href="/">Επιστροφή στην Αρχική</a>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Αρχικοποίηση χάρτη (Κέντρο: Ελλάδα)
+        var map = L.map('map').setView([39.0742, 21.8243], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var marker;
+
+        function onMapClick(e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+
+            // Ενημέρωση των πεδίων
+            document.getElementById('geografiko_platos').value = lat;
+            document.getElementById('geografiko_mikos').value = lng;
+
+            // Τοποθέτηση ή μετακίνηση δείκτη
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng).addTo(map);
+            }
+        }
+
+        map.on('click', onMapClick);
+    </script>
+</body>
+</html>

@@ -9,6 +9,16 @@
     <h1>Καλώς ήρθατε στο Olea AI!</h1>
     <p>Γεια σου, <strong>{{ xrhsths.email }}</strong></p>
     <p>Εδώ είναι ο πίνακας ελέγχου σας για την ευφυή γεωργία.</p>
+    
+    <h3>Τα Κτήματά μου</h3>
+    <ul>
+        {% for ktima in ktimata %}
+            <li>{{ ktima.onoma_ktimatos }} ({{ ktima.geografiko_mikos }}, {{ ktima.geografiko_platos }})</li>
+        {% else %}
+            <li>Δεν έχετε αποθηκεύσει ακόμα κτήματα.</li>
+        {% endfor %}
+    </ul>
+    <p><a href="/neo_ktima">Προσθήκη Νέου Κτήματος</a></p>
     <a href="/eksodos">Έξοδος</a>
 </body>
 </html>
