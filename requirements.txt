@@ -4,3 +4,5 @@ Flask-Bcrypt
 Flask-Login
 email_validator
 gunicorn
+requests
+python-dotenv

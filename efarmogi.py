@@ -1,8 +1,13 @@
 import os
+import requests
+from dotenv import load_dotenv
 from flask import Flask, redirect, url_for, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
+
+# Φόρτωση μεταβλητών περιβάλλοντος
+load_dotenv()
 
 # Αρχικοποίηση εφαρμογής
 efarmogi = Flask(__name__, template_folder='.')
@@ -46,11 +51,29 @@ class Ktima(vasi.Model):
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"
 
+# Βοηθητική συνάρτηση για τον καιρό
+def pare_kairo(lat, lng):
+    api_key = os.getenv('WEATHER_API_KEY')
+    try:
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
+        response = requests.get(url)
+        data = response.json()
+        if response.status_code == 200:
+            return {
+                'temp': data['main']['temp'],
+                'description': data['weather'][0]['description']
+            }
+    except Exception as e:
+        print(f"Σφάλμα λήψης καιρού: {e}")
+    return None
+
 # Routes
 @efarmogi.route('/')
 @login_required
 def arxikh():
     ktimata = current_user.ktimata
+    for ktima in ktimata:
+        ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
     return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
 
 @efarmogi.route('/eggrafi', methods=['GET', 'POST'])

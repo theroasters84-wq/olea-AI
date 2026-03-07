@@ -11,13 +11,22 @@
     <p>Εδώ είναι ο πίνακας ελέγχου σας για την ευφυή γεωργία.</p>
     
     <h3>Τα Κτήματά μου</h3>
-    <ul>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
         {% for ktima in ktimata %}
-            <li>{{ ktima.onoma_ktimatos }} ({{ ktima.geografiko_mikos }}, {{ ktima.geografiko_platos }})</li>
+            <div style="border: 1px solid #ccc; padding: 15px; border-radius: 8px; width: 300px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);">
+                <h4>{{ ktima.onoma_ktimatos }}</h4>
+                <p><strong>Τοποθεσία:</strong> {{ ktima.geografiko_platos }}, {{ ktima.geografiko_mikos }}</p>
+                {% if ktima.kairos %}
+                    <p><strong>Θερμοκρασία:</strong> {{ ktima.kairos.temp }}°C</p>
+                    <p><strong>Καιρός:</strong> {{ ktima.kairos.description }}</p>
+                {% else %}
+                    <p>Δεν υπάρχουν δεδομένα καιρού.</p>
+                {% endif %}
+            </div>
         {% else %}
-            <li>Δεν έχετε αποθηκεύσει ακόμα κτήματα.</li>
+            <p>Δεν έχετε αποθηκεύσει ακόμα κτήματα.</p>
         {% endfor %}
-    </ul>
+    </div>
     <p><a href="/neo_ktima">Προσθήκη Νέου Κτήματος</a></p>
     <a href="/eksodos">Έξοδος</a>
 </body>
