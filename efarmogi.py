@@ -60,8 +60,8 @@ def pare_kairo(lat, lng):
         data = response.json()
         if response.status_code == 200:
             return {
-                'temp': data['main']['temp'],
-                'description': data['weather'][0]['description'],
+                'thermokrasia': data['main']['temp'],
+                'perigrafi': data['weather'][0]['description'],
                 'ygrasia': data['main']['humidity']
             }
     except Exception as e:
@@ -75,7 +75,7 @@ def geoponikos_elegxos(thermokrasia, ygrasia):
     elif thermokrasia > 35:
         return {"minima": "Κίνδυνος Καύσωνα! Προγραμματίστε βαθύ πότισμα.", "xroma": "orange"}
     elif 20 <= thermokrasia <= 30 and ygrasia > 60:
-        return {"minima": "Ιδανικές συνθήκες για Δάκο! Εξετάστε το ενδεχόμενο ψεκασμού.", "xroma": "red"}
+        return {"minima": "Ιδανικές συνθήκες για Δάκο! Εξετάστε το ενδεχόμενο δολωματικού ψεκασμού.", "xroma": "red"}
     else:
         return {"minima": "Κανονικές συνθήκες. Καμία άμεση ενέργεια.", "xroma": "green"}
 
@@ -87,7 +87,7 @@ def arxikh():
     for ktima in ktimata:
         ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
         if ktima.kairos:
-            ktima.symvouli = geoponikos_elegxos(ktima.kairos['temp'], ktima.kairos['ygrasia'])
+            ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
     return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
 
 @efarmogi.route('/eggrafi', methods=['GET', 'POST'])

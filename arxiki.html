@@ -17,9 +17,9 @@
                 <h4>{{ ktima.onoma_ktimatos }}</h4>
                 <p><strong>Τοποθεσία:</strong> {{ ktima.geografiko_platos }}, {{ ktima.geografiko_mikos }}</p>
                 {% if ktima.kairos %}
-                    <p><strong>Θερμοκρασία:</strong> {{ ktima.kairos.temp }}°C</p>
+                    <p><strong>Θερμοκρασία:</strong> {{ ktima.kairos.thermokrasia }}°C</p>
                     <p><strong>Υγρασία:</strong> {{ ktima.kairos.ygrasia }}%</p>
-                    <p><strong>Καιρός:</strong> {{ ktima.kairos.description }}</p>
+                    <p><strong>Καιρός:</strong> {{ ktima.kairos.perigrafi }}</p>
                     {% if ktima.symvouli %}
                         <div style="margin-top: 10px; padding: 10px; background-color: {{ ktima.symvouli.xroma }}; color: white; border-radius: 5px;">
                             <strong>Συμβουλή:</strong> {{ ktima.symvouli.minima }}
