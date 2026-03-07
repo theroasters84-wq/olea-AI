@@ -5,7 +5,7 @@ from flask_login import UserMixin, LoginManager, login_user, login_required, log
 from flask_bcrypt import Bcrypt
 
 # Αρχικοποίηση εφαρμογής
-efarmogi = Flask(__name__, template_folder='selides')
+efarmogi = Flask(__name__, template_folder='.')
 efarmogi.config['SECRET_KEY'] = 'mystiko-kleidi-olea-ai'
 efarmogi.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vasi_dedomenwn.db'
 efarmogi.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
