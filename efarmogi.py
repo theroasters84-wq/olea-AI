@@ -86,6 +86,10 @@ def eksodos():
     logout_user()
     return redirect(url_for('eisodos'))
 
+@efarmogi.route('/favicon.ico')
+def favicon():
+    return "", 204
+
 # Δημιουργία της βάσης δεδομένων
 with efarmogi.app_context():
     vasi.create_all()
