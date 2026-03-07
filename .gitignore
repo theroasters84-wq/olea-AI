@@ -4,3 +4,4 @@
 # Αγνοούμε φακέλους cache της Python
 __pycache__/
 *.pyc
+.env

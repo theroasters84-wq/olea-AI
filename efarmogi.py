@@ -61,11 +61,23 @@ def pare_kairo(lat, lng):
         if response.status_code == 200:
             return {
                 'temp': data['main']['temp'],
-                'description': data['weather'][0]['description']
+                'description': data['weather'][0]['description'],
+                'ygrasia': data['main']['humidity']
             }
     except Exception as e:
         print(f"Σφάλμα λήψης καιρού: {e}")
     return None
+
+# Γεωπονικός Έλεγχος (Rule Engine)
+def geoponikos_elegxos(thermokrasia, ygrasia):
+    if thermokrasia < 2:
+        return {"minima": "Κίνδυνος Παγετού! Αποφύγετε το κλάδεμα.", "xroma": "red"}
+    elif thermokrasia > 35:
+        return {"minima": "Κίνδυνος Καύσωνα! Προγραμματίστε βαθύ πότισμα.", "xroma": "orange"}
+    elif 20 <= thermokrasia <= 30 and ygrasia > 60:
+        return {"minima": "Ιδανικές συνθήκες για Δάκο! Εξετάστε το ενδεχόμενο ψεκασμού.", "xroma": "red"}
+    else:
+        return {"minima": "Κανονικές συνθήκες. Καμία άμεση ενέργεια.", "xroma": "green"}
 
 # Routes
 @efarmogi.route('/')
@@ -74,6 +86,8 @@ def arxikh():
     ktimata = current_user.ktimata
     for ktima in ktimata:
         ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
+        if ktima.kairos:
+            ktima.symvouli = geoponikos_elegxos(ktima.kairos['temp'], ktima.kairos['ygrasia'])
     return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
 
 @efarmogi.route('/eggrafi', methods=['GET', 'POST'])
