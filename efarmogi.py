@@ -1,3 +1,4 @@
+import os
 from flask import Flask, redirect, url_for, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_user, login_required, logout_user, current_user
@@ -90,4 +91,5 @@ with efarmogi.app_context():
     vasi.create_all()
 
 if __name__ == '__main__':
-    efarmogi.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    efarmogi.run(host='0.0.0.0', port=port, debug=True)
