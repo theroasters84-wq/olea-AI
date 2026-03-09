@@ -16,6 +16,12 @@ Flask-SQLAlchemy
 Flask-Bcrypt
 Flask-Login
 email_validator
+requests
+python-dotenv
+google-generativeai
+apscheduler
+Pillow
+gunicorn
 """
 
 # run.py
