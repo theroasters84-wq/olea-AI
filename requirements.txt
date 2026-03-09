@@ -6,3 +6,5 @@ email_validator
 gunicorn
 requests
 python-dotenv
+google-generativeai
+APScheduler
