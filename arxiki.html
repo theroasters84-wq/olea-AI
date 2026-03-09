@@ -34,7 +34,7 @@
             background-color: var(--primary-color);
             border-color: var(--primary-color);
         }
-        .btn-primary:hover {
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
             background-color: var(--secondary-color);
             border-color: var(--secondary-color);
         }
@@ -64,7 +64,7 @@
         .list-group-item:last-child {
             border-bottom: none;
         }
-        #map { height: 400px; width: 100%; margin-bottom: 20px; border: 1px solid #ccc; }
+        #map { height: 400px; width: 100%; border: 1px solid #ccc; border-radius: 8px; }
         
         #installBtn {
             display: none;
@@ -77,14 +77,34 @@
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1><i class="fas fa-seedling"></i> Olea AI</h1>
-                <p class="text-muted">Καλώς ήρθατε, <strong>{{ xrhsths.email }}</strong></p>
+    <!-- Global Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: #4A7C59;">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="/"><i class="fas fa-seedling"></i> Olea AI</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Αρχική</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/arxeio"><i class="fas fa-archive"></i> Αρχείο Σοδειών</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="fas fa-share-nodes"></i> Κοινοποίηση Εφαρμογής</a>
+                    </li>
+                </ul>
+                <span class="navbar-text me-3 text-white d-none d-lg-inline-block">
+                    {{ current_user.email }}
+                </span>
+                <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
             </div>
-            <a href="/eksodos" class="btn btn-outline-danger btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
         </div>
+    </nav>
+
+    <div class="container py-4">
 
         <!-- Install Button -->
         <button id="installBtn" class="btn btn-primary btn-lg rounded-pill">
@@ -200,47 +220,26 @@
 
                 <!-- Ατζέντα Εργασιών -->
                 <h5 style="color: #2c3e50;"><i class="fas fa-clipboard-list"></i> Λίστα Εργασιών</h5>
+                <a href="/ananeosi_ergasion/{{ ktima.id }}" class="btn btn-sm btn-outline-success mb-2"><i class="fas fa-sync-alt"></i> Επικαιροποίηση AI για την Περιοχή</a>
                 
                 <ul class="list-group mb-3" style="font-size: 0.9em;">
-                    {% if 'Βασική Λίπανση (Άζωτο/Βόριο)' not in ktima.completed_tasks_month %}
+                    {% for task in ktima.pending_tasks %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Βασική Λίπανση (Άζωτο/Βόριο)
+                        {{ task }}
                         <div>
-                            <button onclick="completeTask('{{ ktima.id }}', 'Βασική Λίπανση (Άζωτο/Βόριο)')" class="btn btn-success btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-check"></i></button>
+                            <button onclick="completeTask('{{ ktima.id }}', '{{ task }}')" class="btn btn-success btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-check"></i></button>
                             <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
-                                <input type="hidden" name="eidos_ergasias" value="Βασική Λίπανση (Άζωτο/Βόριο)">
+                                <input type="hidden" name="eidos_ergasias" value="{{ task }}">
                                 <input type="hidden" name="katastasi" value="Ακυρώθηκε">
                                 <button type="submit" class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-times"></i></button>
                             </form>
                         </div>
                     </li>
-                    {% endif %}
-                    {% if 'Ψεκασμός (Χαλκός για Κυκλοκόνιο)' not in ktima.completed_tasks_month %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Ψεκασμός (Χαλκός για Κυκλοκόνιο)
-                        <div>
-                            <button onclick="completeTask('{{ ktima.id }}', 'Ψεκασμός (Χαλκός για Κυκλοκόνιο)')" class="btn btn-success btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-check"></i></button>
-                            <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
-                                <input type="hidden" name="eidos_ergasias" value="Ψεκασμός (Χαλκός για Κυκλοκόνιο)">
-                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
-                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-times"></i></button>
-                            </form>
-                        </div>
+                    {% else %}
+                    <li class="list-group-item text-center text-success">
+                        <i class="fas fa-check-circle"></i> 🎉 Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!
                     </li>
-                    {% endif %}
-                    {% if 'Ολοκλήρωση Κλαδέματος' not in ktima.completed_tasks_month %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Ολοκλήρωση Κλαδέματος
-                        <div>
-                            <button onclick="completeTask('{{ ktima.id }}', 'Ολοκλήρωση Κλαδέματος')" class="btn btn-success btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-check"></i></button>
-                            <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
-                                <input type="hidden" name="eidos_ergasias" value="Ολοκλήρωση Κλαδέματος">
-                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
-                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-times"></i></button>
-                            </form>
-                        </div>
-                    </li>
-                    {% endif %}
+                    {% endfor %}
                 </ul>
 
                 <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
@@ -372,58 +371,111 @@
         {% endfor %}
     </div>
     
-    <h3 class="mt-5 mb-3 p-3 bg-success text-white rounded shadow-sm"><i class="fas fa-plus-circle"></i> Προσθήκη Νέου Κτήματος</h3>
-    <p>Κάντε κλικ πάνω στον χάρτη για να επιλέξετε την τοποθεσία του ελαιοπερίβολου.</p>
-    <div id="map" class="rounded shadow-sm"></div>
-    <form action="{{ url_for('prosthes_ktima') }}" method="POST" class="mb-5 p-4 border rounded bg-white shadow-sm">
-        <div class="row">
-            <div class="col-md-4 mb-2">
-                <label>Όνομα Κτήματος</label>
-                <input type="text" name="onoma_ktimatos" class="form-control" required>
-            </div>
-            <div class="col-md-4 mb-2">
-                <label>Γεωγραφικό Πλάτος</label>
-                <input type="text" id="geografiko_platos" name="geografiko_platos" class="form-control" required readonly>
-            </div>
-            <div class="col-md-4 mb-2">
-                <label>Γεωγραφικό Μήκος</label>
-                <input type="text" id="geografiko_mikos" name="geografiko_mikos" class="form-control" required readonly>
+    <!-- Floating Action Button for Add Ktima -->
+    <div class="fixed-bottom mb-5 me-4 text-end" style="z-index: 999; pointer-events: none;">
+        <button class="btn btn-success btn-lg shadow rounded-circle" style="width: 60px; height: 60px; pointer-events: auto;" data-bs-toggle="modal" data-bs-target="#addKtimaModal">
+            <i class="fas fa-plus fa-lg"></i>
+        </button>
+    </div>
+
+    <!-- Add Ktima Modal -->
+    <div class="modal fade" id="addKtimaModal" tabindex="-1" aria-labelledby="addKtimaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="addKtimaModalLabel"><i class="fas fa-tree"></i> Προσθήκη Νέου Κτήματος</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Κάντε κλικ πάνω στον χάρτη για να επιλέξετε την τοποθεσία.</p>
+                    <div id="map" class="mb-3"></div>
+                    
+                    <form action="{{ url_for('prosthes_ktima') }}" method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Όνομα Κτήματος</label>
+                                <input type="text" name="onoma_ktimatos" class="form-control" required>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Γεωγραφικό Πλάτος</label>
+                                <input type="text" id="geografiko_platos" name="geografiko_platos" class="form-control" required readonly>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Γεωγραφικό Μήκος</label>
+                                <input type="text" id="geografiko_mikos" name="geografiko_mikos" class="form-control" required readonly>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Τύπος Εδάφους</label>
+                                <select name="typos_edafous" class="form-select"><option value="Αμμώδες">Αμμώδες</option><option value="Αργιλώδες">Αργιλώδες</option><option value="Πηλώδες">Πηλώδες</option><option value="Πετρώδες">Πετρώδες</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Κλίση</label>
+                                <select name="klisi" class="form-select"><option value="Πεδινό">Πεδινό</option><option value="Επικλινές/Πλαγιά">Επικλινές/Πλαγιά</option><option value="Ρέμα/Κοιλότητα">Ρέμα/Κοιλότητα</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Άρδευση</label>
+                                <select name="ardefsi" class="form-select"><option value="Ξηρικό">Ξηρικό</option><option value="Αρδευόμενο">Αρδευόμενο</option></select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Ποικιλία</label>
+                                <select name="poikilia" class="form-select"><option value="Κορωνέικη">Κορωνέικη</option><option value="Καλαμών">Καλαμών</option><option value="Χαλκιδικής">Χαλκιδικής</option><option value="Άλλη">Άλλη</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Στρέμματα</label>
+                                <input type="number" name="stremmata" class="form-control" step="0.1" placeholder="π.χ. 10.5">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Αριθμός Δέντρων</label>
+                                <input type="number" name="arithmos_dentron" class="form-control" placeholder="π.χ. 250">
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-success">Αποθήκευση Κτήματος</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-3 mb-2">
-                <label>Τύπος Εδάφους</label>
-                <select name="typos_edafous" class="form-select"><option value="Αμμώδες">Αμμώδες</option><option value="Αργιλώδες">Αργιλώδες</option><option value="Πηλώδες">Πηλώδες</option><option value="Πετρώδες">Πετρώδες</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
-            </div>
-            <div class="col-md-3 mb-2">
-                <label>Κλίση/Ανάγλυφο</label>
-                <select name="klisi" class="form-select"><option value="Πεδινό">Πεδινό</option><option value="Επικλινές/Πλαγιά">Επικλινές/Πλαγιά</option><option value="Ρέμα/Κοιλότητα">Ρέμα/Κοιλότητα</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
-            </div>
-            <div class="col-md-3 mb-2">
-                <label>Άρδευση</label>
-                <select name="ardefsi" class="form-select"><option value="Ξηρικό">Ξηρικό</option><option value="Αρδευόμενο">Αρδευόμενο</option></select>
-            </div>
-            <div class="col-md-3 mb-2">
-                <label>Ποικιλία</label>
-                <select name="poikilia" class="form-select"><option value="Κορωνέικη">Κορωνέικη</option><option value="Καλαμών">Καλαμών</option><option value="Χαλκιδικής">Χαλκιδικής</option><option value="Άλλη">Άλλη</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
+    </div>
+
+    <!-- Share Modal -->
+    <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="shareModalLabel"><i class="fas fa-share-alt"></i> Κοινοποίηση Olea AI</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="text-muted mb-4">Μοιραστείτε την εφαρμογή με φίλους ή συνεργάτες!</p>
+                    
+                    <button id="btnShareNative" class="btn btn-success w-100 mb-3 btn-lg shadow-sm">
+                        <i class="fas fa-paper-plane"></i> Αποστολή Link (Viber, SMS...)
+                    </button>
+
+                    <button id="btnShowQR" class="btn btn-outline-secondary w-100 mb-3 btn-lg">
+                        <i class="fas fa-qrcode"></i> Εμφάνιση QR Code
+                    </button>
+
+                    <div id="qrContainer" class="mt-4" style="display: none;">
+                        <div class="p-3 bg-light rounded border d-inline-block">
+                            <img id="qrImage" src="" alt="QR Code" class="img-fluid rounded" style="max-width: 200px;">
+                        </div>
+                        <p class="text-muted mt-2 small"><i class="fas fa-camera"></i> Σκανάρετε με την κάμερα του κινητού</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <label>Στρέμματα</label>
-                <input type="number" name="stremmata" class="form-control" step="0.1" placeholder="π.χ. 10.5">
-            </div>
-            <div class="col-md-6 mb-2">
-                <label>Αριθμός Δέντρων</label>
-                <input type="number" name="arithmos_dentron" class="form-control" placeholder="π.χ. 250">
-            </div>
-        </div>
-        <button type="submit" class="btn btn-success mt-2">Αποθήκευση Κτήματος</button>
-    </form>
+    </div>
 
     </div> <!-- End Container -->
 
     <!-- Leaflet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
@@ -459,6 +511,12 @@
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
+
+        // Fix map rendering inside modal
+        const addKtimaModal = document.getElementById('addKtimaModal');
+        addKtimaModal.addEventListener('shown.bs.modal', function () {
+            map.invalidateSize();
+        });
 
         var marker;
 
@@ -549,6 +607,29 @@
             document.body.appendChild(form);
             form.submit();
         }
+
+        // Share Logic
+        document.getElementById('btnShareNative').addEventListener('click', async () => {
+            const shareData = {
+                title: 'Olea AI - Ευφυής Γεωργία',
+                text: 'Δες αυτή την απίστευτη εφαρμογή για τη διαχείριση του ελαιώνα!',
+                url: window.location.origin
+            };
+            if (navigator.share) {
+                try { await navigator.share(shareData); } catch (err) { console.log('Σφάλμα κοινοποίησης:', err); }
+            } else {
+                navigator.clipboard.writeText(window.location.origin);
+                alert('Το Link αντιγράφηκε στο πρόχειρο!');
+            }
+        });
+
+        document.getElementById('btnShowQR').addEventListener('click', () => {
+            const qrContainer = document.getElementById('qrContainer');
+            const qrImage = document.getElementById('qrImage');
+            // Uses a free, reliable external API to generate the QR code instantly based on the current URL
+            qrImage.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(window.location.origin);
+            qrContainer.style.display = 'block';
+        });
     </script>
 </body>
 </html>

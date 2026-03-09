@@ -3,6 +3,7 @@ import requests
 import smtplib
 import PIL.Image
 from datetime import datetime, timedelta
+from itsdangerous import URLSafeTimedSerializer
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 from flask import Flask, redirect, url_for, request, render_template, jsonify, flash, make_response
@@ -22,6 +23,9 @@ efarmogi = Flask(__name__, template_folder='.')
 efarmogi.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY') or 'mystiko-kleidi-olea-ai'
 efarmogi.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'vasi_dedomenwn.db')
 efarmogi.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Serializer για tokens επαναφοράς κωδικού
+serializer = URLSafeTimedSerializer(efarmogi.config['SECRET_KEY'])
 
 # Ρύθμιση Gemini AI
 genai.configure(api_key=os.getenv('AI_API_KEY'))
@@ -66,6 +70,8 @@ class Ktima(vasi.Model):
     stremmata = vasi.Column(vasi.Float, default=0.0)
     arithmos_dentron = vasi.Column(vasi.Integer, default=0)
     arxeia_sygkomidis = vasi.relationship('ArxeioSygkomidis', backref='ktima', lazy=True, cascade="all, delete-orphan")
+    topikes_ergasies = vasi.Column(vasi.Text)
+    teleftaia_enimerosi_ergasion = vasi.Column(vasi.DateTime)
     analysi_dedomena = vasi.Column(vasi.Text)
     diagnoseis = vasi.relationship('Diagnosi', backref='ktima', lazy=True, cascade="all, delete-orphan")
     ergasies = vasi.relationship('Ergasia', backref='ktima', lazy=True, cascade="all, delete-orphan")
@@ -284,6 +290,50 @@ def steile_email(paraliptis, thema, keimeno):
         print(f"Σφάλμα αποστολής email: {e}")
         return False
 
+# Helper function for Seasonal Tasks
+def get_epoxikes_ergasies(minas):
+    if minas in [3, 4, 5]: # Spring
+        return ['Διαχείριση Ζιζανίων (Χορτοκοπή / Φρέζα)', 'Βασική Λίπανση (Άζωτο / Βόριο)', 'Ολοκλήρωση Κλαδέματος', 'Ψεκασμός (Χαλκούχα για Κυκλοκόνιο)', 'Διαφυλλικός Ψεκασμός (Αμινοξέα & Ιχνοστοιχεία)']
+    elif minas in [6, 7, 8]: # Summer
+        return ['Άρδευση (Αν είναι ποτιστικό)', 'Ψεκασμός για Δάκο (Αν T < 33°C)', 'Διαφυλλική Λίπανση Καλίου']
+    elif minas in [9, 10, 11]: # Autumn
+        return ['Προετοιμασία Συγκομιδής', 'Συγκομιδή Ελαιοκάρπου', 'Ψεκασμός (Χαλκός Μετασυλλεκτικά)']
+    elif minas in [12, 1, 2]: # Winter
+        return ['Χειμερινός Ψεκασμός (Χαλκός)', 'Κλάδεμα Μορφοποίησης', 'Ανάλυση Εδάφους']
+    return []
+
+def generate_local_tasks_via_ai(ktima):
+    now = datetime.now()
+    
+    # Check if cache is valid (same month and year)
+    if ktima.teleftaia_enimerosi_ergasion and \
+       ktima.teleftaia_enimerosi_ergasion.month == now.month and \
+       ktima.teleftaia_enimerosi_ergasion.year == now.year and \
+       ktima.topikes_ergasies:
+        return ktima.topikes_ergasies.split(',')
+
+    # Call AI
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = (f"Είσαι ειδικός γεωπόνος. Το ελαιόκτημα βρίσκεται στις συντεταγμένες {ktima.geografiko_platos}, {ktima.geografiko_mikos} στην Ελλάδα "
+                  f"(υπολόγισε το τοπικό μικροκλίμα, π.χ. παραθαλάσσιο vs ορεινό). Ο τρέχων μήνας είναι ο {now.month}. "
+                  f"Δώσε μου ΜΟΝΟ μια λίστα με τις 3-5 απολύτως απαραίτητες εργασίες για αυτή την περιοχή αυτόν τον μήνα, "
+                  f"χωρισμένες με κόμμα (,). Μην γράψεις καμία άλλη λέξη ή εισαγωγή. "
+                  f"Παράδειγμα: Διαχείριση Ζιζανίων,Ψεκασμός με Χαλκό,Βασική Λίπανση")
+        
+        response = model.generate_content(prompt)
+        tasks_str = response.text.strip().replace('\n', '').replace('.', '')
+        
+        ktima.topikes_ergasies = tasks_str
+        ktima.teleftaia_enimerosi_ergasion = now
+        vasi.session.commit()
+        
+        return tasks_str.split(',')
+    except Exception as e:
+        print(f"AI Task Error: {e}")
+        # Fallback to static logic if AI fails
+        return get_epoxikes_ergasies(now.month)
+
 # Αυτοματοποιημένος Έλεγχος (Background Job)
 def aytomatizomenos_elegxos():
     with efarmogi.app_context():
@@ -333,15 +383,37 @@ def arxikh():
         else:
             ktima.protaseis = []
         
-        # Εύρεση ολοκληρωμένων εργασιών για τον τρέχοντα μήνα
-        ktima.completed_tasks_month = {
-            t.eidos_ergasias for t in ktima.ergasies 
-            if t.katastasi == 'Ολοκληρώθηκε' and t.imerominia.month == now.month and t.imerominia.year == now.year and not t.archived
-        }
+        # Geospatial AI Task Engine
+        ideal_tasks = generate_local_tasks_via_ai(ktima)
+        if isinstance(ideal_tasks, list):
+             ideal_tasks = [t.strip() for t in ideal_tasks if t.strip()]
+             
+        completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
+        ktima.pending_tasks = [task for task in ideal_tasks if task not in completed_tasks]
 
         # Υπολογισμός Συνολικού Κόστους για εμφάνιση
         ktima.synoliko_kostos = sum(exodo.poso for exodo in ktima.exoda if not exodo.archived)
     return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
+
+@efarmogi.route('/ananeosi_ergasion/<int:ktima_id>')
+@login_required
+def ananeosi_ergasion(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
+    
+    ktima.teleftaia_enimerosi_ergasion = None
+    vasi.session.commit()
+    generate_local_tasks_via_ai(ktima) # Force regeneration
+    
+    flash('Η λίστα εργασιών επικαιροποιήθηκε με βάση το μικροκλίμα!', 'success')
+    return redirect(url_for('arxikh'))
+
+@efarmogi.route('/arxeio')
+@login_required
+def arxeio():
+    ktimata = current_user.ktimata
+    return render_template('arxeio.html', ktimata=ktimata)
 
 @efarmogi.route('/rwta_ai/<int:ktima_id>', methods=['POST'])
 @login_required
@@ -586,9 +658,15 @@ def eggrafi():
     if request.method == 'POST':
         email = request.form.get('email')
         kwdikos = request.form.get('kwdikos')
+        epivevaiosi = request.form.get('epivevaiosi_kwdikou')
         
-        if not email or not kwdikos:
-            return "Συμπληρώστε όλα τα πεδία"
+        if not email or not kwdikos or not epivevaiosi:
+            flash("Συμπληρώστε όλα τα πεδία.", "warning")
+            return render_template('eggrafi.html')
+
+        if kwdikos != epivevaiosi:
+            flash("Οι κωδικοί δεν ταιριάζουν.", "danger")
+            return render_template('eggrafi.html')
             
         hash_kwdikou = kryptografhsh.generate_password_hash(kwdikos).decode('utf-8')
         neos_xrhsths = Xrhsths(email=email, kwdikos=hash_kwdikou)
@@ -596,32 +674,62 @@ def eggrafi():
         try:
             vasi.session.add(neos_xrhsths)
             vasi.session.commit()
+            flash("Η εγγραφή ολοκληρώθηκε! Συνδεθείτε.", "success")
             return redirect(url_for('eisodos'))
         except:
-            return "Το Email υπάρχει ήδη."
+            flash("Το Email υπάρχει ήδη.", "danger")
             
     return render_template('eggrafi.html')
 
-@efarmogi.route('/anakthsh', methods=['GET', 'POST'])
-def anakthsh():
-    if current_user.is_authenticated:
-        return redirect(url_for('arxikh'))
-    
+@efarmogi.route('/xexasa_kodiko', methods=['GET', 'POST'])
+def xexasa_kodiko():
     if request.method == 'POST':
         email = request.form.get('email')
-        neos_kwdikos = request.form.get('neos_kwdikos')
-        
         xrhsths = Xrhsths.query.filter_by(email=email).first()
         
-        if xrhsths and neos_kwdikos:
+        if xrhsths:
+            token = serializer.dumps(email, salt='epanafora-kodikou')
+            link = url_for('epanafora_kodikou', token=token, _external=True)
+            
+            thema = "Επαναφορά Κωδικού - Olea AI"
+            keimeno = f"Για να επαναφέρετε τον κωδικό σας, πατήστε στον παρακάτω σύνδεσμο:\n{link}\n\nΟ σύνδεσμος λήγει σε 1 ώρα."
+            
+            if steile_email(email, thema, keimeno):
+                flash('Στάλθηκε email με οδηγίες επαναφοράς.', 'info')
+            else:
+                flash('Υπήρξε πρόβλημα κατά την αποστολή του email.', 'danger')
+        else:
+            flash('Δεν βρέθηκε λογαριασμός με αυτό το email.', 'warning')
+            
+        return redirect(url_for('eisodos'))
+
+    return render_template('xexasa_kodiko.html')
+
+@efarmogi.route('/epanafora_kodikou/<token>', methods=['GET', 'POST'])
+def epanafora_kodikou(token):
+    try:
+        email = serializer.loads(token, salt='epanafora-kodikou', max_age=3600)
+    except:
+        flash('Ο σύνδεσμος είναι άκυρος ή έχει λήξει.', 'danger')
+        return redirect(url_for('xexasa_kodiko'))
+    
+    if request.method == 'POST':
+        kwdikos = request.form.get('kwdikos')
+        epivevaiosi = request.form.get('epivevaiosi_kwdikou')
+        
+        if kwdikos != epivevaiosi:
+            flash('Οι κωδικοί δεν ταιριάζουν.', 'danger')
+            return render_template('epanafora_kodikou.html', token=token)
+            
+        xrhsths = Xrhsths.query.filter_by(email=email).first()
+        if xrhsths:
             hash_kwdikou = kryptografhsh.generate_password_hash(neos_kwdikos).decode('utf-8')
             xrhsths.kwdikos = hash_kwdikou
             vasi.session.commit()
+            flash('Ο κωδικός σας άλλαξε επιτυχώς! Συνδεθείτε.', 'success')
             return redirect(url_for('eisodos'))
-        else:
-            return "Το Email δεν βρέθηκε ή λείπει ο κωδικός."
-
-    return render_template('anakthsh.html')
+            
+    return render_template('epanafora_kodikou.html', token=token)
 
 @efarmogi.route('/eisodos', methods=['GET', 'POST'])
 def eisodos():
@@ -638,7 +746,7 @@ def eisodos():
             login_user(xrhsths)
             return redirect(url_for('arxikh'))
         else:
-            return "Λάθος email ή κωδικός"
+            flash("Λάθος email ή κωδικός", "danger")
 
     return render_template('eisodos.html')
 
