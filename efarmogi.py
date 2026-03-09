@@ -723,7 +723,7 @@ def epanafora_kodikou(token):
             
         xrhsths = Xrhsths.query.filter_by(email=email).first()
         if xrhsths:
-            hash_kwdikou = kryptografhsh.generate_password_hash(neos_kwdikos).decode('utf-8')
+            hash_kwdikou = kryptografhsh.generate_password_hash(kwdikos).decode('utf-8')
             xrhsths.kwdikos = hash_kwdikou
             vasi.session.commit()
             flash('Ο κωδικός σας άλλαξε επιτυχώς! Συνδεθείτε.', 'success')
