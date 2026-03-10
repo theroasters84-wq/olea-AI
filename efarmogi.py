@@ -1025,6 +1025,10 @@ def service_worker():
         });
         self.addEventListener('fetch', (event) => {
             event.respondWith(fetch(event.request));
+            // Βασική στρατηγική: Network First, falling back to cache (αν υπήρχε cache)
+            // Για την ώρα, απλά επιτρέπουμε το αίτημα να περάσει στο δίκτυο
+            // χωρίς να προκαλούμε σφάλματα σε cross-origin ή only-if-cached requests.
+            return; 
         });
     """)
     response.headers['Content-Type'] = 'application/javascript'
