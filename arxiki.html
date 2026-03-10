@@ -354,6 +354,17 @@
                                         <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
                                     </form>
                                 </div>
+
+                                <hr>
+
+                                <!-- AI Yield Estimation -->
+                                <div class="mb-3">
+                                    <h6 style="color: #555;"><i class="fas fa-balance-scale"></i> AI Εκτίμηση Παραγωγής</h6>
+                                    <form action="/ektimisi_paragogis/{{ ktima.id }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                                        <input type="file" name="fwtografia_paragogis" accept="image/*" capture="environment" class="form-control form-control-sm me-2" required>
+                                        <button type="submit" class="btn btn-sm btn-warning text-dark"><i class="fas fa-chart-line"></i> Εκτίμηση</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -378,6 +389,40 @@
                                     </div>
                                 </form>
                                 
+                                <!-- Chart Canvas -->
+                                <canvas id="chart{{ ktima.id }}" width="400" height="200" class="mb-3"></canvas>
+
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function() {
+                                        const ctx_{{ ktima.id }} = document.getElementById('chart{{ ktima.id }}').getContext('2d');
+                                        
+                                        const labels_{{ ktima.id }} = [];
+                                        const data_{{ ktima.id }} = [];
+
+                                        {% for exodo in ktima.exoda %}
+                                            {% if not exodo.archived %}
+                                                labels_{{ ktima.id }}.push("{{ exodo.perigrafi|e }}");
+                                                data_{{ ktima.id }}.push({{ exodo.poso }});
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        new Chart(ctx_{{ ktima.id }}, {
+                                            type: 'bar',
+                                            data: {
+                                                labels: labels_{{ ktima.id }},
+                                                datasets: [{
+                                                    label: 'Κόστος (€)',
+                                                    data: data_{{ ktima.id }},
+                                                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                                                    borderColor: 'rgba(192, 57, 43, 1)',
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: { scales: { y: { beginAtZero: true } } }
+                                        });
+                                    });
+                                </script>
+
                                 <h6 class="mt-3">Αναλυτικά Έξοδα:</h6>
                                 {% if ktima.exoda %}
                                     <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; margin-bottom: 10px;">

@@ -15,6 +15,7 @@ from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, pare_simvouli_ai, steile_email, get_epoxikes_ergasies
+import logging
 
 # Φόρτωση μεταβλητών περιβάλλοντος
 # Ορίζουμε ρητά τη διαδρομή για το αρχείο .env στον ίδιο φάκελο με το script
@@ -23,6 +24,9 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 # Αρχικοποίηση εφαρμογής
 efarmogi = Flask(__name__, template_folder='.')
+
+# Ρύθμιση Logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Ρύθμιση Βάσης Δεδομένων (Production & Development)
 database_url = os.getenv('DATABASE_URL')
@@ -90,6 +94,7 @@ class Ktima(vasi.Model):
     nero_agwgimotita = vasi.Column(vasi.Float, nullable=True)
     ugrasies = vasi.relationship('KatagrafiUgrasias', backref='ktima', lazy=True, cascade="all, delete-orphan")
     arxeia_sygkomidis = vasi.relationship('ArxeioSygkomidis', backref='ktima', lazy=True, cascade="all, delete-orphan")
+    analuseis_edafous = vasi.relationship('AnalysiEdafous', backref='ktima', lazy=True, cascade="all, delete-orphan")
     topikes_ergasies = vasi.Column(vasi.Text)
     teleftaia_enimerosi_ergasion = vasi.Column(vasi.DateTime)
     analysi_dedomena = vasi.Column(vasi.Text)
@@ -164,6 +169,19 @@ class ArxeioSygkomidis(vasi.Model):
     tonoi = vasi.Column(vasi.Float, nullable=False)
     kila_ana_dentro = vasi.Column(vasi.Float, nullable=False)
     synoliko_kostos = vasi.Column(vasi.Float, nullable=False)
+
+# Μοντέλο Ανάλυσης Εδάφους (Smart Fertilization)
+class AnalysiEdafous(vasi.Model):
+    __tablename__ = 'analuseis_edafous'
+    
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
+    ph = vasi.Column(vasi.Float)
+    organiki_ousia = vasi.Column(vasi.Float)
+    azwto = vasi.Column(vasi.Float)
+    fwsforos = vasi.Column(vasi.Float)
+    kalio = vasi.Column(vasi.Float)
+    imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
 
 # Προληπτικός Σύμβουλος (Εγκυκλοπαίδεια)
 def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
@@ -284,6 +302,12 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     if ktima.diagnoseis:
         teleytaia_diagnosi = ktima.diagnoseis[-1]
         protaseis.append(f"👁️ Μνήμη Διάγνωσης: Το AI είχε εντοπίσει πρόσφατα: {teleytaia_diagnosi.apotelesma}. Προσαρμόστε τις ενέργειές σας.")
+
+    # Smart Fertilization Logic
+    if ktima.analuseis_edafous:
+        teleytaia_analysi = ktima.analuseis_edafous[-1]
+        if teleytaia_analysi.ph and teleytaia_analysi.ph > 7.5:
+            protaseis.append("⚠️ Υψηλό pH (>7.5): Κίνδυνος έλλειψης Βορίου και Ιχνοστοιχείων. Προτείνεται διαφυλλική εφαρμογή.")
 
     return protaseis
 
@@ -475,7 +499,32 @@ def analysi_egrafou(ktima_id):
             model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = "Είσαι γεωπόνος. Διάβασε αυτό το έγγραφο ανάλυσης εδάφους/φύλλων. Εντόπισε μόνο τα βασικά προβλήματα ή ελλείψεις (π.χ. έλλειψη καλίου, χαμηλό pH, περίσσεια αζώτου). Γράψε 1-2 προτάσεις με τα ευρήματα."
             response = model.generate_content([prompt, img])
+            
+            # Save generic analysis text
             ktima.analysi_dedomena = response.text
+            
+            # Smart Extraction for Database
+            extraction_prompt = """
+            Extract the following soil data from the image and return ONLY a JSON object:
+            {"ph": float, "organiki_ousia": float, "azwto": float, "fwsforos": float, "kalio": float}
+            If a value is not found, use null. Do not use markdown formatting.
+            """
+            extraction_response = model.generate_content([extraction_prompt, img])
+            try:
+                import json
+                data = json.loads(extraction_response.text.strip().replace('```json', '').replace('```', ''))
+                nea_analysi = AnalysiEdafous(
+                    ktima_id=ktima_id,
+                    ph=data.get('ph'),
+                    organiki_ousia=data.get('organiki_ousia'),
+                    azwto=data.get('azwto'),
+                    fwsforos=data.get('fwsforos'),
+                    kalio=data.get('kalio')
+                )
+                vasi.session.add(nea_analysi)
+            except Exception as e:
+                print(f"Extraction Error: {e}")
+
             vasi.session.commit()
             flash('Η ανάλυση του εγγράφου ολοκληρώθηκε και αποθηκεύτηκε.', 'success')
         except Exception as e:
@@ -515,6 +564,35 @@ def anagnorisi_stadiou(ktima_id):
         except Exception as e:
             print(f"Σφάλμα Stage Vision AI: {e}")
             flash('Προέκυψε σφάλμα κατά την αναγνώριση του σταδίου.', 'danger')
+            
+    return redirect(url_for('arxikh'))
+
+@efarmogi.route('/ektimisi_paragogis/<int:ktima_id>', methods=['POST'])
+@login_required
+def ektimisi_paragogis(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
+
+    if 'fwtografia_paragogis' not in request.files:
+        flash('Δεν βρέθηκε αρχείο φωτογραφίας.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    file = request.files['fwtografia_paragogis']
+    if file.filename == '':
+        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    if file:
+        try:
+            img = PIL.Image.open(file)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"Είσαι ειδικός γεωπόνος. Μετρα οσες ελιες βλεπεις στο κλαδι. Το κτημα εχει {ktima.arithmos_dentron} δεντρα. Κανε μια εκτιμηση για την συνολικη παραγωγη σε κιλα λαδιου. Δωσε μονο τον αριθμο και μια συντομη αιτιολογηση."
+            response = model.generate_content([prompt, img])
+            flash(f'Εκτίμηση Παραγωγής: {response.text}', 'info')
+        except Exception as e:
+            print(f"Σφάλμα Yield AI: {e}")
+            flash('Προέκυψε σφάλμα κατά την εκτίμηση παραγωγής.', 'danger')
             
     return redirect(url_for('arxikh'))
 
@@ -982,6 +1060,9 @@ def update_db_schema():
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_agwgimotita FLOAT"))
             except Exception as e:
                 print(f"Column nero_agwgimotita exists or error: {e}")
+            
+            # Create table analuseis_edafous if not exists
+            vasi.create_all()
             
             conn.commit()
         return "Η βάση δεδομένων ενημερώθηκε επιτυχώς! Τώρα μπορείτε να πάτε στην <a href='/'>Αρχική</a>."
