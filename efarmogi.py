@@ -14,6 +14,7 @@ import google.generativeai as genai
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
+from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, pare_simvouli_ai, steile_email, get_epoxikes_ergasies
 
 # Φόρτωση μεταβλητών περιβάλλοντος
 # Ορίζουμε ρητά τη διαδρομή για το αρχείο .env στον ίδιο φάκελο με το script
@@ -164,60 +165,6 @@ class ArxeioSygkomidis(vasi.Model):
     kila_ana_dentro = vasi.Column(vasi.Float, nullable=False)
     synoliko_kostos = vasi.Column(vasi.Float, nullable=False)
 
-# Βοηθητική συνάρτηση για τον καιρό
-def pare_kairo(lat, lng):
-    api_key = os.getenv('WEATHER_API_KEY')
-    
-    if not api_key:
-        print("⚠️ ΠΡΟΣΟΧΗ: Δεν βρέθηκε το WEATHER_API_KEY. Ελέγξτε το αρχείο .env")
-        return None
-
-    try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
-        response = requests.get(url)
-        data = response.json()
-        if response.status_code == 200:
-            return {
-                'thermokrasia': data['main']['temp'],
-                'perigrafi': data['weather'][0]['description'],
-                'ygrasia': data['main']['humidity']
-            }
-        else:
-            print(f"⚠️ Σφάλμα από το OpenWeatherMap: {response.status_code} - {data.get('message')}")
-    except Exception as e:
-        print(f"Σφάλμα λήψης καιρού: {e}")
-    return None
-
-# Νέα συνάρτηση για πρόγνωση καιρού (5 ημέρες / 3 ώρες)
-def pare_prognosi_kairou(lat, lng):
-    api_key = os.getenv('WEATHER_API_KEY')
-    
-    if not api_key:
-        return None
-
-    try:
-        url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
-        response = requests.get(url)
-        data = response.json()
-        if response.status_code == 200:
-            return data['list']
-        else:
-            print(f"⚠️ Σφάλμα από το OpenWeatherMap Forecast: {response.status_code} - {data.get('message')}")
-    except Exception as e:
-        print(f"Σφάλμα λήψης πρόγνωσης: {e}")
-    return None
-
-# Γεωπονικός Έλεγχος (Rule Engine)
-def geoponikos_elegxos(thermokrasia, ygrasia):
-    if thermokrasia < 2:
-        return {"minima": "Κίνδυνος Παγετού! Αποφύγετε το κλάδεμα.", "xroma": "red"}
-    elif thermokrasia > 35:
-        return {"minima": "Κίνδυνος Καύσωνα! Προγραμματίστε βαθύ πότισμα.", "xroma": "orange"}
-    elif 20 <= thermokrasia <= 30 and ygrasia > 60:
-        return {"minima": "Ιδανικές συνθήκες για Δάκο! Εξετάστε το ενδεχόμενο δολωματικού ψεκασμού.", "xroma": "red"}
-    else:
-        return {"minima": "Κανονικές συνθήκες. Καμία άμεση ενέργεια.", "xroma": "green"}
-
 # Προληπτικός Σύμβουλος (Εγκυκλοπαίδεια)
 def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     mhnas = datetime.now().month
@@ -339,58 +286,6 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         protaseis.append(f"👁️ Μνήμη Διάγνωσης: Το AI είχε εντοπίσει πρόσφατα: {teleytaia_diagnosi.apotelesma}. Προσαρμόστε τις ενέργειές σας.")
 
     return protaseis
-
-# AI Γεωπόνος
-def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
-    try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = (f"Είσαι ένας ειδικός γεωπόνος. Με θερμοκρασία {thermokrasia}°C, "
-                  f"υγρασία {ygrasia}% και καιρό {perigrafi}, δώσε μια σύντομη συμβουλή "
-                  f"(1-2 προτάσεις) για την καλλιέργεια της ελιάς.")
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        print(f"Σφάλμα AI: {e}")
-        return "Δεν μπορώ να δώσω συμβουλή αυτή τη στιγμή."
-
-# Λειτουργία Αποστολής Email
-def steile_email(paraliptis, thema, keimeno, raise_exception=False):
-    sender_email = os.getenv('EMAIL_ADDRESS')
-    sender_password = os.getenv('EMAIL_PASSWORD')
-    
-    if not sender_email or not sender_password:
-        print("⚠️ Λείπουν τα στοιχεία email από το .env")
-        return False
-
-    msg = MIMEText(keimeno, 'plain', 'utf-8')
-    msg['Subject'] = thema
-    msg['From'] = sender_email
-    msg['To'] = paraliptis
-
-    try:
-        # Προσθήκη timeout 10 δευτερολέπτων για να μην κολλάει η εφαρμογή
-        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
-            server.starttls()
-            server.login(sender_email, sender_password)
-            server.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"Σφάλμα αποστολής email: {e}")
-        if raise_exception:
-            raise e
-        return False
-
-# Helper function for Seasonal Tasks
-def get_epoxikes_ergasies(minas):
-    if minas in [3, 4, 5]: # Spring
-        return ['Διαχείριση Ζιζανίων (Χορτοκοπή / Φρέζα)', 'Βασική Λίπανση (Άζωτο / Βόριο)', 'Ολοκλήρωση Κλαδέματος', 'Ψεκασμός (Χαλκούχα για Κυκλοκόνιο)', 'Διαφυλλικός Ψεκασμός (Αμινοξέα & Ιχνοστοιχεία)']
-    elif minas in [6, 7, 8]: # Summer
-        return ['Άρδευση (Αν είναι ποτιστικό)', 'Ψεκασμός για Δάκο (Αν T < 33°C)', 'Διαφυλλική Λίπανση Καλίου']
-    elif minas in [9, 10, 11]: # Autumn
-        return ['Προετοιμασία Συγκομιδής', 'Συγκομιδή Ελαιοκάρπου', 'Ψεκασμός (Χαλκός Μετασυλλεκτικά)']
-    elif minas in [12, 1, 2]: # Winter
-        return ['Χειμερινός Ψεκασμός (Χαλκός)', 'Κλάδεμα Μορφοποίησης', 'Ανάλυση Εδάφους']
-    return []
 
 def generate_local_tasks_via_ai(ktima):
     now = datetime.now()
@@ -1096,6 +991,25 @@ def update_db_schema():
 @efarmogi.route('/ping')
 def ping_keep_alive():
     return "OK", 200
+
+@efarmogi.route('/ai_vision', methods=['POST'])
+@login_required
+def ai_vision():
+    if 'image' not in request.files:
+        return jsonify({'error': 'Δεν βρέθηκε αρχείο εικόνας'}), 400
+
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'Δεν επιλέχθηκε αρχείο'}), 400
+
+    try:
+        img = PIL.Image.open(file)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = "Λειτούργησε ως έμπειρος γεωπόνος. Ανάλυσε αυτή την εικόνα και εντόπισε το φαινολογικό στάδιο της ελιάς ή πιθανές ασθένειες."
+        response = model.generate_content([prompt, img])
+        return jsonify({'result': response.text})
+    except Exception as e:
+        return jsonify({'error': f"Σφάλμα AI: {str(e)}"}), 500
 
 if __name__ == '__main__':
     # This check prevents the scheduler from starting twice when debug=True, fixing the email spam bug.

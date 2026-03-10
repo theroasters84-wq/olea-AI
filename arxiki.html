@@ -52,9 +52,6 @@
             background-color: var(--card-bg);
             transition: transform 0.2s;
         }
-        .card:hover {
-            transform: translateY(-2px);
-        }
         .badge {
             font-weight: 500;
             padding: 0.5em 0.8em;
@@ -151,17 +148,6 @@
                     {% if ktima.klisi %}<span class="badge bg-warning text-dark"><i class="fas fa-mountain"></i> {{ ktima.klisi }}</span>{% endif %}
                     {% if ktima.typos_edafous %}<span class="badge bg-secondary"><i class="fas fa-gem"></i> {{ ktima.typos_edafous }}</span>{% endif %}
                 </div>
-                
-                <!-- Διαχείριση Νερού -->
-                <div class="mt-2 mb-2">
-                    <h6 style="color: #555;"><i class="fas fa-faucet"></i> Διαχείριση Νερού</h6>
-                    <button data-bs-toggle="modal" data-bs-target="#waterModal{{ ktima.id }}" class="btn btn-sm btn-outline-info me-1"><i class="fas fa-water"></i> Ποιότητα Νερού</button>
-                    <button data-bs-toggle="modal" data-bs-target="#moistureModal{{ ktima.id }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-tint"></i> + Νέα Υγρασία</button>
-                    {% if ktima.ugrasies %}
-                        <small class="text-muted d-block mt-1">Τελευταία Μέτρηση Υγρασίας: <strong>{{ (ktima.ugrasies|last).pososto }}%</strong></small>
-                    {% endif %}
-                </div>
-
                 {% if ktima.kairos %}
                     <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded mb-2">
                         <span><i class="fas fa-thermometer-half text-danger"></i> {{ ktima.kairos.thermokrasia }}°C</span>
@@ -200,234 +186,260 @@
                     {% endif %}
                 </div>
 
-                <!-- Ανάλυση Εδάφους/Φύλλων -->
-                <div class="mb-3">
-                    <form action="{{ url_for('analysi_egrafou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
-                        <div class="input-group input-group-sm">
-                            <input type="file" name="fwtografia_analysis" accept="image/*" capture="environment" required class="form-control">
-                            <button class="btn btn-secondary" type="submit"><i class="fas fa-file-medical-alt"></i> Ανάλυση</button>
+                <!-- Κουμπιά Ενεργειών (Modals) -->
+                <div class="d-flex flex-wrap gap-2 mt-3 mb-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalErgasies{{ ktima.id }}">📋 Εργασίες</button>
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnaluseis{{ ktima.id }}">🧪 Αναλύσεις</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalAI{{ ktima.id }}">📸 AI Εργαλεία</button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalOikonomika{{ ktima.id }}">💶 Οικονομικά</button>
+                </div>
+
+                <!-- Modal Εργασιών -->
+                <div class="modal fade" id="modalErgasies{{ ktima.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">📋 Διαχείριση Εργασιών</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Ατζέντα Εργασιών -->
+                                <h5 style="color: #2c3e50;"><i class="fas fa-clipboard-list"></i> Λίστα Εργασιών</h5>
+                                <a href="/ananeosi_ergasion/{{ ktima.id }}" class="btn btn-sm btn-outline-success mb-2"><i class="fas fa-sync-alt"></i> Επικαιροποίηση AI για την Περιοχή</a>
+                                
+                                <ul class="list-group mb-3" style="font-size: 0.9em;">
+                                    {% for task in ktima.pending_tasks %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ task }}
+                                        <div>
+                                            <button onclick="completeTask('{{ ktima.id }}', '{{ task }}')" class="btn btn-success btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-check"></i></button>
+                                            <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
+                                                <input type="hidden" name="eidos_ergasias" value="{{ task }}">
+                                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
+                                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-times"></i></button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                    {% else %}
+                                    <li class="list-group-item text-center text-success">
+                                        <i class="fas fa-check-circle"></i> 🎉 Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+
+                                <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
+                                <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;">
+                                    <div class="mb-1">
+                                        <select name="eidos_ergasias" class="form-select form-select-sm" required>
+                                            <option value="" disabled selected>Επιλογή Εργασίας</option>
+                                            <option value="Ψεκασμός">Ψεκασμός</option>
+                                            <option value="Κλάδεμα">Κλάδεμα</option>
+                                            <option value="Λίπανση">Λίπανση</option>
+                                            <option value="Πότισμα">Πότισμα</option>
+                                            <option value="Φρεζάρισμα">Φρεζάρισμα</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-1">
+                                        <input type="text" name="farmaka_lipasmata" class="form-control form-control-sm" placeholder="Φάρμακα/Λιπάσματα">
+                                    </div>
+                                    <div class="mb-1">
+                                        <select name="katastasi" class="form-select form-select-sm">
+                                            <option value="Εκκρεμεί">Εκκρεμεί</option>
+                                            <option value="Ολοκληρώθηκε">Ολοκληρώθηκε</option>
+                                            <option value="Ακυρώθηκε">Ακυρώθηκε</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100">Προσθήκη Εργασίας</button>
+                                </form>
+
+                                <h6 class="mt-3"><i class="fas fa-history"></i> Ιστορικό Εργασιών:</h6>
+                                {% if ktima.ergasies %}
+                                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em;">
+                                        <ul class="list-group">
+                                            {% for ergasia in ktima.ergasies|reverse %}
+                                              {% if not ergasia.archived %}
+                                                <li class="list-group-item">
+                                                    <strong>{{ ergasia.eidos_ergasias }}</strong> - {{ ergasia.katastasi }}<br>
+                                                    <small class="text-muted">{{ ergasia.imerominia.strftime('%d/%m/%Y') }}</small>
+                                                    {% if ergasia.farmaka_lipasmata %}
+                                                        <br><small>💊 {{ ergasia.farmaka_lipasmata }}</small>
+                                                    {% endif %}
+                                                </li>
+                                              {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    <p style="font-size: 0.9em; font-style: italic;">Δεν υπάρχουν καταγεγραμμένες εργασίες.</p>
+                                {% endif %}
+                            </div>
                         </div>
-                    </form>
-                    <h6 style="color: #555;"><i class="fas fa-chart-bar"></i> Ανάλυση Εδάφους/Φύλλων</h6>
-                    <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
-                        {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν έχουν καταχωρηθεί δεδομένα ανάλυσης.' }}
                     </div>
                 </div>
 
-                <!-- AI Διάγνωση Ασθενειών -->
-                <div class="mb-3">
-                    <h6 style="color: #555;"><i class="fas fa-camera"></i> AI Διάγνωση Ασθενειών</h6>
-                    <form action="{{ url_for('diagnosi_fwtografias', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
-                        <div class="input-group input-group-sm">
-                            <input type="file" name="fwtografia" accept="image/*" capture="environment" required class="form-control">
-                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Ανάλυση</button>
-                        </div>
-                    </form>
-                    {% if ktima.diagnoseis %}
-                        <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
-                            <strong>Τελευταία Διάγνωση:</strong><br>
-                            {{ ktima.diagnoseis[-1].apotelesma }}
-                            <br>
-                            <small class="text-muted">{{ ktima.diagnoseis[-1].imerominia.strftime('%d/%m/%Y') }}</small>
-                        </div>
-                    {% endif %}
-                </div>
+                <!-- Modal Αναλύσεων -->
+                <div class="modal fade" id="modalAnaluseis{{ ktima.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">🧪 Αναλύσεις & Νερό</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Ανάλυση Εδάφους/Φύλλων -->
+                                <div class="mb-3">
+                                    <form action="{{ url_for('analysi_egrafou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                                        <div class="input-group input-group-sm">
+                                            <input type="file" name="fwtografia_analysis" accept="image/*" capture="environment" required class="form-control">
+                                            <button class="btn btn-secondary" type="submit"><i class="fas fa-file-medical-alt"></i> Ανάλυση</button>
+                                        </div>
+                                    </form>
+                                    <h6 style="color: #555;"><i class="fas fa-chart-bar"></i> Ανάλυση Εδάφους/Φύλλων</h6>
+                                    <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
+                                        {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν έχουν καταχωρηθεί δεδομένα ανάλυσης.' }}
+                                    </div>
+                                </div>
 
-                <!-- AI Phenological Stage Recognition -->
-                <div class="mb-3">
-                    <h6 style="color: #555;"><i class="fas fa-calendar-day"></i> AI Αναγνώριση Σταδίου</h6>
-                    <form action="/anagnorisi_stadiou/{{ ktima.id }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
-                        <input type="file" name="fwtografia_stadiou" accept="image/*" capture="environment" class="form-control form-control-sm me-2" required>
-                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
-                    </form>
-                </div>
+                                <hr>
 
-                <!-- Ατζέντα Εργασιών -->
-                <h5 style="color: #2c3e50;"><i class="fas fa-clipboard-list"></i> Λίστα Εργασιών</h5>
-                <a href="/ananeosi_ergasion/{{ ktima.id }}" class="btn btn-sm btn-outline-success mb-2"><i class="fas fa-sync-alt"></i> Επικαιροποίηση AI για την Περιοχή</a>
-                
-                <ul class="list-group mb-3" style="font-size: 0.9em;">
-                    {% for task in ktima.pending_tasks %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ task }}
-                        <div>
-                            <button onclick="completeTask('{{ ktima.id }}', '{{ task }}')" class="btn btn-success btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-check"></i></button>
-                            <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
-                                <input type="hidden" name="eidos_ergasias" value="{{ task }}">
-                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
-                                <button type="submit" class="btn btn-secondary btn-sm" style="padding: 2px 5px; font-size: 0.8em;"><i class="fas fa-times"></i></button>
-                            </form>
-                        </div>
-                    </li>
-                    {% else %}
-                    <li class="list-group-item text-center text-success">
-                        <i class="fas fa-check-circle"></i> 🎉 Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!
-                    </li>
-                    {% endfor %}
-                </ul>
-
-                <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
-                <form action="{{ url_for('prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;">
-                    <div class="mb-1">
-                        <select name="eidos_ergasias" class="form-select form-select-sm" required>
-                            <option value="" disabled selected>Επιλογή Εργασίας</option>
-                            <option value="Ψεκασμός">Ψεκασμός</option>
-                            <option value="Κλάδεμα">Κλάδεμα</option>
-                            <option value="Λίπανση">Λίπανση</option>
-                            <option value="Πότισμα">Πότισμα</option>
-                            <option value="Φρεζάρισμα">Φρεζάρισμα</option>
-                        </select>
-                    </div>
-                    <div class="mb-1">
-                        <input type="text" name="farmaka_lipasmata" class="form-control form-control-sm" placeholder="Φάρμακα/Λιπάσματα">
-                    </div>
-                    <div class="mb-1">
-                        <select name="katastasi" class="form-select form-select-sm">
-                            <option value="Εκκρεμεί">Εκκρεμεί</option>
-                            <option value="Ολοκληρώθηκε">Ολοκληρώθηκε</option>
-                            <option value="Ακυρώθηκε">Ακυρώθηκε</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">Προσθήκη Εργασίας</button>
-                </form>
-
-                <h6 class="mt-3"><i class="fas fa-history"></i> Ιστορικό Εργασιών:</h6>
-                {% if ktima.ergasies %}
-                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em;">
-                        <ul class="list-group">
-                            {% for ergasia in ktima.ergasies|reverse %}
-                              {% if not ergasia.archived %}
-                                <li class="list-group-item">
-                                    <strong>{{ ergasia.eidos_ergasias }}</strong> - {{ ergasia.katastasi }}<br>
-                                    <small class="text-muted">{{ ergasia.imerominia.strftime('%d/%m/%Y') }}</small>
-                                    {% if ergasia.farmaka_lipasmata %}
-                                        <br><small>💊 {{ ergasia.farmaka_lipasmata }}</small>
+                                <!-- Διαχείριση Νερού -->
+                                <div class="mt-2 mb-2">
+                                    <h6 style="color: #555;"><i class="fas fa-faucet"></i> Διαχείριση Νερού</h6>
+                                    <button data-bs-toggle="modal" data-bs-target="#waterModal{{ ktima.id }}" class="btn btn-sm btn-outline-info me-1"><i class="fas fa-water"></i> Ποιότητα Νερού</button>
+                                    <button data-bs-toggle="modal" data-bs-target="#moistureModal{{ ktima.id }}" class="btn btn-sm btn-outline-primary"><i class="fas fa-tint"></i> + Νέα Υγρασία</button>
+                                    {% if ktima.ugrasies %}
+                                        <small class="text-muted d-block mt-1">Τελευταία Μέτρηση Υγρασίας: <strong>{{ (ktima.ugrasies|last).pososto }}%</strong></small>
                                     {% endif %}
-                                </li>
-                              {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% else %}
-                    <p style="font-size: 0.9em; font-style: italic;">Δεν υπάρχουν καταγεγραμμένες εργασίες.</p>
-                {% endif %}
-
-                <hr>
-
-                <!-- Οικονομικά -->
-                <h5 style="color: #c0392b;"><i class="fas fa-coins"></i> Οικονομικά</h5>
-                <form action="{{ url_for('prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;">
-                    <div class="input-group input-group-sm mb-1">
-                        <input type="text" name="perigrafi" class="form-control" placeholder="Περιγραφή" required>
-                        <input type="number" name="poso" class="form-control" placeholder="€" step="0.01" required>
-                        <button class="btn btn-danger" type="submit"><i class="fas fa-plus"></i></button>
-                    </div>
-                </form>
-                
-                <h6 class="mt-3">Αναλυτικά Έξοδα:</h6>
-                {% if ktima.exoda %}
-                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; margin-bottom: 10px;">
-                        <ul class="list-group">
-                            {% for exodo in ktima.exoda|reverse %}
-                              {% if not exodo.archived %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <span>{{ exodo.perigrafi }}</span><br>
-                                        <small class="text-muted">{{ exodo.imerominia.strftime('%d/%m/%Y') }}</small>
-                                    </div>
-                                    <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(exodo.poso) }}€</span>
-                                </li>
-                              {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% else %}
-                    <p style="font-size: 0.9em; font-style: italic;">Δεν υπάρχουν καταγεγραμμένα έξοδα.</p>
-                {% endif %}
-
-                <div style="background-color: #fff; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                    <strong>Συνολικό Κόστος: </strong> 
-                    <span style="color: #c0392b; font-size: 1.1em;">{{ "%.2f"|format(ktima.synoliko_kostos) }}€</span>
-                </div>
-
-                <hr>
-                <!-- Ολοκλήρωση Χρονιάς -->
-                <h5 style="color: #d35400;"><i class="fas fa-tractor"></i> Ολοκλήρωση Χρονιάς</h5>
-                <form action="{{ url_for('lixi_xronias', ktima_id=ktima.id) }}" method="POST" class="mb-3" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Αυτή η ενέργεια θα αρχειοθετήσει όλα τα τρέχοντα έξοδα και εργασίες. Είστε σίγουροι;');">
-                    <div class="input-group input-group-sm">
-                        <input type="number" name="tonoi_paragogis" class="form-control" placeholder="Τόνοι Παραγωγής" step="0.01" required>
-                        <button class="btn btn-warning" type="submit"><i class="fas fa-archive"></i> Αρχειοθέτηση</button>
-                    </div>
-                </form>
-
-                <!-- Ιστορικό -->
-                {% if ktima.arxeia_sygkomidis %}
-                <h6 class="mt-3"><i class="fas fa-book"></i> Ιστορικό Προηγούμενων Ετών</h6>
-                <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.8em;">
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Ημ/νία</th>
-                                <th>Τόνοι</th>
-                                <th>Kg/Δέντρο</th>
-                                <th>Κόστος</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for arxeio in ktima.arxeia_sygkomidis|reverse %}
-                            <tr>
-                                <td>{{ arxeio.imerominia.strftime('%d/%m/%Y') }}</td>
-                                <td>{{ arxeio.tonoi }}</td>
-                                <td>{{ "%.1f"|format(arxeio.kila_ana_dentro) }}</td>
-                                <td>{{ "%.2f"|format(arxeio.synoliko_kostos) }}€</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
-
-                <!-- Water Quality Modal -->
-                <div class="modal fade" id="waterModal{{ ktima.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Ποιότητα Νερού Άρδευσης</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form action="{{ url_for('enimerosi_nerou', ktima_id=ktima.id) }}" method="POST">
-                                    <div class="mb-3">
-                                        <label class="form-label">pH Νερού</label>
-                                        <input type="number" step="0.1" name="nero_ph" class="form-control" value="{{ ktima.nero_ph or '' }}">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Αγωγιμότητα (EC) σε mS/cm</label>
-                                        <input type="number" step="0.1" name="nero_agwgimotita" class="form-control" value="{{ ktima.nero_agwgimotita or '' }}">
-                                    </div>
-                                    <button type="submit" class="btn btn-info text-white">Αποθήκευση</button>
-                                </form>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Moisture Modal -->
-                <div class="modal fade" id="moistureModal{{ ktima.id }}" tabindex="-1" aria-hidden="true">
+                <!-- Modal AI Εργαλείων -->
+                <div class="modal fade" id="modalAI{{ ktima.id }}" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title">Καταγραφή Υγρασίας Εδάφους</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <h5 class="modal-title">📸 AI Εργαλεία</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <form action="{{ url_for('prosthes_ugrasia', ktima_id=ktima.id) }}" method="POST">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ποσοστό Υγρασίας (%)</label>
-                                        <input type="number" step="0.1" name="pososto" class="form-control" required placeholder="π.χ. 25.5">
+                                <!-- AI Διάγνωση Ασθενειών -->
+                                <div class="mb-3">
+                                    <h6 style="color: #555;"><i class="fas fa-camera"></i> AI Διάγνωση Ασθενειών</h6>
+                                    <form action="{{ url_for('diagnosi_fwtografias', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                                        <div class="input-group input-group-sm">
+                                            <input type="file" name="fwtografia" accept="image/*" capture="environment" required class="form-control">
+                                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Ανάλυση</button>
+                                        </div>
+                                    </form>
+                                    {% if ktima.diagnoseis %}
+                                        <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
+                                            <strong>Τελευταία Διάγνωση:</strong><br>
+                                            {{ ktima.diagnoseis[-1].apotelesma }}
+                                            <br>
+                                            <small class="text-muted">{{ ktima.diagnoseis[-1].imerominia.strftime('%d/%m/%Y') }}</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <hr>
+
+                                <!-- AI Phenological Stage Recognition -->
+                                <div class="mb-3">
+                                    <h6 style="color: #555;"><i class="fas fa-calendar-day"></i> AI Αναγνώριση Σταδίου</h6>
+                                    <form action="/anagnorisi_stadiou/{{ ktima.id }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                                        <input type="file" name="fwtografia_stadiou" accept="image/*" capture="environment" class="form-control form-control-sm me-2" required>
+                                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Οικονομικών -->
+                <div class="modal fade" id="modalOikonomika{{ ktima.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">💶 Οικονομικά Στοιχεία</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Οικονομικά -->
+                                <h5 style="color: #c0392b;"><i class="fas fa-coins"></i> Οικονομικά</h5>
+                                <form action="{{ url_for('prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;">
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="text" name="perigrafi" class="form-control" placeholder="Περιγραφή" required>
+                                        <input type="number" name="poso" class="form-control" placeholder="€" step="0.01" required>
+                                        <button class="btn btn-danger" type="submit"><i class="fas fa-plus"></i></button>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Καταγραφή</button>
                                 </form>
+                                
+                                <h6 class="mt-3">Αναλυτικά Έξοδα:</h6>
+                                {% if ktima.exoda %}
+                                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; margin-bottom: 10px;">
+                                        <ul class="list-group">
+                                            {% for exodo in ktima.exoda|reverse %}
+                                              {% if not exodo.archived %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <span>{{ exodo.perigrafi }}</span><br>
+                                                        <small class="text-muted">{{ exodo.imerominia.strftime('%d/%m/%Y') }}</small>
+                                                    </div>
+                                                    <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(exodo.poso) }}€</span>
+                                                </li>
+                                              {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    <p style="font-size: 0.9em; font-style: italic;">Δεν υπάρχουν καταγεγραμμένα έξοδα.</p>
+                                {% endif %}
+
+                                <div style="background-color: #fff; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <strong>Συνολικό Κόστος: </strong> 
+                                    <span style="color: #c0392b; font-size: 1.1em;">{{ "%.2f"|format(ktima.synoliko_kostos) }}€</span>
+                                </div>
+
+                                <hr>
+                                <!-- Ολοκλήρωση Χρονιάς -->
+                                <h5 style="color: #d35400;"><i class="fas fa-tractor"></i> Ολοκλήρωση Χρονιάς</h5>
+                                <form action="{{ url_for('lixi_xronias', ktima_id=ktima.id) }}" method="POST" class="mb-3" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Αυτή η ενέργεια θα αρχειοθετήσει όλα τα τρέχοντα έξοδα και εργασίες. Είστε σίγουροι;');">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="tonoi_paragogis" class="form-control" placeholder="Τόνοι Παραγωγής" step="0.01" required>
+                                        <button class="btn btn-warning" type="submit"><i class="fas fa-archive"></i> Αρχειοθέτηση</button>
+                                    </div>
+                                </form>
+
+                                <!-- Ιστορικό -->
+                                {% if ktima.arxeia_sygkomidis %}
+                                <h6 class="mt-3"><i class="fas fa-book"></i> Ιστορικό Προηγούμενων Ετών</h6>
+                                <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.8em;">
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Ημ/νία</th>
+                                                <th>Τόνοι</th>
+                                                <th>Kg/Δέντρο</th>
+                                                <th>Κόστος</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for arxeio in ktima.arxeia_sygkomidis|reverse %}
+                                            <tr>
+                                                <td>{{ arxeio.imerominia.strftime('%d/%m/%Y') }}</td>
+                                                <td>{{ arxeio.tonoi }}</td>
+                                                <td>{{ "%.1f"|format(arxeio.kila_ana_dentro) }}</td>
+                                                <td>{{ "%.2f"|format(arxeio.synoliko_kostos) }}€</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
