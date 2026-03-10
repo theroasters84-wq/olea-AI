@@ -252,6 +252,18 @@
                                     <button type="submit" class="btn btn-primary btn-sm w-100">Προσθήκη Εργασίας</button>
                                 </form>
 
+                                <hr>
+
+                                <!-- AI Auto-Fill Task -->
+                                <h6 style="color: #2c3e50;"><i class="fas fa-magic"></i> Αυτόματη Καταγραφή</h6>
+                                <form action="{{ url_for('ai_input_scan', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                                    <div class="input-group input-group-sm">
+                                        <input type="file" name="fwtografia_input" class="form-control" accept="image/*" capture="environment" required>
+                                        <button type="submit" class="btn btn-success"><i class="fas fa-camera"></i> Σάρωση</button>
+                                    </div>
+                                    <div class="form-text" style="font-size: 0.8em;">📸 Καταγράψτε φάρμακο/λίπασμα από φωτογραφία.</div>
+                                </form>
+
                                 <h6 class="mt-3"><i class="fas fa-history"></i> Ιστορικό Εργασιών:</h6>
                                 {% if ktima.ergasies %}
                                     <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em;">

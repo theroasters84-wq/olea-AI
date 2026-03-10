@@ -190,15 +190,15 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     now = datetime.now()
 
     # Helper to find days since last specific task
-    def get_days_since_task(keyword):
+    def get_last_task_info(keyword):
         relevant_tasks = [
             t for t in ktima.ergasies 
             if not t.archived and (keyword in t.eidos_ergasias or (t.farmaka_lipasmata and keyword in t.farmaka_lipasmata))
         ]
         if not relevant_tasks:
-            return None
+            return None, None
         latest_task = max(relevant_tasks, key=lambda x: x.imerominia)
-        return (now - latest_task.imerominia).days
+        return (now - latest_task.imerominia).days, latest_task.imerominia
 
     # Get a list of completed tasks for the current season (for simple existence checks)
     completed_tasks_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
@@ -240,9 +240,9 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     # Άνοιξη (Μάρτιος, Απρίλιος)
     if mhnas in [3, 4]:
         # Fertilization check (Time-Aware: 60 days)
-        days_since_fert = get_days_since_task('Λίπανση')
+        days_since_fert, _ = get_last_task_info('Λίπανση')
         if days_since_fert is None:
-             days_since_fert = get_days_since_task('Άζωτο')
+             days_since_fert, _ = get_last_task_info('Άζωτο')
 
         if days_since_fert is None or days_since_fert > 60:
             protaseis.append("🌱 Άνοιξη: Ιδανική περίοδος για βασική λίπανση (Άζωτο & Βόριο).")
@@ -257,12 +257,12 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         if ktima.fainologiko_stadio == 'Άνθιση':
             protaseis.append("🛑 ΑΠΑΓΟΡΕΥΣΗ ΨΕΚΑΣΜΩΝ: Το δέντρο βρίσκεται σε Άνθιση! Σταματήστε ΑΜΕΣΩΣ κάθε ψεκασμό (ειδικά με χαλκό ή διαφυλλικά) για να μην προκαλέσετε κάψιμο των ανθέων και πτώση της παραγωγής.")
         elif ktima.fainologiko_stadio == 'Σχηματισμός Ταξιανθιών':
-            days_since_copper = get_days_since_task('Χαλκ')
+            days_since_copper, _ = get_last_task_info('Χαλκ')
             if days_since_copper is None or days_since_copper > 25:
                 protaseis.append("⚠️ Κρίσιμο Στάδιο: Τα δέντρα είναι στο 'μούρο' (Σχηματισμός Ταξιανθιών) και η προστασία του χαλκού έχει λήξει. Απαιτείται άμεσα ψεκασμός πριν ανοίξουν τα άνθη.")
         # Fallback to original time/humidity logic if stage is not critical (e.g., 'Άγνωστο', 'Λήθαργος')
         elif ygrasia > 65:
-            days_since_copper = get_days_since_task('Χαλκ')
+            days_since_copper, _ = get_last_task_info('Χαλκ')
             if days_since_copper is not None:
                 if days_since_copper <= 25:
                     protaseis.append(f"🛡️ Ενεργή Προστασία: Υψηλή υγρασία, αλλά ο ελαιώνας προστατεύεται από τον χαλκό που εφαρμόστηκε πριν {days_since_copper} μέρες.")
@@ -270,7 +270,12 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
                     protaseis.append(f"⚠️ Λήξη Προστασίας: Έχουν περάσει {days_since_copper} μέρες από τον τελευταίο ψεκασμό χαλκού. Η δράση του έχει εξασθενήσει. Λόγω υγρασίας, απαιτείται επαναληπτικός ψεκασμός.")
             else:
                 protaseis.append("💧 Υψηλή υγρασία: Συνιστάται προληπτικός ψεκασμός με χαλκούχα για το Κυκλοκόνιο.")
-        protaseis.append("⚠️ Προσοχή στους ψεκασμούς: ΜΗΝ αναμειγνύετε ποτέ χαλκό με αμινοξέα (κίνδυνος φυτοτοξικότητας)!")
+        
+        days_since_copper, copper_date = get_last_task_info('Χαλκ')
+        if days_since_copper is not None and days_since_copper <= 7:
+            protaseis.append(f"✅ Εφαρμόστηκε Χαλκός στις {copper_date.strftime('%d/%m')}. Αποφύγετε αμινοξέα για ακόμα {7 - days_since_copper} ημέρες.")
+        else:
+            protaseis.append("⚠️ Προσοχή στους ψεκασμούς: ΜΗΝ αναμειγνύετε ποτέ χαλκό με αμινοξέα (κίνδυνος φυτοτοξικότητας)!")
     
     # Άνθιση / Αρχές Καλοκαιριού (Μάιος, Ιούνιος)
     elif mhnas in [5, 6]:
@@ -287,9 +292,16 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
 
     # Scientific Memory: Boron & Temperature Rule (Refactored for performance and safety)
     if thermokrasia < 12:
-        days_since_boron = get_days_since_task('Βόριο')
-        if days_since_boron is None or days_since_boron > 25:
+        days_since_boron, _ = get_last_task_info('Βόριο')
+        if days_since_boron is not None:
+            protaseis.append("🛡️ Κάλυψη Βορίου: Επόμενος έλεγχος σε 15-20 ημέρες.")
+        elif days_since_boron is None or days_since_boron > 25:
             protaseis.append("📊 Επιστημονική Μνήμη: Η θερμοκρασία είναι < 12°C. Προτείνεται εφαρμογή Βορίου, καθώς η απορρόφησή του είναι μειωμένη σε χαμηλές θερμοκρασίες και μπορεί να χρειαστεί επανάληψη.")
+
+    # Spray Countdown
+    days_since_spray, _ = get_last_task_info('Ψεκασμός')
+    if days_since_spray == 0:
+        protaseis.append("⏳ Επόμενος δυνατός ψεκασμός μετά από 10-12 ημέρες (ανάλογα με τις βροχοπτώσεις).")
 
     # Smart Dacus Management (June - October)
     if mhnas in [6, 7, 8, 9, 10]:
@@ -593,6 +605,41 @@ def ektimisi_paragogis(ktima_id):
         except Exception as e:
             print(f"Σφάλμα Yield AI: {e}")
             flash('Προέκυψε σφάλμα κατά την εκτίμηση παραγωγής.', 'danger')
+            
+    return redirect(url_for('arxikh'))
+
+@efarmogi.route('/ai_input_scan/<int:ktima_id>', methods=['POST'])
+@login_required
+def ai_input_scan(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
+
+    if 'fwtografia_input' not in request.files:
+        flash('Δεν βρέθηκε αρχείο φωτογραφίας.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    file = request.files['fwtografia_input']
+    if file.filename == '':
+        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    if file:
+        try:
+            img = PIL.Image.open(file)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = "You are an agronomist. Look at this bottle label or invoice of a farming product. Extract: 1) Product Name, 2) Active Ingredient, 3) Recommended Dosage. Return a very short summary like: 'Applied [Product] ([Ingredient]) at [Dosage]'."
+            response = model.generate_content([prompt, img])
+            
+            ai_summary = response.text.strip()
+
+            nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός/Λίπανση (AI)', katastasi='Ολοκληρώθηκε', farmaka_lipasmata=ai_summary, imerominia=datetime.now())
+            vasi.session.add(nea_ergasia)
+            vasi.session.commit()
+            flash('Η εργασία καταγράφηκε αυτόματα από την εικόνα!', 'success')
+        except Exception as e:
+            print(f"Σφάλμα AI Input Scan: {e}")
+            flash('Προέκυψε σφάλμα κατά την αυτόματη καταγραφή.', 'danger')
             
     return redirect(url_for('arxikh'))
 
