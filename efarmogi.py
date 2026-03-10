@@ -1030,11 +1030,9 @@ def service_worker():
             console.log('Service Worker installing.');
         });
         self.addEventListener('fetch', (event) => {
-            event.respondWith(fetch(event.request));
-            // Βασική στρατηγική: Network First, falling back to cache (αν υπήρχε cache)
-            // Για την ώρα, απλά επιτρέπουμε το αίτημα να περάσει στο δίκτυο
-            // χωρίς να προκαλούμε σφάλματα σε cross-origin ή only-if-cached requests.
-            return; 
+            // For now, just let the browser handle the fetch request normally.
+            // This avoids errors with special requests (e.g., cross-origin, only-if-cached).
+            return;
         });
     """)
     response.headers['Content-Type'] = 'application/javascript'
