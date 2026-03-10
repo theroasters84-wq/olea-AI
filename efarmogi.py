@@ -1093,6 +1093,10 @@ def update_db_schema():
     except Exception as e:
         return f"Σφάλμα κατά την ενημέρωση: {e}", 500
 
+@efarmogi.route('/ping')
+def ping_keep_alive():
+    return "OK", 200
+
 if __name__ == '__main__':
     # This check prevents the scheduler from starting twice when debug=True, fixing the email spam bug.
     if not efarmogi.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
