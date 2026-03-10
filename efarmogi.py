@@ -77,6 +77,7 @@ class Ktima(vasi.Model):
     poikilia = vasi.Column(vasi.String(50))
     stremmata = vasi.Column(vasi.Float, default=0.0)
     arithmos_dentron = vasi.Column(vasi.Integer, default=0)
+    fainologiko_stadio = vasi.Column(vasi.String(50), default='Άγνωστο')
     arxeia_sygkomidis = vasi.relationship('ArxeioSygkomidis', backref='ktima', lazy=True, cascade="all, delete-orphan")
     topikes_ergasies = vasi.Column(vasi.Text)
     teleftaia_enimerosi_ergasion = vasi.Column(vasi.DateTime)
@@ -199,6 +200,21 @@ def geoponikos_elegxos(thermokrasia, ygrasia):
 def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     mhnas = datetime.now().month
     protaseis = []
+    now = datetime.now()
+
+    # Helper to find days since last specific task
+    def get_days_since_task(keyword):
+        relevant_tasks = [
+            t for t in ktima.ergasies 
+            if not t.archived and (keyword in t.eidos_ergasias or (t.farmaka_lipasmata and keyword in t.farmaka_lipasmata))
+        ]
+        if not relevant_tasks:
+            return None
+        latest_task = max(relevant_tasks, key=lambda x: x.imerominia)
+        return (now - latest_task.imerominia).days
+
+    # Get a list of completed tasks for the current season (for simple existence checks)
+    completed_tasks_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
 
     # Phase 18: Agronomic Profiling Rules
     if ktima.klisi == 'Επικλινές/Πλαγιά' and ('βροχή' in perigrafi.lower() or 'βροχη' in perigrafi.lower()):
@@ -220,10 +236,38 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
 
     # Άνοιξη (Μάρτιος, Απρίλιος)
     if mhnas in [3, 4]:
-        protaseis.append("🌱 Άνοιξη: Ιδανική περίοδος για βασική λίπανση (Άζωτο & Βόριο) και ολοκλήρωση κλαδέματος.")
+        # Fertilization check (Time-Aware: 60 days)
+        days_since_fert = get_days_since_task('Λίπανση')
+        if days_since_fert is None:
+             days_since_fert = get_days_since_task('Άζωτο')
+
+        if days_since_fert is None or days_since_fert > 60:
+            protaseis.append("🌱 Άνοιξη: Ιδανική περίοδος για βασική λίπανση (Άζωτο & Βόριο).")
+
+        # Pruning check
+        has_pruned = any('Κλάδεμα' in task for task in completed_tasks_names)
+        if not has_pruned:
+            protaseis.append("✂️ Άνοιξη: Ολοκληρώστε το κλάδεμα διαμόρφωσης και καρποφορίας.")
+
+        # --- MODIFIED COPPER/SPRAY LOGIC ---
+        # Phenological stage takes precedence over simple humidity/time rules.
+        if ktima.fainologiko_stadio == 'Άνθιση':
+            protaseis.append("🛑 ΑΠΑΓΟΡΕΥΣΗ ΨΕΚΑΣΜΩΝ: Το δέντρο βρίσκεται σε Άνθιση! Σταματήστε ΑΜΕΣΩΣ κάθε ψεκασμό (ειδικά με χαλκό ή διαφυλλικά) για να μην προκαλέσετε κάψιμο των ανθέων και πτώση της παραγωγής.")
+        elif ktima.fainologiko_stadio == 'Σχηματισμός Ταξιανθιών':
+            days_since_copper = get_days_since_task('Χαλκ')
+            if days_since_copper is None or days_since_copper > 25:
+                protaseis.append("⚠️ Κρίσιμο Στάδιο: Τα δέντρα είναι στο 'μούρο' (Σχηματισμός Ταξιανθιών) και η προστασία του χαλκού έχει λήξει. Απαιτείται άμεσα ψεκασμός πριν ανοίξουν τα άνθη.")
+        # Fallback to original time/humidity logic if stage is not critical (e.g., 'Άγνωστο', 'Λήθαργος')
+        elif ygrasia > 65:
+            days_since_copper = get_days_since_task('Χαλκ')
+            if days_since_copper is not None:
+                if days_since_copper <= 25:
+                    protaseis.append(f"🛡️ Ενεργή Προστασία: Υψηλή υγρασία, αλλά ο ελαιώνας προστατεύεται από τον χαλκό που εφαρμόστηκε πριν {days_since_copper} μέρες.")
+                else:
+                    protaseis.append(f"⚠️ Λήξη Προστασίας: Έχουν περάσει {days_since_copper} μέρες από τον τελευταίο ψεκασμό χαλκού. Η δράση του έχει εξασθενήσει. Λόγω υγρασίας, απαιτείται επαναληπτικός ψεκασμός.")
+            else:
+                protaseis.append("💧 Υψηλή υγρασία: Συνιστάται προληπτικός ψεκασμός με χαλκούχα για το Κυκλοκόνιο.")
         protaseis.append("⚠️ Προσοχή στους ψεκασμούς: ΜΗΝ αναμειγνύετε ποτέ χαλκό με αμινοξέα (κίνδυνος φυτοτοξικότητας)!")
-        if ygrasia > 60:
-            protaseis.append("💧 Υψηλή υγρασία: Συνιστάται προληπτικός ψεκασμός με χαλκούχα για το Κυκλοκόνιο.")
     
     # Άνθιση / Αρχές Καλοκαιριού (Μάιος, Ιούνιος)
     elif mhnas in [5, 6]:
@@ -508,6 +552,40 @@ def analysi_egrafou(ktima_id):
             print(f"Σφάλμα OCR AI: {e}")
             flash('Προέκυψε σφάλμα κατά την ανάγνωση του εγγράφου.', 'danger')
 
+    return redirect(url_for('arxikh'))
+
+@efarmogi.route('/anagnorisi_stadiou/<int:ktima_id>', methods=['POST'])
+@login_required
+def anagnorisi_stadiou(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    if 'fwtografia_stadiou' not in request.files:
+        flash('Δεν βρέθηκε αρχείο φωτογραφίας.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    file = request.files['fwtografia_stadiou']
+    if file.filename == '':
+        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
+        return redirect(url_for('arxikh'))
+
+    if file:
+        try:
+            img = PIL.Image.open(file)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = "Είσαι κορυφαίος γεωπόνος. Δες αυτή τη φωτογραφία από κλαδί ελιάς. Σε ποιο φαινολογικό στάδιο βρίσκεται; Επίλεξε ΑΥΣΤΗΡΑ ΜΟΝΟ ΜΙΑ από τις παρακάτω φράσεις, χωρίς καμία άλλη λέξη ή τελεία: Λήθαργος, Βλαστική Ανάπτυξη, Σχηματισμός Ταξιανθιών, Άνθιση, Καρπόδεση, Ανάπτυξη Καρπού, Ωρίμανση."
+            response = model.generate_content([prompt, img])
+            
+            stage_text = response.text.strip().replace('.', '')
+            ktima.fainologiko_stadio = stage_text
+            vasi.session.commit()
+            flash(f'Το φαινολογικό στάδιο του κτήματος ορίστηκε σε: {stage_text}', 'success')
+        except Exception as e:
+            print(f"Σφάλμα Stage Vision AI: {e}")
+            flash('Προέκυψε σφάλμα κατά την αναγνώριση του σταδίου.', 'danger')
+            
     return redirect(url_for('arxikh'))
 
 @efarmogi.route('/steile_anafora', methods=['POST'])

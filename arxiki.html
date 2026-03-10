@@ -144,6 +144,7 @@
                 <h4>{{ ktima.onoma_ktimatos }}</h4>
                 <p class="text-muted small"><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos }}, {{ ktima.geografiko_mikos }}</p>
                 <p class="text-muted">🌳 {{ ktima.stremmata }} στρ. | {{ ktima.arithmos_dentron }} δέντρα</p>
+                <p class="text-muted">🌱 Στάδιο: <strong>{{ ktima.fainologiko_stadio }}</strong></p>
                 <div class="mb-2">
                     {% if ktima.poikilia %}<span class="badge bg-success"><i class="fas fa-leaf"></i> {{ ktima.poikilia }}</span>{% endif %}
                     {% if ktima.ardefsi %}<span class="badge bg-info text-dark"><i class="fas fa-tint"></i> {{ ktima.ardefsi }}</span>{% endif %}
@@ -219,6 +220,15 @@
                             <small class="text-muted">{{ ktima.diagnoseis[-1].imerominia.strftime('%d/%m/%Y') }}</small>
                         </div>
                     {% endif %}
+                </div>
+
+                <!-- AI Phenological Stage Recognition -->
+                <div class="mb-3">
+                    <h6 style="color: #555;"><i class="fas fa-calendar-day"></i> AI Αναγνώριση Σταδίου</h6>
+                    <form action="/anagnorisi_stadiou/{{ ktima.id }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                        <input type="file" name="fwtografia_stadiou" accept="image/*" capture="environment" class="form-control form-control-sm me-2" required>
+                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
+                    </form>
                 </div>
 
                 <!-- Ατζέντα Εργασιών -->
