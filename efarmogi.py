@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from itsdangerous import URLSafeTimedSerializer
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for, request, render_template, jsonify, flash, make_response
+from flask import Flask, redirect, url_for, request, render_template, jsonify, flash, make_response, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
@@ -23,6 +23,8 @@ efarmogi = Flask(__name__, template_folder='.')
 efarmogi.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY') or 'mystiko-kleidi-olea-ai'
 efarmogi.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'vasi_dedomenwn.db')
 efarmogi.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+efarmogi.config['MAIL_FAIL_SILENTLY'] = False
+efarmogi.config['MAIL_DEBUG'] = True
 
 # Serializer για tokens επαναφοράς κωδικού
 serializer = URLSafeTimedSerializer(efarmogi.config['SECRET_KEY'])
@@ -267,7 +269,7 @@ def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
         return "Δεν μπορώ να δώσω συμβουλή αυτή τη στιγμή."
 
 # Λειτουργία Αποστολής Email
-def steile_email(paraliptis, thema, keimeno):
+def steile_email(paraliptis, thema, keimeno, raise_exception=False):
     sender_email = os.getenv('EMAIL_ADDRESS')
     sender_password = os.getenv('EMAIL_PASSWORD')
     
@@ -288,6 +290,8 @@ def steile_email(paraliptis, thema, keimeno):
         return True
     except Exception as e:
         print(f"Σφάλμα αποστολής email: {e}")
+        if raise_exception:
+            raise e
         return False
 
 # Helper function for Seasonal Tasks
@@ -694,10 +698,14 @@ def xexasa_kodiko():
             thema = "Επαναφορά Κωδικού - Olea AI"
             keimeno = f"Για να επαναφέρετε τον κωδικό σας, πατήστε στον παρακάτω σύνδεσμο:\n{link}\n\nΟ σύνδεσμος λήγει σε 1 ώρα."
             
-            if steile_email(email, thema, keimeno):
+            try:
+                steile_email(email, thema, keimeno, raise_exception=True)
                 flash('Στάλθηκε email με οδηγίες επαναφοράς.', 'info')
-            else:
-                flash('Υπήρξε πρόβλημα κατά την αποστολή του email.', 'danger')
+                return redirect(url_for('eisodos'))
+            except Exception as e:
+                print(f"EMAIL ERROR: {str(e)}", flush=True)
+                flash('Σφάλμα κατά την αποστολή του email. Ελέγξτε τα logs.', 'danger')
+                return redirect(url_for('xexasa_kodiko'))
         else:
             flash('Δεν βρέθηκε λογαριασμός με αυτό το email.', 'warning')
             
@@ -831,6 +839,18 @@ def lixi_xronias(ktima_id):
     flash(f'Η χρονιά έκλεισε επιτυχώς! Απόδοση: {kila_ana_dentro:.2f} kg/δέντρο.', 'success')
     return redirect(url_for('arxikh'))
 
+@efarmogi.route('/ping')
+def ping():
+    return "Pong", 200
+
+@efarmogi.route('/icon.svg')
+def serve_icon():
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="22" fill="#4A7C59"/>
+      <text x="50%" y="50%" font-size="55" text-anchor="middle" dominant-baseline="central">🫒</text>
+    </svg>'''
+    return Response(svg, mimetype='image/svg+xml')
+
 @efarmogi.route('/manifest.json')
 def manifest():
     return jsonify({
@@ -842,9 +862,9 @@ def manifest():
         "theme_color": "#386641",
         "icons": [
             {
-                "src": "https://cdn-icons-png.flaticon.com/512/628/628283.png",
-                "sizes": "512x512",
-                "type": "image/png"
+                "src": "/icon.svg",
+                "sizes": "any",
+                "type": "image/svg+xml"
             }
         ]
     })
