@@ -283,7 +283,8 @@ def steile_email(paraliptis, thema, keimeno, raise_exception=False):
     msg['To'] = paraliptis
 
     try:
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        # Προσθήκη timeout 10 δευτερολέπτων για να μην κολλάει η εφαρμογή
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
             server.starttls()
             server.login(sender_email, sender_password)
             server.send_message(msg)
