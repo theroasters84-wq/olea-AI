@@ -20,8 +20,14 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 # Αρχικοποίηση εφαρμογής
 efarmogi = Flask(__name__, template_folder='.')
+
+# Ρύθμιση Βάσης Δεδομένων (Production & Development)
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
 efarmogi.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY') or 'mystiko-kleidi-olea-ai'
-efarmogi.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'vasi_dedomenwn.db')
+efarmogi.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.join(basedir, 'vasi_dedomenwn.db')
 efarmogi.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 efarmogi.config['MAIL_FAIL_SILENTLY'] = False
 efarmogi.config['MAIL_DEBUG'] = True
