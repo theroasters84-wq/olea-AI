@@ -1082,6 +1082,7 @@ def update_db_schema():
                 print(f"Column nero_ph exi tsnor errorr {e}")
 
             # Προσθήκη nero_o_agwgimotita exists or error: {e}")
+                print(f"Column nero_agwgimotita exists or error: {e}")
             
             conn.commit()
         return "Η βάση δεδομένων ενημερώθηκε επιτυχώς! Τώρα μπορείτε να πάτε στην <a href='/'>Αρχική</a>."
