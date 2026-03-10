@@ -251,7 +251,7 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     if ktima.nero_agwgimotita and ktima.nero_agwgimotita > 3.0:
         protaseis.append("⚠️ Τοξικότητα Αλάτων: Η αγωγιμότητα του νερού είναι πολύ υψηλή (>3.0 mS/cm). Κίνδυνος ξηράνσεων στα φύλλα. Συνιστάται έκπλυση εδάφους ή χρήση βελτιωτικών.")
 
-    # Soil Moisture Stress
+    # Soil Moisture Stress 
     # Soil Moisture Stress - Safely check for records
     if ktima.ugrasies:
         latest_moisture = ktima.ugrasies[-1].pososto
