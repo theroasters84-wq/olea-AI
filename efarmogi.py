@@ -285,18 +285,11 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     elif mhnas in [9, 10, 11, 12, 1, 2]:
         protaseis.append("🍂 Ελαιογένεση/Συγκομιδή: Έμφαση στο Κάλιο. Μετά τη συγκομιδή ή χαλάζι/παγετό, ψεκάστε άμεσα με χαλκό για απολύμανση πληγών.")
 
-    # Scientific Memory: Boron & Temperature Rule
+    # Scientific Memory: Boron & Temperature Rule (Refactored for performance and safety)
     if thermokrasia < 12:
-        twenty_five_days_ago = datetime.now() - timedelta(days=25)
-        # Ελέγχουμε αν υπάρχει εφαρμογή Βορίου τις τελευταίες 25 ημέρες
-        recent_boron = Ergasia.query.filter(
-            Ergasia.ktima_id == ktima.id,
-            Ergasia.farmaka_lipasmata.ilike('%Βόριο%'),
-            Ergasia.imerominia >= twenty_five_days_ago
-        ).first()
-        
-        if not recent_boron:
-            protaseis.append("📊 Επιστημονική Μνήμη: Η θερμοκρασία είναι < 12°C και έχει περάσει καιρός από την τελευταία εφαρμογή Βορίου. Προτείνεται επανάληψη λόγω μειωμένης απορρόφησης.")
+        days_since_boron = get_days_since_task('Βόριο')
+        if days_since_boron is None or days_since_boron > 25:
+            protaseis.append("📊 Επιστημονική Μνήμη: Η θερμοκρασία είναι < 12°C. Προτείνεται εφαρμογή Βορίου, καθώς η απορρόφησή του είναι μειωμένη σε χαμηλές θερμοκρασίες και μπορεί να χρειαστεί επανάληψη.")
 
     # Adaptive Memory from Diagnosis
     if ktima.diagnoseis:
