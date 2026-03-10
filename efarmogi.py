@@ -50,12 +50,11 @@ diaxeiristh_syndeshs.login_message = "Παρακαλώ συνδεθείτε γι
 
 @diaxeiristh_syndeshs.user_loader
 def fortwsh_xrhsth(xrhsths_id):
-    return vasi.session.get(Xrhsths, int(xrhsths_id))
+    try:
+        return vasi.session.get(Xrhsths, int(xrhsths_id))
+    except Exception:
+        return None
 
-# Μοντέλο Χρήστη (Database Model)
-class Xrhsths(vasi.Model, UserMixin):
-    __tablename__ = 'xrhstes'
-    
     id = vasi.Column(vasi.Integer, primary_key=True)
     email = vasi.Column(vasi.String(120), unique=True, nullable=False)
     kwdikos = vasi.Column(vasi.String(60), nullable=False)
@@ -1079,18 +1078,15 @@ def update_db_schema():
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_agwgimotita FLOAT"))
             except Exception as e:
-                print(f"Column nero_agwgimotita exists or error: {e}")
+                print(f"Columns e:
+                print(f"Column nero_ph exi tsnor errorr {e}")
 
-            # Create table katagrafes_ugrasias if not exists (Handled by create_all usually, but good for manual updb)
-            vasi.create_all()
+            # Προσθήκη nero_o_agwgimotita exists or error: {e}")
             
             conn.commit()
         return "Η βάση δεδομένων ενημερώθηκε επιτυχώς! Τώρα μπορείτε να πάτε στην <a href='/'>Αρχική</a>."
-    except Exception as e:
-        return f"Σφάλμα κατά την ενημέρωση: {e}", 500
-
-if __name__ == '__main__':
-    # This check prevents the scheduler from starting twice when debug=True, fixing the email spam bug.
+    except Exception as e:        return f"Σφάλμα κατά την ενημέρωση: {e}", 500
+heck prevents the scheduler from starting twice when debug=True, fixing the email spam bug.
     if not efarmogi.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         scheduler = BackgroundScheduler()
         scheduler.add_job(func=aytomatizomenos_elegxos, trigger="cron", hour=8, minute=0)
