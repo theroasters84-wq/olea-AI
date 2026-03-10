@@ -251,12 +251,8 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     if ktima.nero_agwgimotita and ktima.nero_agwgimotita > 3.0:
          protaseis.append("⚠️ Τοξικότητα Αλάτων: Η αγωγιμότητα του νερού είναι πολύ υψηλή (>3.0 mS/cm). Κίνδυνος ξηράνσεων στα φύλλα. Συνιστάται έκπλυση εδάφους ή χρήση βελτιωτικών.")
 
-    # Soil Moisture Stress 
     # Soil Moisture Stress - Safely check for records
     if ktima.ugrasies:
-        latest_moisture = ktima.ugrasies[-1].pososto
-        if latest_moisture < 20 and mhnas in [6, 7, 8, 9]:
-            protaseis.append(f"💧 Έντονο Υδατικό Στρες: Η υγρασία εδάφους είναι στο {latest_moisture}%. Απαιτείται άμεση άρδευση για να μην συρρικνωθεί ο καρπός.")
         try:
             # Accessing the relationship triggers the lazy load.
             # If the collection is empty, [-1] will raise an IndexError.
