@@ -12,6 +12,7 @@ from flask_login import UserMixin, LoginManager, login_user, login_required, log
 from flask_bcrypt import Bcrypt
 import google.generativeai as genai
 from apscheduler.schedulers.background import BackgroundScheduler
+from sqlalchemy import text
 
 # Φόρτωση μεταβλητών περιβάλλοντος
 # Ορίζουμε ρητά τη διαδρομή για το αρχείο .env στον ίδιο φάκελο με το script
@@ -786,8 +787,7 @@ def xexasa_kodiko():
                 return redirect(url_for('xexasa_kodiko'))
         else:
             flash('Δεν βρέθηκε λογαριασμός με αυτό το email.', 'warning')
-            
-        return redirect(url_for('eisodos'))
+            return redirect(url_for('xexasa_kodiko'))
 
     return render_template('xexasa_kodiko.html')
 
@@ -968,6 +968,33 @@ def eksodos():
 @efarmogi.route('/favicon.ico')
 def favicon():
     return "", 204
+
+@efarmogi.route('/updb')
+def update_db_schema():
+    try:
+        with vasi.engine.connect() as conn:
+            # Προσθήκη fainologiko_stadio
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN fainologiko_stadio VARCHAR(50) DEFAULT 'Άγνωστο'"))
+            except Exception as e:
+                print(f"Column fainologiko_stadio exists or error: {e}")
+
+            # Προσθήκη topikes_ergasies
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN topikes_ergasies TEXT"))
+            except Exception as e:
+                print(f"Column topikes_ergasies exists or error: {e}")
+
+            # Προσθήκη teleftaia_enimerosi_ergasion
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN teleftaia_enimerosi_ergasion TIMESTAMP"))
+            except Exception as e:
+                print(f"Column teleftaia_enimerosi_ergasion exists or error: {e}")
+                
+            conn.commit()
+        return "Η βάση δεδομένων ενημερώθηκε επιτυχώς! Τώρα μπορείτε να πάτε στην <a href='/'>Αρχική</a>."
+    except Exception as e:
+        return f"Σφάλμα κατά την ενημέρωση: {e}", 500
 
 # Δημιουργία της βάσης δεδομένων
 with efarmogi.app_context():
