@@ -1,8 +1,11 @@
 import sqlite3
+import os
 
 def update_db():
-    print("🔄 Ενημέρωση βάσης δεδομένων...")
-    conn = sqlite3.connect('vasi_dedomenwn.db')
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_path = os.path.join(basedir, 'vasi_dedomenwn.db')
+    print(f"🔄 Ενημέρωση βάσης δεδομένων: {db_path}")
+    conn = sqlite3.connect(db_path)
     c = conn.cursor()
     
     # Προσθήκη στήλης topikes_ergasies
@@ -18,6 +21,13 @@ def update_db():
         print("✅ Προστέθηκε η στήλη 'teleftaia_enimerosi_ergasion'")
     except sqlite3.OperationalError:
         print("ℹ️ Η στήλη 'teleftaia_enimerosi_ergasion' υπάρχει ήδη")
+
+    # Προσθήκη στήλης fainologiko_stadio
+    try:
+        c.execute("ALTER TABLE ktimata ADD COLUMN fainologiko_stadio VARCHAR(50) DEFAULT 'Άγνωστο'")
+        print("✅ Προστέθηκε η στήλη 'fainologiko_stadio'")
+    except sqlite3.OperationalError:
+        print("ℹ️ Η στήλη 'fainologiko_stadio' υπάρχει ήδη")
 
     conn.commit()
     conn.close()

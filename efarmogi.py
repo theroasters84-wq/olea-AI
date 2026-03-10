@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
 import google.generativeai as genai
+from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 
@@ -41,6 +42,7 @@ genai.configure(api_key=os.getenv('AI_API_KEY'))
 
 # Αρχικοποίηση βάσης δεδομένων
 vasi = SQLAlchemy(efarmogi)
+migrate = Migrate(efarmogi, vasi)
 kryptografhsh = Bcrypt(efarmogi)
 diaxeiristh_syndeshs = LoginManager(efarmogi)
 diaxeiristh_syndeshs.login_view = 'eisodos'
@@ -79,6 +81,9 @@ class Ktima(vasi.Model):
     stremmata = vasi.Column(vasi.Float, default=0.0)
     arithmos_dentron = vasi.Column(vasi.Integer, default=0)
     fainologiko_stadio = vasi.Column(vasi.String(50), default='Άγνωστο')
+    nero_ph = vasi.Column(vasi.Float, nullable=True)
+    nero_agwgimotita = vasi.Column(vasi.Float, nullable=True)
+    ugrasies = vasi.relationship('KatagrafiUgrasias', backref='ktima', lazy=True, cascade="all, delete-orphan")
     arxeia_sygkomidis = vasi.relationship('ArxeioSygkomidis', backref='ktima', lazy=True, cascade="all, delete-orphan")
     topikes_ergasies = vasi.Column(vasi.Text)
     teleftaia_enimerosi_ergasion = vasi.Column(vasi.DateTime)
@@ -89,6 +94,18 @@ class Ktima(vasi.Model):
 
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"
+
+# Μοντέλο Καταγραφής Υγρασίας Εδάφους
+class KatagrafiUgrasias(vasi.Model):
+    __tablename__ = 'katagrafes_ugrasias'
+    
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
+    pososto = vasi.Column(vasi.Float, nullable=False)
+    imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+
+    def __repr__(self):
+        return f"Ugrasia('{self.pososto}%', '{self.imerominia}')"
 
 # Μοντέλο Εργασίας (Task Model)
 class Ergasia(vasi.Model):
@@ -230,6 +247,16 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     if ktima.klisi == 'Ρέμα/Κοιλότητα' and thermokrasia < 5 and mhnas in [12, 1, 2, 3]:
         protaseis.append("❄️ Ρέμα/Κοιλότητα: Αυξημένος κίνδυνος παγετού (frost pocket).")
 
+    # Water Quality Rules
+    if ktima.nero_agwgimotita and ktima.nero_agwgimotita > 3.0:
+        protaseis.append("⚠️ Τοξικότητα Αλάτων: Η αγωγιμότητα του νερού είναι πολύ υψηλή (>3.0 mS/cm). Κίνδυνος ξηράνσεων στα φύλλα. Συνιστάται έκπλυση εδάφους ή χρήση βελτιωτικών.")
+
+    # Soil Moisture Stress
+    if ktima.ugrasies:
+        latest_moisture = ktima.ugrasies[-1].pososto
+        if latest_moisture < 20 and mhnas in [6, 7, 8, 9]:
+            protaseis.append(f"💧 Έντονο Υδατικό Στρες: Η υγρασία εδάφους είναι στο {latest_moisture}%. Απαιτείται άμεση άρδευση για να μην συρρικνωθεί ο καρπός.")
+
     # Weather-Aware Fertilization (Months 2, 3, 4)
     if mhnas in [2, 3, 4]:
         if 'βροχή' not in perigrafi.lower() and 'βροχη' not in perigrafi.lower():
@@ -272,15 +299,12 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     
     # Άνθιση / Αρχές Καλοκαιριού (Μάιος, Ιούνιος)
     elif mhnas in [5, 6]:
-        protaseis.append("🌼 Περίοδος Άνθισης/Μούρου: ΑΠΑΓΟΡΕΥΕΤΑΙ η χρήση χαλκού (καίει το άνθος). Προγραμματίστε καταπολέμηση ζιζανίων.")
+        if ktima.fainologiko_stadio == 'Άνθιση':
+             protaseis.append("🌼 Περίοδος Άνθισης/Μούρου: ΑΠΑΓΟΡΕΥΕΤΑΙ η χρήση χαλκού (καίει το άνθος). Προγραμματίστε καταπολέμηση ζιζανίων.")
     
     # Καλοκαίρι (Ιούλιος, Αύγουστος)
     elif mhnas in [7, 8]:
         protaseis.append("☀️ Καλοκαίρι: Κρίσιμη περίοδος για άρδευση (πήξη πυρήνα).")
-        if 20 <= thermokrasia <= 30 and ygrasia > 50:
-            protaseis.append("🪰 Ιδανικές συνθήκες Δάκου: Προγραμματίστε δολωματικούς ψεκασμούς.")
-        if thermokrasia > 35:
-            protaseis.append("🔥 Καύσωνας: Ψεκασμός με Καολίνη για προστασία. Ο δάκος αδρανοποιείται.")
             
     # Φθινόπωρο / Χειμώνας (Σεπτέμβριος - Φεβρουάριος)
     elif mhnas in [9, 10, 11, 12, 1, 2]:
@@ -291,6 +315,13 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         days_since_boron = get_days_since_task('Βόριο')
         if days_since_boron is None or days_since_boron > 25:
             protaseis.append("📊 Επιστημονική Μνήμη: Η θερμοκρασία είναι < 12°C. Προτείνεται εφαρμογή Βορίου, καθώς η απορρόφησή του είναι μειωμένη σε χαμηλές θερμοκρασίες και μπορεί να χρειαστεί επανάληψη.")
+
+    # Smart Dacus Management (June - October)
+    if mhnas in [6, 7, 8, 9, 10]:
+        if thermokrasia >= 34:
+            protaseis.append("☀️ Καύσωνας & Δάκος: Η θερμοκρασία ξεπερνά τους 34°C. ΑΠΑΓΟΡΕΥΕΤΑΙ ο ψεκασμός. Ο πληθυσμός του δάκου καταρρέει φυσικά από τη ζέστη. Εξοικονομήστε χρήματα και φάρμακα!")
+        elif 20 <= thermokrasia <= 30 and ygrasia > 60 and ktima.fainologiko_stadio in ['Ανάπτυξη Καρπού', 'Ωρίμανση']:
+            protaseis.append("🪰 Κίνδυνος Δάκου: Οι τρέχουσες συνθήκες (δροσιά και υγρασία) είναι ιδανικές για δακοπροσβολή στον καρπό. Ελέγξτε άμεσα τις παγίδες σας και προγραμματίστε δολωματικό ψεκασμό αν τα επίπεδα είναι υψηλά.")
 
     # Adaptive Memory from Diagnosis
     if ktima.diagnoseis:
@@ -700,6 +731,45 @@ def oloklirosi_ergasias(ktima_id):
     vasi.session.commit()
     return redirect(url_for('arxikh'))
 
+@efarmogi.route('/prosthes_ugrasia/<int:ktima_id>', methods=['POST'])
+@login_required
+def prosthes_ugrasia(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
+    
+    try:
+        pososto = float(request.form.get('pososto'))
+        nea_ugrasia = KatagrafiUgrasias(ktima_id=ktima_id, pososto=pososto)
+        vasi.session.add(nea_ugrasia)
+        vasi.session.commit()
+        flash('Η μέτρηση υγρασίας καταγράφηκε.', 'success')
+    except ValueError:
+        flash('Μη έγκυρη τιμή.', 'danger')
+        
+    return redirect(url_for('arxikh'))
+
+@efarmogi.route('/enimerosi_nerou/<int:ktima_id>', methods=['POST'])
+@login_required
+def enimerosi_nerou(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
+    
+    try:
+        ph = request.form.get('nero_ph')
+        ec = request.form.get('nero_agwgimotita')
+        
+        if ph: ktima.nero_ph = float(ph)
+        if ec: ktima.nero_agwgimotita = float(ec)
+        
+        vasi.session.commit()
+        flash('Τα στοιχεία ποιότητας νερού ενημερώθηκαν.', 'success')
+    except ValueError:
+        flash('Μη έγκυρες τιμές.', 'danger')
+        
+    return redirect(url_for('arxikh'))
+
 @efarmogi.route('/prosthes_exodo/<int:ktima_id>', methods=['POST'])
 @login_required
 def prosthes_exodo(ktima_id):
@@ -991,14 +1061,25 @@ def update_db_schema():
             except Exception as e:
                 print(f"Column teleftaia_enimerosi_ergasion exists or error: {e}")
                 
+            # Προσθήκη nero_ph
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_ph FLOAT"))
+            except Exception as e:
+                print(f"Column nero_ph exists or error: {e}")
+
+            # Προσθήκη nero_agwgimotita
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_agwgimotita FLOAT"))
+            except Exception as e:
+                print(f"Column nero_agwgimotita exists or error: {e}")
+
+            # Create table katagrafes_ugrasias if not exists (Handled by create_all usually, but good for manual updb)
+            vasi.create_all()
+            
             conn.commit()
         return "Η βάση δεδομένων ενημερώθηκε επιτυχώς! Τώρα μπορείτε να πάτε στην <a href='/'>Αρχική</a>."
     except Exception as e:
         return f"Σφάλμα κατά την ενημέρωση: {e}", 500
-
-# Δημιουργία της βάσης δεδομένων
-with efarmogi.app_context():
-    vasi.create_all()
 
 if __name__ == '__main__':
     # This check prevents the scheduler from starting twice when debug=True, fixing the email spam bug.
