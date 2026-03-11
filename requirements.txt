@@ -2,6 +2,7 @@ Flask
 Flask-SQLAlchemy
 Flask-Bcrypt
 Flask-Login
+Flask-Migrate
 email_validator
 gunicorn
 requests
@@ -10,4 +11,3 @@ google-generativeai
 APScheduler
 Pillow
 psycopg2-binary
-Flask-Migrate

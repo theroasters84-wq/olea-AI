@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <title>Αναφορά Κτήματος - Olea AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #000; }
+        .header { border-bottom: 2px solid #4A7C59; padding-bottom: 10px; margin-bottom: 20px; }
+        .logo { color: #4A7C59; font-weight: bold; font-size: 24px; }
+        .section-title { background-color: #f8f9fa; padding: 5px 10px; border-left: 4px solid #4A7C59; margin-top: 20px; margin-bottom: 10px; font-weight: bold; }
+        .table-sm { font-size: 0.85em; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container" id="report-content">
+        <!-- Header -->
+        <div class="header d-flex justify-content-between align-items-center">
+            <div class="logo"><i class="fas fa-tree"></i> Olea AI</div>
+            <div class="text-end">
+                <h5 class="mb-0">Ημερολόγιο Αγρού & Αναφορά</h5>
+                <small class="text-muted">Ημερομηνία: {{ ktima.teleftaia_enimerosi_ergasion.strftime('%d/%m/%Y') if ktima.teleftaia_enimerosi_ergasion else datetime.now().strftime('%d/%m/%Y') }}</small>
+            </div>
+        </div>
+
+        <!-- Estate Info -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4>{{ ktima.onoma_ktimatos }}</h4>
+                <p class="mb-1"><strong><i class="fas fa-map-marker-alt"></i> Τοποθεσία:</strong> {{ ktima.geografiko_platos }}, {{ ktima.geografiko_mikos }}</p>
+                <p class="mb-1"><strong><i class="fas fa-ruler"></i> Έκταση:</strong> {{ ktima.stremmata }} στρ. | <strong>Δέντρα:</strong> {{ ktima.arithmos_dentron }}</p>
+                <p class="mb-0"><strong><i class="fas fa-tag"></i> Ποικιλία:</strong> {{ ktima.poikilia }} | <strong>Άρδευση:</strong> {{ ktima.ardefsi }}</p>
+            </div>
+        </div>
+
+        <!-- Tasks Table -->
+        <div class="section-title">Ιστορικό Εργασιών (Ημερολόγιο Αγρού)</div>
+        <table class="table table-bordered table-sm table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 15%">Ημ/νία</th>
+                    <th style="width: 25%">Εργασία</th>
+                    <th style="width: 40%">Λεπτομέρειες (Φάρμακα/Λιπάσματα)</th>
+                    <th style="width: 20%">Κατάσταση</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ergasia in ktima.ergasies|sort(attribute='imerominia', reverse=True) %}
+                {% if not ergasia.archived %}
+                <tr>
+                    <td>{{ ergasia.imerominia.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ ergasia.eidos_ergasias }}</td>
+                    <td>{{ ergasia.farmaka_lipasmata or '-' }}</td>
+                    <td>{{ ergasia.katastasi }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Financials Table -->
+        <div class="section-title">Οικονομικός Απολογισμός</div>
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Περιγραφή Εξόδου</th>
+                    <th class="text-end">Ποσό (€)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exodo in ktima.exoda %}
+                {% if not exodo.archived %}
+                <tr>
+                    <td>{{ exodo.perigrafi }}</td>
+                    <td class="text-end">{{ "%.2f"|format(exodo.poso) }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                <tr class="fw-bold table-light">
+                    <td>ΣΥΝΟΛΟ</td>
+                    <td class="text-end text-danger">{{ "%.2f"|format(ktima.synoliko_kostos) }}€</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="mt-5 text-center text-muted small">
+             <p>Δημιουργήθηκε αυτόματα από το <strong>Olea AI</strong> - Σύστημα Ευφυούς Γεωργίας.</p>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="text-center mt-4 no-print fixed-bottom bg-white border-top p-3 shadow">
+        <button onclick="downloadPDF()" class="btn btn-success btn-lg me-2"><i class="fas fa-file-download"></i> Λήψη PDF</button>
+        <button onclick="window.close()" class="btn btn-secondary btn-lg">Κλείσιμο</button>
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('report-content');
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     'Anafora_{{ ktima.onoma_ktimatos }}_{{ datetime.now().strftime("%Y%m%d") }}.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            // Hide buttons before printing
+            document.querySelector('.no-print').style.display = 'none';
+            html2pdf().set(opt).from(element).save().then(() => {
+                document.querySelector('.no-print').style.display = 'block';
+            });
+        }
+    </script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>

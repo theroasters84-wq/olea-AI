@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Αποθήκη - Olea AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background-color: #4A7C59; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="/"><i class="fas fa-tree me-2"></i> Olea AI</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="/">Αρχική</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/arxeio"><i class="fas fa-archive"></i> Αρχείο Σοδειών</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/apothiki"><i class="fas fa-boxes"></i> Αποθήκη</a></li>
+                </ul>
+                <span class="navbar-text me-3 text-white d-none d-lg-inline-block">{{ current_user.email }}</span>
+                <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <h3 class="mb-4" style="color: #386641;"><i class="fas fa-boxes"></i> Η Αποθήκη μου</h3>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card p-3">
+                    <h5 class="mb-3"><i class="fas fa-plus-circle text-success"></i> Προσθήκη Προϊόντος</h5>
+                    <form action="/apothiki" method="POST">
+                        <div class="mb-2">
+                            <select name="eidos" class="form-select" required>
+                                <option value="" disabled selected>Κατηγορία...</option>
+                                <option value="Φάρμακο">Φάρμακο</option>
+                                <option value="Λίπασμα">Λίπασμα</option>
+                                <option value="Εξοπλισμός">Εξοπλισμός (Αναλώσιμο)</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="onoma_proiontos" class="form-control" placeholder="Όνομα Προϊόντος (π.χ. Kocide)" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-7">
+                                <input type="number" step="0.01" name="posotita" class="form-control" placeholder="Ποσότητα" required>
+                            </div>
+                            <div class="col-5">
+                                <select name="monada_metrisis" class="form-select" required>
+                                    <option value="Λίτρα">Λίτρα (L)</option>
+                                    <option value="Κιλά">Κιλά (kg)</option>
+                                    <option value="Τεμάχια">Τεμάχια</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Αποθήκευση</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-3">
+                    <h5 class="mb-3"><i class="fas fa-list"></i> Απόθεμα</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Κατηγορία</th>
+                                    <th>Προϊόν</th>
+                                    <th>Υπόλοιπο</th>
+                                    <th class="text-end">Ενέργεια</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for proion in proionta %}
+                                <tr>
+                                    <td>
+                                        {% if proion.eidos == 'Φάρμακο' %}<span class="badge bg-danger">Φάρμακο</span>
+                                        {% elif proion.eidos == 'Λίπασμα' %}<span class="badge bg-info text-dark">Λίπασμα</span>
+                                        {% else %}<span class="badge bg-secondary">Εξοπλισμός</span>{% endif %}
+                                    </td>
+                                    <td class="fw-bold">{{ proion.onoma_proiontos }}</td>
+                                    <td>{{ proion.posotita }} {{ proion.monada_metrisis }}</td>
+                                    <td class="text-end">
+                                        <form action="{{ url_for('diagrafi_apothikis', item_id=proion.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το προϊόν (π.χ. άδειασε ή χύθηκε);');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Διαγραφή">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Η αποθήκη σας είναι άδεια.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -16,6 +16,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, pare_simvouli_ai, steile_email, get_epoxikes_ergasies
 import logging
+import warnings
+
+# Απόκρυψη προειδοποιήσεων deprecated της Google για καθαρό log
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
 
 # Φόρτωση μεταβλητών περιβάλλοντος
 # Ορίζουμε ρητά τη διαδρομή για το αρχείο .env στον ίδιο φάκελο με το script
@@ -61,6 +65,7 @@ class Xrhsths(vasi.Model, UserMixin):
     email = vasi.Column(vasi.String(120), unique=True, nullable=False)
     kwdikos = vasi.Column(vasi.String(60), nullable=False)
     ktimata = vasi.relationship('Ktima', backref='idioktitis', lazy=True)
+    apothiki_items = vasi.relationship('Apothiki', backref='idioktitis_apothikis', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"Xrhsths('{self.email}')"
@@ -101,6 +106,8 @@ class Ktima(vasi.Model):
     diagnoseis = vasi.relationship('Diagnosi', backref='ktima', lazy=True, cascade="all, delete-orphan")
     ergasies = vasi.relationship('Ergasia', backref='ktima', lazy=True, cascade="all, delete-orphan")
     exoda = vasi.relationship('Exodo', backref='ktima', lazy=True, cascade="all, delete-orphan")
+    gdd_accumulated = vasi.Column(vasi.Float, default=0.0)
+    poikilies_details = vasi.relationship('KtimaPoikilia', backref='ktima', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"
@@ -182,6 +189,25 @@ class AnalysiEdafous(vasi.Model):
     fwsforos = vasi.Column(vasi.Float)
     kalio = vasi.Column(vasi.Float)
     imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+
+# Μοντέλο για Πολλαπλές Ποικιλίες ανά Κτήμα
+class KtimaPoikilia(vasi.Model):
+    __tablename__ = 'ktima_poikilies'
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
+    poikilia_onoma = vasi.Column(vasi.String(100), nullable=False)
+    arithmos_dentron = vasi.Column(vasi.Integer, nullable=False)
+
+# Μοντέλο Αποθήκης
+class Apothiki(vasi.Model):
+    __tablename__ = 'apothiki'
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    xrhsths_id = vasi.Column(vasi.Integer, vasi.ForeignKey('xrhstes.id'), nullable=False)
+    eidos = vasi.Column(vasi.String(50), nullable=False)
+    onoma_proiontos = vasi.Column(vasi.String(100), nullable=False)
+    posotita = vasi.Column(vasi.Float, nullable=False)
+    monada_metrisis = vasi.Column(vasi.String(20), nullable=False)
+
 
 # Προληπτικός Σύμβουλος (Εγκυκλοπαίδεια)
 def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
@@ -321,6 +347,13 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         if teleytaia_analysi.ph and teleytaia_analysi.ph > 7.5:
             protaseis.append("⚠️ Υψηλό pH (>7.5): Κίνδυνος έλλειψης Βορίου και Ιχνοστοιχείων. Προτείνεται διαφυλλική εφαρμογή.")
 
+    # GDD Model Logic (Precision Agriculture)
+    gdd = ktima.gdd_accumulated or 0.0
+    if 140 <= gdd <= 160:
+        protaseis.append("🎯 Κρίσιμη Ειδοποίηση (Ακρίβεια GDD): Βάσει των Βαθμοημερών της περιοχής, ξεκινά η εκκόλαψη της ανθόβιας γενιάς του Πυρηνοτρήτη. Έχετε 3-4 ημέρες για το μέγιστο αποτέλεσμα ψεκασμού.")
+    elif 300 <= gdd <= 330:
+        protaseis.append("🎯 Κρίσιμη Ειδοποίηση (Ακρίβεια GDD): Έναρξη της καρπόβιας γενιάς του Πυρηνοτρήτη! Προστατέψτε τους νεαρούς καρπούς.")
+
     return protaseis
 
 def generate_local_tasks_via_ai(ktima):
@@ -366,6 +399,15 @@ def aytomatizomenos_elegxos():
                 prognosi = pare_prognosi_kairou(ktima.geografiko_platos, ktima.geografiko_mikos)
                 
                 if prognosi:
+                    # GDD Calculation (Simple Daily Accumulation)
+                    try:
+                        avg_temp = prognosi[0]['main']['temp']
+                        if avg_temp > 9.0:
+                            ktima.gdd_accumulated = (ktima.gdd_accumulated or 0.0) + (avg_temp - 9.0)
+                            vasi.session.commit()
+                    except Exception as e:
+                        print(f"GDD Error {ktima.id}: {e}")
+
                     apeiles = []
                     
                     # Έλεγχος κάθε 3ωρου διαστήματος
@@ -414,6 +456,19 @@ def arxikh():
 
         # Υπολογισμός Συνολικού Κόστους για εμφάνιση
         ktima.synoliko_kostos = sum(exodo.poso for exodo in ktima.exoda if not exodo.archived)
+
+        # Calculate days since last spray for PHI checking
+        latest_spray = None
+        for ergasia in ktima.ergasies:
+            if not ergasia.archived and 'Ψεκασμός' in ergasia.eidos_ergasias:
+                if latest_spray is None or ergasia.imerominia > latest_spray.imerominia:
+                    latest_spray = ergasia
+        
+        if latest_spray:
+            ktima.meres_apo_psekasmo = (now - latest_spray.imerominia).days
+        else:
+            ktima.meres_apo_psekasmo = None
+            
     return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
 
 @efarmogi.route('/ananeosi_ergasion/<int:ktima_id>')
@@ -599,7 +654,19 @@ def ektimisi_paragogis(ktima_id):
         try:
             img = PIL.Image.open(file)
             model = genai.GenerativeModel('gemini-1.5-flash')
-            prompt = f"Είσαι ειδικός γεωπόνος. Μετρα οσες ελιες βλεπεις στο κλαδι. Το κτημα εχει {ktima.arithmos_dentron} δεντρα. Κανε μια εκτιμηση για την συνολικη παραγωγη σε κιλα λαδιου. Δωσε μονο τον αριθμο και μια συντομη αιτιολογηση."
+            
+            # Κατασκευή πληροφοριών ποικιλίας για το AI
+            if ktima.poikilies_details:
+                poikilies_str = ", ".join([f"{p.poikilia_onoma} ({p.arithmos_dentron} δέντρα)" for p in ktima.poikilies_details])
+            else:
+                poikilies_str = ktima.poikilia
+
+            prompt = (f"Είσαι ειδικός γεωπόνος. Ανάλυσε την εικόνα (φορτίο καρπού στο κλαδί) και λάβε υπόψη τα εξής δεδομένα: "
+                      f"Σύνολο Δέντρων: {ktima.arithmos_dentron}. Ποικιλία/ες: {poikilies_str}. "
+                      f"Χρησιμοποίησε τη βάση γνώσεών σου για τη μέση απόδοση σε καρπό και την ελαιοπεριεκτικότητα (απόδοση σε λάδι) που χαρακτηρίζει αυτές τις ποικιλίες. "
+                      f"Συνδύασε την εικόνα (αν το κλαδί είναι φορτωμένο ή όχι) με τα αγρονομικά δεδομένα της ποικιλίας για να κάνεις μια ρεαλιστική εκτίμηση της συνολικής παραγωγής σε κιλά ελαιολάδου. "
+                      f"Δώσε το αποτέλεσμα και μια σύντομη αιτιολόγηση.")
+            
             response = model.generate_content([prompt, img])
             flash(f'Εκτίμηση Παραγωγής: {response.text}', 'info')
         except Exception as e:
@@ -945,12 +1012,34 @@ def prosthes_ktima():
     typos = request.form.get('typos_edafous')
     klisi = request.form.get('klisi')
     ardefsi = request.form.get('ardefsi')
-    poikilia = request.form.get('poikilia')
     stremmata = request.form.get('stremmata')
-    arithmos_dentron = request.form.get('arithmos_dentron')
+
+    # Νέα λογική για πολλαπλές ποικιλίες
+    poikilia_onomata = request.form.getlist('poikilia_onoma')
+    poikilia_dentra_str = request.form.getlist('poikilia_dentra')
     
     if onoma and mikos and platos:
         try:
+            # Υπολογισμός συνολικών δέντρων από τις υποκατηγορίες
+            total_trees = 0
+            poikilia_dentra = []
+            for s in poikilia_dentra_str:
+                try:
+                    num_trees = int(s)
+                    if num_trees > 0:
+                        total_trees += num_trees
+                        poikilia_dentra.append(num_trees)
+                except (ValueError, TypeError):
+                    poikilia_dentra.append(0)
+
+            # Καθορισμός της τιμής για την παλιά στήλη 'poikilia' για συμβατότητα
+            if len(poikilia_onomata) > 1:
+                display_poikilia = 'Ανάμεικτο'
+            elif len(poikilia_onomata) == 1:
+                display_poikilia = poikilia_onomata[0]
+            else:
+                display_poikilia = 'Δεν ορίστηκε'
+
             neo = Ktima(
                 onoma_ktimatos=onoma, 
                 geografiko_mikos=float(mikos), 
@@ -959,17 +1048,25 @@ def prosthes_ktima():
                 typos_edafous=typos,
                 klisi=klisi,
                 ardefsi=ardefsi,
-                poikilia=poikilia,
+                poikilia=display_poikilia,  # Αποθήκευση σύνοψης
                 stremmata=float(stremmata) if stremmata else 0.0,
-                arithmos_dentron=int(arithmos_dentron) if arithmos_dentron else 0
+                arithmos_dentron=total_trees # Αποθήκευση συνόλου
             )
             vasi.session.add(neo)
+            vasi.session.flush()  # Λήψη του ID για το νέο κτήμα
+
+            # Προσθήκη των αναλυτικών ποικιλιών
+            for i, onoma_poikilias in enumerate(poikilia_onomata):
+                if onoma_poikilias and poikilia_dentra[i] > 0:
+                    detail = KtimaPoikilia(ktima_id=neo.id, poikilia_onoma=onoma_poikilias, arithmos_dentron=poikilia_dentra[i])
+                    vasi.session.add(detail)
+
             vasi.session.commit()
             flash('Το κτήμα προστέθηκε επιτυχώς!', 'success')
         except ValueError:
-            flash('Σφάλμα στις συντεταγμένες.', 'danger')
+            flash('Σφάλμα στις συντεταγμένες ή τους αριθμούς.', 'danger')
     else:
-        flash('Συμπληρώστε όλα τα πεδία.', 'warning')
+        flash('Συμπληρώστε όλα τα βασικά πεδία.', 'warning')
         
     return redirect(url_for('arxikh'))
 
@@ -1012,6 +1109,8 @@ def lixi_xronias(ktima_id):
     # 4. Create New Post-Harvest Task
     nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός (Χαλκός Μετασυλλεκτικά)', katastasi='Εκκρεμεί', farmaka_lipasmata='Χαλκούχα (Απολύμανση πληγών συγκομιδής)', imerominia=datetime.now())
     vasi.session.add(nea_ergasia)
+
+    ktima.gdd_accumulated = 0.0
 
     vasi.session.commit()
     flash(f'Η χρονιά έκλεισε επιτυχώς! Απόδοση: {kila_ana_dentro:.2f} kg/δέντρο.', 'success')
@@ -1108,6 +1207,12 @@ def update_db_schema():
             except Exception as e:
                 print(f"Column nero_agwgimotita exists or error: {e}")
             
+            # Προσθήκη gdd_accumulated
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN gdd_accumulated FLOAT DEFAULT 0.0"))
+            except Exception as e:
+                print(f"Column gdd_accumulated exists or error: {e}")
+            
             # Create table analuseis_edafous if not exists
             vasi.create_all()
             
@@ -1138,6 +1243,44 @@ def ai_vision():
         return jsonify({'result': response.text})
     except Exception as e:
         return jsonify({'error': f"Σφάλμα AI: {str(e)}"}), 500
+
+@efarmogi.route('/ektyposi_anaforas/<int:ktima_id>')
+@login_required
+def ektyposi_anaforas(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
+    return render_template('anafora.html', ktima=ktima)
+
+@efarmogi.route('/apothiki', methods=['GET', 'POST'])
+@login_required
+def apothiki():
+    if request.method == 'POST':
+        eidos = request.form.get('eidos')
+        onoma_proiontos = request.form.get('onoma_proiontos')
+        try:
+            posotita = float(request.form.get('posotita'))
+        except (ValueError, TypeError):
+            flash('Μη έγκυρη ποσότητα.', 'danger')
+            return redirect(url_for('apothiki'))
+        monada_metrisis = request.form.get('monada_metrisis')
+        neo_proion = Apothiki(xrhsths_id=current_user.id, eidos=eidos, onoma_proiontos=onoma_proiontos, posotita=posotita, monada_metrisis=monada_metrisis)
+        vasi.session.add(neo_proion)
+        vasi.session.commit()
+        flash('Το προϊόν προστέθηκε στην αποθήκη!', 'success')
+        return redirect(url_for('apothiki'))
+    proionta = Apothiki.query.filter_by(xrhsths_id=current_user.id).all()
+    return render_template('apothiki.html', proionta=proionta)
+
+@efarmogi.route('/diagrafi_apothikis/<int:item_id>', methods=['POST'])
+@login_required
+def diagrafi_apothikis(item_id):
+    item = vasi.session.get(Apothiki, item_id)
+    if item and item.xrhsths_id == current_user.id:
+        vasi.session.delete(item)
+        vasi.session.commit()
+        flash('Το προϊόν διαγράφηκε από την αποθήκη.', 'success')
+    return redirect(url_for('apothiki'))
 
 # Start Scheduler for Gunicorn (Production)
 if not efarmogi.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":

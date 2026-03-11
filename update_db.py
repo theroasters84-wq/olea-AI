@@ -29,6 +29,13 @@ def update_db():
     except sqlite3.OperationalError:
         print("ℹ️ Η στήλη 'fainologiko_stadio' υπάρχει ήδη")
 
+    # Προσθήκη στήλης gdd_accumulated (ΝΕΟ)
+    try:
+        c.execute("ALTER TABLE ktimata ADD COLUMN gdd_accumulated FLOAT DEFAULT 0.0")
+        print("✅ Προστέθηκε η στήλη 'gdd_accumulated'")
+    except sqlite3.OperationalError:
+        print("ℹ️ Η στήλη 'gdd_accumulated' υπάρχει ήδη")
+
     conn.commit()
     conn.close()
     print("🚀 Η βάση δεδομένων είναι έτοιμη!")
