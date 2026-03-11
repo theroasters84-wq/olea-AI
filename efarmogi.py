@@ -1152,11 +1152,6 @@ def service_worker():
         self.addEventListener('install', (event) => {
             console.log('Service Worker installing.');
         });
-        self.addEventListener('fetch', (event) => {
-            // For now, just let the browser handle the fetch request normally.
-            // This avoids errors with special requests (e.g., cross-origin, only-if-cached).
-            return;
-        });
     """)
     response.headers['Content-Type'] = 'application/javascript'
     return response
@@ -1182,36 +1177,42 @@ def update_db_schema():
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN fainologiko_stadio VARCHAR(50) DEFAULT 'Άγνωστο'"))
             except Exception as e:
                 print(f"Column fainologiko_stadio exists or error: {e}")
+                conn.rollback()
 
             # Προσθήκη topikes_ergasies
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN topikes_ergasies TEXT"))
             except Exception as e:
                 print(f"Column topikes_ergasies exists or error: {e}")
+                conn.rollback()
 
             # Προσθήκη teleftaia_enimerosi_ergasion
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN teleftaia_enimerosi_ergasion TIMESTAMP"))
             except Exception as e:
                 print(f"Column teleftaia_enimerosi_ergasion exists or error: {e}")
+                conn.rollback()
                 
             # Προσθήκη nero_ph
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_ph FLOAT"))
             except Exception as e:
                 print(f"Column nero_ph exists or error: {e}")
+                conn.rollback()
 
             # Προσθήκη nero_agwgimotita
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_agwgimotita FLOAT"))
             except Exception as e:
                 print(f"Column nero_agwgimotita exists or error: {e}")
+                conn.rollback()
             
             # Προσθήκη gdd_accumulated
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN gdd_accumulated FLOAT DEFAULT 0.0"))
             except Exception as e:
                 print(f"Column gdd_accumulated exists or error: {e}")
+                conn.rollback()
             
             # Create table analuseis_edafous if not exists
             vasi.create_all()
