@@ -7,7 +7,7 @@ email_validator
 gunicorn
 requests
 python-dotenv
-google-generativeai
+google-genai
 APScheduler
 Pillow
 psycopg2-binary

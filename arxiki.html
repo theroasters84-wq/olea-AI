@@ -226,7 +226,7 @@
 
                         <!-- Κουμπί AI & Email -->
                         <div class="mt-2">
-                            <button class="btn btn-sm btn-outline-primary" onclick="rwtaAI('{{ ktima.id }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.kairos.perigrafi }}')"><i class="fas fa-robot"></i> Ρώτα το AI</button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="rwtaAI('{{ ktima.id }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.kairos.perigrafi }}', this)"><i class="fas fa-robot"></i> Ρώτα το AI</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="steileAnafora('{{ ktima.onoma_ktimatos }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.id }}')"><i class="fas fa-envelope"></i> Email</button>
                         </div>
                         <div id="ai-apantisi-{{ ktima.id }}" style="margin-top: 10px; font-style: italic; color: #006400;"></div>
@@ -737,9 +737,12 @@
 
         map.on('click', onMapClick);
 
-        async function rwtaAI(id, temp, hum, desc) {
+        async function rwtaAI(id, temp, hum, desc, btn) {
             const divApantisis = document.getElementById('ai-apantisi-' + id);
             divApantisis.innerText = "Ο AI Γεωπόνος σκέφτεται...";
+            
+            // Απενεργοποίηση κουμπιού για αποφυγή spam
+            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Φόρτωση...'; }
             
             try {
                 const response = await fetch('/rwta_ai/' + id, {
@@ -754,6 +757,11 @@
             } catch (error) {
                 divApantisis.innerText = "Σφάλμα επικοινωνίας με το AI.";
                 console.error('Error:', error);
+            } finally {
+                // Επαναφορά κουμπιού μετά από 5 δευτερόλεπτα (Rate Limit Protection)
+                if(btn) {
+                    setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-robot"></i> Ρώτα το AI'; }, 5000);
+                }
             }
         }
 

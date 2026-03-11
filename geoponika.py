@@ -2,8 +2,8 @@ import os
 import requests
 import smtplib
 from email.mime.text import MIMEText
-import google.generativeai as genai
 from datetime import datetime
+import time
 
 # Βοηθητική συνάρτηση για τον καιρό
 def pare_kairo(lat, lng):
@@ -61,16 +61,42 @@ def geoponikos_elegxos(thermokrasia, ygrasia):
 
 # AI Γεωπόνος
 def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
+    from core import ai_client, api_key_ai
+    
+    if not api_key_ai:
+        print("⚠️ AI API Key missing in geoponika.py call")
+        return "Το σύστημα AI δεν είναι ενεργοποιημένο (λείπει το κλειδί)."
+
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = (f"Είσαι ένας ειδικός γεωπόνος. Με θερμοκρασία {thermokrasia}°C, "
                   f"υγρασία {ygrasia}% και καιρό {perigrafi}, δώσε μια σύντομη συμβουλή "
                   f"(1-2 προτάσεις) για την καλλιέργεια της ελιάς.")
-        response = model.generate_content(prompt)
-        return response.text
+        
+        # Simple Retry Logic for Rate Limiting
+        for attempt in range(3):
+            try:
+                print(f"🔄 Προσπάθεια AI {attempt+1}/3...")
+                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                
+                if response and response.text:
+                    print("✅ Το AI απάντησε επιτυχώς!")
+                    return response.text
+                else:
+                    print(f"⚠️ Το AI επέστρεψε κενή απάντηση (Προσπάθεια {attempt+1})")
+
+            except Exception as e:
+                if "429" in str(e) or "quota" in str(e).lower():
+                    print(f"⏳ Rate Limit (429) - Αναμονή... ({e})")
+                    time.sleep(3 * (attempt + 1)) # Backoff: 3s, 6s, 9s
+                    continue
+                print(f"❌ Σφάλμα στη προσπάθεια {attempt+1}: {e}")
+                raise e
     except Exception as e:
-        print(f"Σφάλμα AI: {e}")
-        return "Δεν μπορώ να δώσω συμβουλή αυτή τη στιγμή."
+        print("\n" + "!"*50)
+        print(f"🔴 ΚΡΙΣΙΜΟ ΣΦΑΛΜΑ AI: {e}")
+        print("!"*50 + "\n")
+        # Επιστροφή φιλικού μηνύματος αντί για None/null
+        return "Το σύστημα AI είναι προσωρινά μη διαθέσιμο λόγω μεγάλου φόρτου. Δοκιμάστε ξανά σε λίγο."
 
 # Λειτουργία Αποστολής Email
 def steile_email(paraliptis, thema, keimeno, raise_exception=False):
