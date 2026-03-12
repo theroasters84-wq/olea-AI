@@ -62,7 +62,3 @@ if not efarmogi.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     scheduler.add_job(func=aytomatizomenos_elegxos_ndvi, trigger='cron', day_of_week='sun', hour=9, minute=0, args=[efarmogi.app_context])
     scheduler.start()
     print("Scheduler has been started for daily forecast checks at 08:00.")
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    efarmogi.run(host='0.0.0.0', port=port, debug=True)
