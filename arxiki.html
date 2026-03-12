@@ -209,6 +209,7 @@
                     <p class="text-muted mb-1 small">
                         � Στάδιο: <strong>{{ ktima.fainologiko_stadio }}</strong>
                         <span class="badge bg-danger ms-1" title="Βαθμοημέρες"><i class="fas fa-temperature-high"></i> {{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else '0' }} GDD</span>
+                        <span class="badge bg-danger ms-1" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#gddInfoModal" title="Τι είναι αυτό; Πατήστε για επεξήγηση."><i class="fas fa-temperature-high"></i> {{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else '0' }} GDD <i class="fas fa-question-circle text-white-50 ms-1"></i></span>
                     </p>
                     
                     <div class="mb-2">
@@ -440,6 +441,56 @@
                                         <small class="text-muted d-block mt-1">Τελευταία Μέτρηση Υγρασίας: <strong>{{ (ktima.ugrasies|last).pososto }}%</strong></small>
                                     {% endif %}
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Ποιότητας Νερού (Missing Fix) -->
+                <div class="modal fade" id="waterModal{{ ktima.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-info text-white">
+                                <h5 class="modal-title"><i class="fas fa-water"></i> Ποιότητα Νερού</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="{{ url_for('enimerosi_nerou', ktima_id=ktima.id) }}" method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label">pH Νερού</label>
+                                        <input type="number" step="0.1" name="nero_ph" class="form-control" value="{{ ktima.nero_ph if ktima.nero_ph else '' }}" placeholder="π.χ. 7.5">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Αγωγιμότητα (EC) (mS/cm)</label>
+                                        <input type="number" step="0.01" name="nero_agwgimotita" class="form-control" value="{{ ktima.nero_agwgimotita if ktima.nero_agwgimotita else '' }}" placeholder="π.χ. 1.2">
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-info text-white">Αποθήκευση</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Υγρασίας (Missing Fix) -->
+                <div class="modal fade" id="moistureModal{{ ktima.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title"><i class="fas fa-tint"></i> Καταγραφή Υγρασίας</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="{{ url_for('prosthes_ugrasia', ktima_id=ktima.id) }}" method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label">Ποσοστό Υγρασίας Εδάφους (%)</label>
+                                        <input type="number" step="0.1" name="pososto" class="form-control" required placeholder="π.χ. 25.0">
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Καταγραφή</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -765,6 +816,34 @@
                             <button type="submit" class="btn btn-success">Αποθήκευση Κτήματος</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GDD Explanation Modal -->
+    <div class="modal fade" id="gddInfoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-temperature-high"></i> Τι είναι τα GDD (Βαθμοημέρες);</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>GDD (Growing Degree Days) - Βαθμοημέρες Ανάπτυξης</strong></p>
+                    <p>Είναι το "βιολογικό ρολόι" του κτήματός σας. Τα δέντρα και τα έντομα δεν καταλαβαίνουν ημερομηνίες, αλλά αντιδρούν στη συσσώρευση θερμότητας.</p>
+                    <hr>
+                    <h6 class="text-danger"><i class="fas fa-shield-alt"></i> Γιατί είναι σημαντικό για εσάς;</h6>
+                    <ul>
+                        <li><strong>Ακρίβεια Ψεκασμών:</strong> Το Olea AI χρησιμοποιεί τα GDD για να προβλέψει πότε ΑΚΡΙΒΩΣ θα εκκολαφθούν τα αυγά εντόμων (όπως ο Πυρηνοτρήτης), ώστε να ψεκάσετε τη σωστή στιγμή.</li>
+                        <li><strong>Πρόβλεψη Σταδίων:</strong> Μας δείχνει αν η χρονιά είναι πρώιμη ή όψιμη.</li>
+                    </ul>
+                    <div class="alert alert-light border small text-muted">
+                        <em>Παράδειγμα: Αν έχουμε υψηλό GDD νωρίς, σημαίνει ότι η Άνθιση θα έρθει γρηγορότερα και πρέπει να ετοιμαστείτε νωρίτερα από πέρυσι.</em>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κατάλαβα</button>
                 </div>
             </div>
         </div>

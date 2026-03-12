@@ -878,53 +878,89 @@ def prosthes_ktima():
     return redirect(url_for('arxikh'))
 @efarmogi.route('/lixi_xronias/<int:ktima_id>', methods=['POST'])
 @login_required
-def lixi_xronias(ktima_id):sion.get(Ktima, ktima_id)
-    if not ktima or ktima.idiok
+def lixi_xronias(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "Μη εξουσιοδοτημένη ενέργεια", 403
 
     try:
         tonoi_paragogis = float(request.form.get('tonoi_paragogis', 0))
     except ValueError:
         flash('Παρακαλώ εισάγετε έγκυρο αριθμό τόνων.', 'danger')
         return redirect(url_for('arxikh'))
-    # 1. Calculate Statsuda
+    
+    # 1. Calculate Stats
+    kila_ana_dentro = 0
+    if ktima.arithmos_dentron > 0:
         kila_ana_dentro = (tonoi_paragogis * 1000) / ktima.arithmos_dentron
+    
+    synoliko_kostos = sum(exodo.poso for exodo in ktima.exoda if not exodo.archived)
 
     # 2. Create Archive Record
-   arxeio = ArxeioSygkomidi( l
+    arxeio = ArxeioSygkomidis(
+        ktima_id=ktima.id,
+        tonoi=tonoi_paragogis,
+        kila_ana_dentro=kila_ana_dentro,
+        synoliko_kostos=synoliko_kostos,
+        imerominia=datetime.now()
     )
     vasi.session.add(arxeio)
 
     # 3. Archive Active Items
     for ergasia in ktima.ergasies:
         ergasia.archived = True
-    for exodo in ktima.exoda
-ima.id, eidos_ergasias='Ψεκασμός (Χαλκός Μετασυλλεκτικά)', katastasi='Εκκρεμεί', farmaka_lipasmata='Χαλκούχα (Απολύμανση πληγών συγκομιδής)', imerominia=datetime.now())
+    for exodo in ktima.exoda:
+        exodo.archived = True
+    
+    # 4. Reset Season Tasks (Create post-harvest task)
+    nea_ergasia = Ergasia(
+        ktima_id=ktima.id, 
+        eidos_ergasias='Ψεκασμός (Χαλκός Μετασυλλεκτικά)', 
+        katastasi='Εκκρεμεί', 
+        farmaka_lipasmata='Χαλκούχα (Απολύμανση πληγών συγκομιδής)', 
+        imerominia=datetime.now()
+    )
     vasi.session.add(nea_ergasia)
 
     ktima.gdd_accumulated = 0.0
 
     vasi.session.commit()
     flash(f'Η χρονιά έκλεισε επιτυχώς! Απόδοση: {kila_ana_dentro:.2f} kg/δέντρο.', 'success')
+    return redirect(url_for('arxikh'))
 
 @efarmogi.route('/ping')
 def ping():
     return "Pong", 200
 
 @efarmogi.route('/icon.svg')
-svg = '''<svg xmlns="http://www.w3.og0gw00">
+def icon():
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
       <rect width="100" height="100" rx="22" fill="#4A7C59"/>
       <text x="50%" y="50%" font-size="55" text-anchor="middle" dominant-baseline="central">🫒</text>
-    return Response(svg, mime/svg+xml')
+    </svg>'''
+    return Response(svg, mimetype='image/svg+xml')
 
-@efarmogi.route('/manifest.json')a()
+@efarmogi.route('/manifest.json')
+def manifest():
+    return jsonify({
+        "name": "Olea AI",
         "short_name": "Olea",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#f4f7f6",
         "theme_color": "#386641",
-        "icons"     s": "any",
+        "icons": [
+            {
+                "src": "/icon.svg",
+                "sizes": "192x192",
+                "type": "image/svg+xml"
+            },
+            {
+                "src": "/icon.svg",
+                "sizes": "512x512",
                 "type": "image/svg+xml"
             }
+        ]
     })
 
 @efarmogi.route('/sw.js')
@@ -932,6 +968,9 @@ def service_worker():
     response = make_response("""
         self.addEventListener('install', (event) => {
             console.log('Service Worker installing.');
+        });
+        self.addEventListener('fetch', (event) => {
+            // Placeholder for caching logic
         });
     """)
     response.headers['Content-Type'] = 'application/javascript'
