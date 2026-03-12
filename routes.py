@@ -770,54 +770,111 @@ def prosthes_ktima():
     
     if onoma and mikos and platos:
         try:
-            # tal_trees = 0
+            # --- PREPARATION ---
+            total_trees = 0
             poikilia_dentra = []
             for s in poikilia_dentra_str:
                 try:
                     num_trees = int(s)
-                    totError, ypi.a
+                    total_trees += num_trees if num_trees > 0 else 0
+                    poikilia_dentra.append(num_trees if num_trees > 0 else 0)
+                except (ValueError, TypeError):
+                    poikilia_dentra.append(0)
 
             display_poikilia = 'Ανάμεικτο' if len(poikilia_onomata) > 1 else (poikilia_onomata[0] if len(poikilia_onomata) == 1 else 'Δεν ορίστηκε')
 
+            # --- GDD SMART INIT ---
             initial_gdd = 0.0
-
-                if api_key_ai:           prompt = f"Cal 
+            now = datetime.now()
+            if now.month > 1:
+                try:
+                    if api_key_ai:
+                        prompt = f"Calculate GDD (Base 9.0°C) for Lat {platos}, Lon {mikos} from Jan 1st to today ({now.strftime('%d/%m')}). Return ONLY the integer value."
+                        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                        if response and response.text:
+                            digits = re.findall(r'\d+', response.text)
+                            if digits:
+                                initial_gdd = float(digits[0])
+                except Exception as e:
                     print(f"GDD Auto-Init Failed: {e}")
+                    estimations = {1: 0, 2: 15, 3: 60, 4: 150, 5: 320, 6: 600, 7: 950, 8: 1350, 9: 1650}
                     initial_gdd = float(estimations.get(now.month, 0))
 
             # --- BUILD OBJECTS IN MEMORY ---
             neo = Ktima(
                 onoma_ktimatos=onoma, geografiko_mikos=float(mikos), geografiko_platos=float(platos), idioktitis=current_user,
-                typos_edafous=typs, klisi=kliayldikiin
+                typos_edafous=typos, klisi=klisi, ardefsi=ardefsi, poikilia=display_poikilia,
+                stremmata=float(stremmata) if stremmata else 0.0,
+                arithmos_dentron=total_trees, gdd_accumulated=initial_gdd, polygon_geojson=polygon_geojson,
+                ilikia_dentron=ilikia_dentron, puknotita_dentron=puknotita_dentron, diacheirisi_edafous=diacheirisi_edafous
+            )
+            vasi.session.add(neo)
+            vasi.session.flush()  # Flush to get neo.id for relations
+
+            for i, onoma_poikilias in enumerate(poikilia_onomata):
+                if onoma_poikilias and i < len(poikilia_dentra) and poikilia_dentra[i] > 0:
+                    detail = KtimaPoikilia(ktima_id=neo.id, poikilia_onoma=onoma_poikilias, arithmos_dentron=poikilia_dentra[i])
+                    vasi.session.add(detail)
+
+            # --- AUTO NDVI ANALYSIS (RUNS BEFORE COMMIT) ---
+            if polygon_geojson and polygon_geojson.strip() != "":
+                try:
+                    import json, requests, io
                     from google import genai
 
-                    geo_data = json.loads(polygon_geojson_str)
+                    geo_data = json.loads(polygon_geojson)
                     api_key = os.getenv('AGROMONITORING_API_KEY')
                     if api_key:
                         poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
                         poly_data = {"name": f"Ktima_{neo.id}_{int(datetime.now().timestamp())}", "geo_json": geo_data}
                         poly_res = requests.post(poly_url, json=poly_data)
                         
-                   p t and_time - (365 * 24 * 60 * 60)
+                        poly_id = None
+                        if poly_res.status_code in [200, 201]: poly_id = poly_res.json().get('id')
+                        elif poly_res.status_code == 422 and 'duplicated' in poly_res.text:
+                            match = re.search(r"polygon '([a-f0-9]+)'", poly_res.text)
+                            if match: poly_id = match.group(1)
+                        
+                        if poly_id:
+                            neo.agromonitoring_poly_id = poly_id # Update object in session
+                            end_time = int(datetime.now().timestamp())
+                            start_time = end_time - (365 * 24 * 60 * 60)
                             img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={poly_id}&appid={api_key}"
                             img_res = requests.get(img_url)
-                            = "Ο δορυφορικός χάρτης NDVI αναλύθηκε επιτυχώς κατά την δημιουργία του κτήματος."
-                 :                         img_response = requests.get(ndvi_url)
+                            
+                            if img_res.status_code == 200 and img_res.json():
+                                for img_data in reversed(img_res.json()):
+                                    ndvi_url = img_data.get('image', {}).get('ndvi')
+                                    if ndvi_url:
+                                        if ndvi_url.startswith('http:'): ndvi_url = ndvi_url.replace('http:', 'https:')
+                                        ai_message = "Ο δορυφορικός χάρτης NDVI αναλύθηκε επιτυχώς κατά την δημιουργία του κτήματος."
+                                        try:
+                                            img_response = requests.get(ndvi_url)
                                             if img_response.status_code == 200:
                                                 image_file = PIL.Image.open(io.BytesIO(img_response.content))
-                                 κευμένος γεωπόνος. Αναλύεις ένα ΝΕΟ κτήμα. Ηλικία δέντρων: {neo.ilikia_dentron}, Πυκνότητα: {neo.puknotita_dentron}, Έδαφος: {neo.diacheirisi_edafous}. Δες τον χάρτη NDVI και γράψε μια πολύ σύντομη, επαγγελματική αρχική εκτίμηση υγείας (1-2 προτάσεις)."
+                                                client = genai.Client(api_key=api_key_ai)
+                                                prompt = f"Είσαι εξειδικευμένος γεωπόνος. Αναλύεις ένα ΝΕΟ κτήμα. Ηλικία δέντρων: {neo.ilikia_dentron}, Πυκνότητα: {neo.puknotita_dentron}, Έδαφος: {neo.diacheirisi_edafous}. Δες τον χάρτη NDVI και γράψε μια πολύ σύντομη, επαγγελματική αρχική εκτίμηση υγείας (1-2 προτάσεις)."
                                                 response = client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                                                 ai_message = response.text.strip()
+                                        except Exception as e:
                                             print(f"Auto NDVI Vision Error: {e}")
                                         
                                         nea_diagnosi = Diagnosi(ktima_id=neo.id, apotelesma=f"🛰️ Αυτόματη Αρχική Διάγνωση (NDVI): {ai_message}", imerominia=datetime.now())
-                                        vasi
+                                        vasi.session.add(nea_diagnosi)
+                                        break
+                except Exception as e:
+                    print(f"Auto NDVI General Error: {e}") # Log error, but don't stop the whole process
 
-            # All objects (Ktima, KtimaPoikilia, Diagnosi) are saved in one single, safe transaction.
-            vasi.session.commit() flash('Το κτήμα προστέθηκε επιτυχώς!', 'success')
+            # --- ATOMIC COMMIT ---
+            vasi.session.commit()
+            flash('Το κτήμα προστέθηκε επιτυχώς!', 'success')
         except Exception as e:
             vasi.session.rollback()
-            print(f"DB Error: {
+            print(f"DB Error: {e}")
+            flash(f'Προέκυψε σφάλμα κατά την αποθήκευση: {e}', 'danger')
+    else:
+        flash('Συμπληρώστε όλα τα βασικά πεδία.', 'warning')
+        
     return redirect(url_for('arxikh'))
 @efarmogi.route('/lixi_xronias/<int:ktima_id>', methods=['POST'])
 @login_required
