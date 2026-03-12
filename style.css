@@ -67,6 +67,7 @@ h1, h2, h3, h4, h5, h6 {
 /* --- Layout Κτημάτων: Mobile Swipe & Desktop Grid --- */
 .ktimata-wrapper {
     display: flex;
+    flex-wrap: nowrap; /* Απαγορεύει την αναδίπλωση - ΜΟΝΟ οριζόντιο swipe */
     overflow-x: auto;
     scroll-snap-type: x mandatory; /* Ενεργοποίηση "μαγνητικού" swipe */
     gap: 15px;
@@ -75,7 +76,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .ktimata-responsive-card {
-    min-width: 90vw; /* Στο κινητό πιάνει το 90% του πλάτους για να φαίνεται η επόμενη κάρτα */
+    flex: 0 0 92vw; /* Κλειδωμένο πλάτος στο 92% της οθόνης - Δεν συμπιέζεται */
+    width: 92vw;    /* Εξασφάλιση σωστού πλάτους */
     scroll-snap-align: center; /* Κεντράρισμα μετά το swipe */
 }
 
@@ -88,7 +90,7 @@ h1, h2, h3, h4, h5, h6 {
         scroll-snap-type: none;
     }
     .ktimata-responsive-card {
-        min-width: auto;
+        flex: unset; /* Επαναφορά για το Grid */
         width: 100%;
     }
 }
