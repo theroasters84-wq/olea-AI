@@ -63,3 +63,32 @@ h1, h2, h3, h4, h5, h6 {
     70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
 }
+
+/* --- Layout Κτημάτων: Mobile Swipe & Desktop Grid --- */
+.ktimata-wrapper {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory; /* Ενεργοποίηση "μαγνητικού" swipe */
+    gap: 15px;
+    padding-bottom: 10px; /* Χώρος για τυχόν scrollbar */
+    -webkit-overflow-scrolling: touch; /* Smooth scroll για iOS */
+}
+
+.ktimata-responsive-card {
+    min-width: 90vw; /* Στο κινητό πιάνει το 90% του πλάτους για να φαίνεται η επόμενη κάρτα */
+    scroll-snap-align: center; /* Κεντράρισμα μετά το swipe */
+}
+
+/* Για οθόνες υπολογιστή (Desktop/Tablet) αλλάζουμε σε Πλέγμα */
+@media (min-width: 992px) {
+    .ktimata-wrapper {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); /* Αυτόματες στήλες */
+        overflow-x: visible;
+        scroll-snap-type: none;
+    }
+    .ktimata-responsive-card {
+        min-width: auto;
+        width: 100%;
+    }
+}
