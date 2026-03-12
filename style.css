@@ -76,8 +76,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .ktimata-responsive-card {
-    flex: 0 0 92vw; /* Κλειδωμένο πλάτος στο 92% της οθόνης - Δεν συμπιέζεται */
-    width: 92vw;    /* Εξασφάλιση σωστού πλάτους */
+    flex: 0 0 90vw; /* Σταθερό πλάτος στο 90% της οθόνης */
+    min-width: 90vw; /* Απαραίτητο: Απαγορεύει τη συμπίεση της κάρτας */
+    width: 90vw;
     scroll-snap-align: center; /* Κεντράρισμα μετά το swipe */
 }
 
@@ -93,4 +94,20 @@ h1, h2, h3, h4, h5, h6 {
         flex: unset; /* Επαναφορά για το Grid */
         width: 100%;
     }
+}
+
+/* --- Γενική Βελτιστοποίηση για Κινητά (Mobile Optimization) --- */
+@media (max-width: 768px) {
+    body {
+        -webkit-text-size-adjust: 100%; /* Αποφυγή αυτόματης μεγέθυνσης κειμένου στο iOS */
+        -webkit-tap-highlight-color: transparent; /* Αφαίρεση γκρι πλαισίου στο πάτημα */
+    }
+    
+    .container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    /* Αποφυγή zoom στα inputs σε iPhone όταν πατάς να γράψεις */
+    input, select, textarea { font-size: 16px !important; }
 }
