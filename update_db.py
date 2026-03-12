@@ -32,6 +32,22 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'fainologiko_stadio' υπάρχει ήδη ({e})")
                 conn.rollback()
 
+            # Προσθήκη στήλης nero_ph
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_ph FLOAT"))
+                print("✅ Προστέθηκε η στήλη 'nero_ph'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'nero_ph' υπάρχει ήδη ({e})")
+                conn.rollback()
+
+            # Προσθήκη στήλης nero_agwgimotita
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN nero_agwgimotita FLOAT"))
+                print("✅ Προστέθηκε η στήλη 'nero_agwgimotita'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'nero_agwgimotita' υπάρχει ήδη ({e})")
+                conn.rollback()
+
             # Προσθήκη στήλης gdd_accumulated (ΝΕΟ)
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN gdd_accumulated FLOAT DEFAULT 0.0"))
@@ -54,6 +70,14 @@ def update_db():
                 print("✅ Προστέθηκε η στήλη 'ai_sumvouli_date'")
             except Exception as e:
                 print(f"ℹ️ Η στήλη 'ai_sumvouli_date' υπάρχει ήδη ({e})")
+                conn.rollback()
+
+            # Προσθήκη στήλης polygon_geojson
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN polygon_geojson TEXT"))
+                print("✅ Προστέθηκε η στήλη 'polygon_geojson'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'polygon_geojson' υπάρχει ήδη ({e})")
                 conn.rollback()
 
             conn.commit()

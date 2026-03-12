@@ -52,9 +52,15 @@ class Ktima(vasi.Model):
     ergasies = vasi.relationship('Ergasia', backref='ktima', lazy=True, cascade="all, delete-orphan")
     exoda = vasi.relationship('Exodo', backref='ktima', lazy=True, cascade="all, delete-orphan")
     gdd_accumulated = vasi.Column(vasi.Float, default=0.0)
+    polygon_geojson = vasi.Column(vasi.Text) # Αποθήκευση συντεταγμένων πολυγώνου
     poikilies_details = vasi.relationship('KtimaPoikilia', backref='ktima', lazy=True, cascade="all, delete-orphan")
     ai_sumvouli_cache = vasi.Column(vasi.Text) # Αποθήκευση απάντησης AI
     ai_sumvouli_date = vasi.Column(vasi.DateTime) # Πότε ρωτήσαμε τελευταία φορά
+    agromonitoring_poly_id = vasi.Column(vasi.String(100), nullable=True) # ID πολυγώνου στο Agromonitoring
+    ilikia_dentron = vasi.Column(vasi.String(50), default='Άγνωστη')
+    puknotita_dentron = vasi.Column(vasi.String(50), default='Κανονική')
+    diacheirisi_edafous = vasi.Column(vasi.String(50), default='Άγνωστη')
+    ekkremis_erotisi_ai = vasi.Column(vasi.Text, nullable=True)
 
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"

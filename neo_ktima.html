@@ -34,9 +34,9 @@
         // Αρχικοποίηση χάρτη (Κέντρο: Ελλάδα)
         var map = L.map('map').setView([39.0742, 21.8243], 6);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri',
+            maxZoom: 19
         }).addTo(map);
 
         var marker;

@@ -120,10 +120,13 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         elif days_since_boron is None or days_since_boron > 25:
             protaseis.append("📊 Επιστημονική Μνήμη: Η θερμοκρασία είναι < 12°C. Προτείνεται εφαρμογή Βορίου, καθώς η απορρόφησή του είναι μειωμένη σε χαμηλές θερμοκρασίες και μπορεί να χρειαστεί επανάληψη.")
 
-    # Spray Countdown
+    # Spray Countdown & Reminder
     days_since_spray, _ = get_last_task_info('Ψεκασμός')
-    if days_since_spray == 0:
-        protaseis.append("⏳ Επόμενος δυνατός ψεκασμός μετά από 10-12 ημέρες (ανάλογα με τις βροχοπτώσεις).")
+    if days_since_spray is not None:
+        if days_since_spray <= 12:
+            protaseis.append(f"⏳ Επόμενος ψεκασμός σε ~{12 - days_since_spray} ημέρες.")
+        else:
+            protaseis.append("🎯 Επαναληπτικός Ψεκασμός: Έχουν περάσει πάνω από 12 ημέρες. Απαιτείται νέα προληπτική κάλυψη.")
 
     # Smart Dacus Management (June - October)
     if mhnas in [6, 7, 8, 9, 10]:
@@ -192,6 +195,7 @@ def generate_local_tasks_via_ai(ktima):
         return tasks_str.split(',')
     except Exception as e:
         print(f"AI Task Error: {e}")
+        vasi.session.rollback()
         # Fallback to static logic if AI fails
         return get_epoxikes_ergasies(now.month)
 
@@ -206,14 +210,21 @@ def aytomatizomenos_elegxos():
                 prognosi = pare_prognosi_kairou(ktima.geografiko_platos, ktima.geografiko_mikos)
                 
                 if prognosi:
-                    # GDD Calculation (Simple Daily Accumulation)
+                    # GDD Calculation (Improved: (Tmax + Tmin) / 2 - Tbase)
                     try:
-                        avg_temp = prognosi[0]['main']['temp']
-                        if avg_temp > 9.0:
-                            ktima.gdd_accumulated = (ktima.gdd_accumulated or 0.0) + (avg_temp - 9.0)
+                        # Παίρνουμε τις προβλέψεις του επόμενου 24ωρου (8 διαστήματα των 3 ωρών)
+                        next_24h = prognosi[:8]
+                        temps = [item['main']['temp'] for item in next_24h]
+                        t_max = max(temps)
+                        t_min = min(temps)
+                        
+                        avg_daily_temp = (t_max + t_min) / 2
+                        if avg_daily_temp > 9.0:
+                            ktima.gdd_accumulated = (ktima.gdd_accumulated or 0.0) + (avg_daily_temp - 9.0)
                             vasi.session.commit()
                     except Exception as e:
                         print(f"GDD Error {ktima.id}: {e}")
+                        vasi.session.rollback()
 
                     apeiles = []
                     
