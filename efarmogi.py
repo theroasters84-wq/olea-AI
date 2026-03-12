@@ -55,7 +55,7 @@ def aytomatizomenos_elegxos_ndvi(app_context):
                 print(f"Background NDVI Error for Ktima {ktima.id}: {e}")
 
 # Start Scheduler for Gunicorn (Production)
-if not efarmogi.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+if (not efarmogi.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true") and not os.environ.get("SKIP_SCHEDULER"):
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=aytomatizomenos_elegxos, trigger="cron", hour=8, minute=0)
     # Προσθήκη εβδομαδιαίου ελέγχου Δορυφόρου

@@ -1,3 +1,5 @@
+import os
+os.environ['SKIP_SCHEDULER'] = 'true' # Prevent scheduler from starting during import
 from sqlalchemy import text
 from core import vasi, efarmogi
 
