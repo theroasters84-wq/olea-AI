@@ -1,0 +1,104 @@
+<!-- Modal Οικονομικών -->
+<div class="modal fade" id="modalOikonomika{{ ktima.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">💶 Οικονομικά Στοιχεία</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Οικονομικά -->
+                <h5 style="color: #c0392b;"><i class="fas fa-coins"></i> Οικονομικά</h5>
+                <form action="{{ url_for('core_app.prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;">
+                    <div class="input-group input-group-sm mb-1">
+                        <input type="text" name="perigrafi" class="form-control" placeholder="Περιγραφή" required>
+                        <input type="number" name="poso" class="form-control" placeholder="€" step="0.01" required>
+                        <button class="btn btn-danger" type="submit"><i class="fas fa-plus"></i></button>
+                    </div>
+                </form>
+                
+                <!-- Chart Canvas -->
+                <div style="position: relative; height:200px; margin-bottom: 1rem;">
+                    <canvas id="chart{{ ktima.id }}"></canvas>
+                </div>
+
+                <h6 class="mt-3">Αναλυτικά Έξοδα:</h6>
+                {% if ktima.exoda %}
+                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; margin-bottom: 10px;">
+                        <ul class="list-group">
+                            {% for exodo in ktima.exoda|reverse %}
+                              {% if not exodo.archived %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span>{{ exodo.perigrafi }}</span><br>
+                                        <small class="text-muted">{{ exodo.imerominia.strftime('%d/%m/%Y') }}</small>
+                                    </div>
+                                    <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(exodo.poso) }}€</span>
+                                </li>
+                              {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <p style="font-size: 0.9em; font-style: italic;">Δεν υπάρχουν καταγεγραμμένα έξοδα.</p>
+                {% endif %}
+
+                <div style="background-color: #fff; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                    <strong>Συνολικό Κόστος: </strong> 
+                    <span style="color: #c0392b; font-size: 1.1em;">{{ "%.2f"|format(ktima.synoliko_kostos) }}€</span>
+                </div>
+
+                <hr>
+                <!-- PDF Report Button -->
+                <div class="d-grid gap-2 mb-4">
+                    <a href="{{ url_for('core_app.ektyposi_anaforas', ktima_id=ktima.id) }}" target="_blank" class="btn btn-outline-dark">
+                        <i class="fas fa-file-pdf text-danger"></i> Εξαγωγή Αναφοράς PDF (Πιστοποίηση)
+                    </a>
+                </div>
+
+                <!-- Ολοκλήρωση Χρονιάς -->
+                <h5 style="color: #d35400;"><i class="fas fa-tractor"></i> Ολοκλήρωση Χρονιάς</h5>
+                
+                {% if ktima.meres_apo_psekasmo is not none and ktima.meres_apo_psekasmo < 21 %}
+                <div class="alert alert-danger py-1 px-2 mb-2" style="font-size: 0.85em;">
+                    <strong><i class="fas fa-skull-crossbones"></i> Προσοχή:</strong> Το κτήμα βρίσκεται σε περίοδο αναμονής PHI. Απομένουν {{ 21 - ktima.meres_apo_psekasmo }} ημέρες για ασφαλή συγκομιδή.
+                </div>
+                {% endif %}
+
+                <form action="{{ url_for('core_app.lixi_xronias', ktima_id=ktima.id) }}" method="POST" class="mb-3" onsubmit="{% if ktima.meres_apo_psekasmo is not none and ktima.meres_apo_psekasmo < 21 %}return confirm('🛑 ΑΠΑΓΟΡΕΥΣΗ ΣΥΓΚΟΜΙΔΗΣ: Έχουν περάσει μόνο {{ ktima.meres_apo_psekasmo }} από τις 21 ημέρες ασφαλείας του τελευταίου ψεκασμού. Αν μαζέψετε τώρα, το ελαιόλαδο θα βγει ακατάλληλο/τοξικό. Είστε ΣΙΓΟΥΡΟΙ ότι θέλετε να προχωρήσετε;');{% else %}return confirm('ΠΡΟΣΟΧΗ: Αυτή η ενέργεια θα αρχειοθετήσει όλα τα τρέχοντα έξοδα και εργασίες. Είστε σίγουροι;');{% endif %}">
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="tonoi_paragogis" class="form-control" placeholder="Τόνοι Παραγωγής" step="0.01" required>
+                        <button class="btn btn-warning" type="submit"><i class="fas fa-archive"></i> Αρχειοθέτηση</button>
+                    </div>
+                </form>
+
+                <!-- Ιστορικό -->
+                {% if ktima.arxeia_sygkomidis %}
+                <h6 class="mt-3"><i class="fas fa-book"></i> Ιστορικό Προηγούμενων Ετών</h6>
+                <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.8em;">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Ημ/νία</th>
+                                <th>Τόνοι</th>
+                                <th>Kg/Δέντρο</th>
+                                <th>Κόστος</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for arxeio in ktima.arxeia_sygkomidis|reverse %}
+                            <tr>
+                                <td>{{ arxeio.imerominia.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ arxeio.tonoi }}</td>
+                                <td>{{ "%.1f"|format(arxeio.kila_ana_dentro) }}</td>
+                                <td>{{ "%.2f"|format(arxeio.synoliko_kostos) }}€</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

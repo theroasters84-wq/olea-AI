@@ -1,0 +1,29 @@
+<!-- Share Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="shareModalLabel"><i class="fas fa-share-alt"></i> Κοινοποίηση Olea AI</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="text-muted mb-4">Μοιραστείτε την εφαρμογή με φίλους ή συνεργάτες!</p>
+                
+                <button id="btnShareNative" class="btn btn-success w-100 mb-3 btn-lg shadow-sm">
+                    <i class="fas fa-paper-plane"></i> Αποστολή Link (Viber, SMS...)
+                </button>
+
+                <button id="btnShowQR" class="btn btn-outline-secondary w-100 mb-3 btn-lg">
+                    <i class="fas fa-qrcode"></i> Εμφάνιση QR Code
+                </button>
+
+                <div id="qrContainer" class="mt-4" style="display: none;">
+                    <div class="p-3 bg-light rounded border d-inline-block">
+                        <img id="qrImage" src="" alt="QR Code" class="img-fluid rounded" style="max-width: 200px;">
+                    </div>
+                    <p class="text-muted mt-2 small"><i class="fas fa-camera"></i> Σκανάρετε με την κάμερα του κινητού</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

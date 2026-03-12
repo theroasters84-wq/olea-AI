@@ -1,0 +1,56 @@
+<!-- Modal Επεξεργασίας Ποικιλιών & Δέντρων -->
+<div class="modal fade" id="modalEditVarieties{{ ktima.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-tree"></i> Διαχείριση Δέντρων</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('core_app.epeksergasia_poikiliwn', ktima_id=ktima.id) }}" method="POST">
+                    <div id="edit-poikilies-container-{{ ktima.id }}">
+                        {% if ktima.poikilies_details %}
+                            {% for detail in ktima.poikilies_details %}
+                                <div class="input-group input-group-sm mb-2">
+                                    <select name="poikilia_onoma" class="form-select" required>
+                                        <option value="Κορωνέικη" {% if detail.poikilia_onoma == 'Κορωνέικη' %}selected{% endif %}>Κορωνέικη</option>
+                                        <option value="Καλαμών" {% if detail.poikilia_onoma == 'Καλαμών' %}selected{% endif %}>Καλαμών</option>
+                                        <option value="Χαλκιδικής" {% if detail.poikilia_onoma == 'Χαλκιδικής' %}selected{% endif %}>Χαλκιδικής</option>
+                                        <option value="Μανάκι" {% if detail.poikilia_onoma == 'Μανάκι' %}selected{% endif %}>Μανάκι</option>
+                                        <option value="Αθηνοελιά" {% if detail.poikilia_onoma == 'Αθηνοελιά' %}selected{% endif %}>Αθηνοελιά</option>
+                                        <option value="Μεγαρίτικη" {% if detail.poikilia_onoma == 'Μεγαρίτικη' %}selected{% endif %}>Μεγαρίτικη</option>
+                                        <option value="Άλλη" {% if detail.poikilia_onoma == 'Άλλη' %}selected{% endif %}>Άλλη</option>
+                                    </select>
+                                    <input type="number" name="poikilia_dentra" class="form-control" value="{{ detail.arithmos_dentron }}" required>
+                                    <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove();"><i class="fas fa-times"></i></button>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Fallback αν δεν υπάρχουν λεπτομέρειες -->
+                            <div class="input-group input-group-sm mb-2">
+                                <select name="poikilia_onoma" class="form-select" required>
+                                    <option value="" disabled selected>Επιλέξτε ποικιλία...</option>
+                                    <option value="Κορωνέικη">Κορωνέικη</option>
+                                    <option value="Καλαμών">Καλαμών</option>
+                                    <option value="Χαλκιδικής">Χαλκιδικής</option>
+                                    <option value="Μανάκι">Μανάκι</option>
+                                    <option value="Αθηνοελιά">Αθηνοελιά</option>
+                                    <option value="Μεγαρίτικη">Μεγαρίτικη</option>
+                                    <option value="Άλλη">Άλλη</option>
+                                </select>
+                                <input type="number" name="poikilia_dentra" class="form-control" placeholder="Δέντρα" value="{{ ktima.arithmos_dentron if ktima.arithmos_dentron > 0 else '' }}" required>
+                                <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove();"><i class="fas fa-times"></i></button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addVarietyRow('edit-poikilies-container-{{ ktima.id }}')">
+                        <i class="fas fa-plus"></i> Προσθήκη Ποικιλίας
+                    </button>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">Αποθήκευση Αλλαγών</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

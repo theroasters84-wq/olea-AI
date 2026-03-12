@@ -1,0 +1,81 @@
+<!-- GDD Explanation Modal -->
+<div class="modal fade" id="gddInfoModal{{ ktima.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-temperature-high"></i> Τι είναι τα GDD (Βαθμοημέρες);</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>GDD (Growing Degree Days) - Βαθμοημέρες Ανάπτυξης</strong></p>
+                <p>Είναι το "βιολογικό ρολόι" του κτήματός σας. Τα δέντρα και τα έντομα δεν καταλαβαίνουν ημερομηνίες, αλλά αντιδρούν στη συσσώρευση θερμότητας.</p>
+                <hr>
+                <h6 class="text-danger"><i class="fas fa-shield-alt"></i> Γιατί είναι σημαντικό για εσάς;</h6>
+                <ul>
+                    <li><strong>Ακρίβεια Ψεκασμών:</strong> Το Olea AI χρησιμοποιεί τα GDD για να προβλέψει πότε ΑΚΡΙΒΩΣ θα εκκολαφθούν τα αυγά εντόμων (όπως ο Πυρηνοτρήτης), ώστε να ψεκάσετε τη σωστή στιγμή.</li>
+                    <li><strong>Πρόβλεψη Σταδίων:</strong> Μας δείχνει αν η χρονιά είναι πρώιμη ή όψιμη.</li>
+                </ul>
+                <div class="alert alert-light border small text-muted">
+                    <em>Παράδειγμα: Αν έχουμε υψηλό GDD νωρίς, σημαίνει ότι η Άνθιση θα έρθει γρηγορότερα και πρέπει να ετοιμαστείτε νωρίτερα από πέρυσι.</em>
+                </div>
+
+                <div class="gdd-progress-section mt-4">
+                    <h6 class="text-success border-bottom pb-1"><i class="fas fa-leaf"></i> Ανάπτυξη Δέντρου & Συγκομιδή</h6>
+                    
+                    {% set anth_pct = ((ktima.gdd_accumulated / ktima.gdd_target_anthisi) * 100) | round | int %}
+                    {% set anth_pct = 100 if anth_pct > 100 else anth_pct %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Πορεία προς Άνθιση ({{ ktima.poikilia }})</span>
+                            <span>{{ anth_pct }}% (Στόχος: {{ ktima.gdd_target_anthisi }} GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-success {% if anth_pct == 100 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ anth_pct }}%;"></div>
+                        </div>
+                    </div>
+                
+                    {% set harv_pct = ((ktima.gdd_accumulated / ktima.gdd_target_sygkomidi) * 100) | round | int %}
+                    {% set harv_pct = 100 if harv_pct > 100 else harv_pct %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Ιδανική Ωρίμανση (Λάδωμα)</span>
+                            <span>{{ harv_pct }}% (Στόχος: {{ ktima.gdd_target_sygkomidi }} GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ harv_pct }}%;"></div>
+                        </div>
+                    </div>
+                
+                    <h6 class="text-danger border-bottom pb-1 mt-4"><i class="fas fa-bug"></i> Κίνδυνος Εντόμων (Ραντάρ)</h6>
+                    
+                    {% set dakos_pct = ((ktima.gdd_accumulated / 450) * 100) | round | int %}
+                    {% set dakos_pct = 100 if dakos_pct > 100 else dakos_pct %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>1η Γενιά Δάκου (Εκκόλαψη)</span>
+                            <span>{{ dakos_pct }}% (Στόχος: 450 GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-danger {% if dakos_pct > 90 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ dakos_pct }}%;"></div>
+                        </div>
+                    </div>
+                
+                    {% set lekanio_pct = ((ktima.gdd_accumulated / 800) * 100) | round | int %}
+                    {% set lekanio_pct = 100 if lekanio_pct > 100 else lekanio_pct %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Λεκάνιο & Μαργαρόνια</span>
+                            <span>{{ lekanio_pct }}% (Στόχος: 800 GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-warning text-dark {% if lekanio_pct > 90 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ lekanio_pct }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κατάλαβα</button>
+            </div>
+        </div>
+    </div>
+</div>

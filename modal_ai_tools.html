@@ -1,0 +1,53 @@
+<!-- Modal AI Εργαλείων -->
+<div class="modal fade" id="modalAI{{ ktima.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📸 AI Εργαλεία</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- AI Διάγνωση Ασθενειών -->
+                <div class="mb-3">
+                    <h6 style="color: #555;"><i class="fas fa-camera"></i> AI Διάγνωση Ασθενειών</h6>
+                    <form action="{{ url_for('ai.diagnosi_fwtografias', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                        <div class="input-group input-group-sm">
+                            <input type="file" name="fwtografia" accept="image/*" capture="environment" required class="form-control">
+                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Ανάλυση</button>
+                        </div>
+                    </form>
+                    {% if ktima.diagnoseis %}
+                        <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
+                            <strong>Τελευταία Διάγνωση:</strong><br>
+                            {{ ktima.diagnoseis[-1].apotelesma }}
+                            <br>
+                            <small class="text-muted">{{ ktima.diagnoseis[-1].imerominia.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <!-- AI Phenological Stage Recognition -->
+                <div class="mb-3">
+                    <h6 style="color: #555;"><i class="fas fa-calendar-day"></i> AI Αναγνώριση Σταδίου</h6>
+                    <form action="{{ url_for('ai.anagnorisi_stadiou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                        <input type="file" name="fwtografia_stadiou" accept="image/*" capture="environment" class="form-control form-control-sm me-2" required>
+                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
+                    </form>
+                </div>
+
+                <hr>
+
+                <!-- AI Yield Estimation -->
+                <div class="mb-3">
+                    <h6 style="color: #555;"><i class="fas fa-balance-scale"></i> AI Εκτίμηση Παραγωγής</h6>
+                    <form action="{{ url_for('ai.ektimisi_paragogis', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                        <input type="file" name="fwtografia_paragogis" accept="image/*" capture="environment" class="form-control form-control-sm me-2" required>
+                        <button type="submit" class="btn btn-sm btn-warning text-dark"><i class="fas fa-chart-line"></i> Εκτίμηση</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

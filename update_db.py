@@ -81,6 +81,21 @@ def update_db():
             except Exception as e:
                 print(f"ℹ️ Η στήλη 'polygon_geojson' υπάρχει ήδη ({e})")
                 conn.rollback()
+            
+            # Προσθήκη νέων GDD στόχων
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN gdd_target_anthisi INTEGER DEFAULT 600"))
+                print("✅ Προστέθηκε η στήλη 'gdd_target_anthisi'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'gdd_target_anthisi' υπάρχει ήδη ή σφάλμα: {e}")
+                # Don't rollback immediately here so we can try the next one
+
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN gdd_target_sygkomidi INTEGER DEFAULT 2500"))
+                print("✅ Προστέθηκε η στήλη 'gdd_target_sygkomidi'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'gdd_target_sygkomidi' υπάρχει ήδη ή σφάλμα: {e}")
+                
 
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")

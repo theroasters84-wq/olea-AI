@@ -152,6 +152,28 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         protaseis.append("🎯 Κρίσιμη Ειδοποίηση (Ακρίβεια GDD): Βάσει των Βαθμοημερών της περιοχής, ξεκινά η εκκόλαψη της ανθόβιας γενιάς του Πυρηνοτρήτη. Έχετε 3-4 ημέρες για το μέγιστο αποτέλεσμα ψεκασμού.")
     elif 300 <= gdd <= 330:
         protaseis.append("🎯 Κρίσιμη Ειδοποίηση (Ακρίβεια GDD): Έναρξη της καρπόβιας γενιάς του Πυρηνοτρήτη! Προστατέψτε τους νεαρούς καρπούς.")
+    elif gdd > 800 and mhnas in [6, 7, 8]:
+        protaseis.append("🎯 Κρίσιμη Ειδοποίηση (Ακρίβεια GDD): Η συσσωρευμένη θερμότητα (GDD) ευνοεί την έναρξη των καλοκαιρινών γενεών του Δάκου. Αυξήστε την επιτήρηση με παγίδες.")
+
+    # --- ΝΕΑ ΔΥΝΑΤΟΤΗΤΑ: Προστασία Βάσει Ηλικίας ---
+    if ktima.ilikia_dentron == 'Νεαρά (1-5 ετών)':
+        # Αν ο σύμβουλος πρότεινε κλάδεμα καρποφορίας, το διορθώνουμε
+        protaseis = [p for p in protaseis if "κλάδεμα διαμόρφωσης και καρποφορίας" not in p]
+        if mhnas in [2, 3]:
+            protaseis.append("🌱 Νεαρά Δέντρα: Απαγορεύεται το αυστηρό κλάδεμα καρποφορίας. Περιοριστείτε σε ελαφρύ καθάρισμα διαμόρφωσης.")
+    
+    # --- ΝΕΑ ΔΥΝΑΤΟΤΗΤΑ: Έξυπνος Έλεγχος Αποθήκης ---
+    # Ελέγχουμε αν ο χρήστης έχει στην αποθήκη τα υλικά που προτείνει ο σύμβουλος
+    if ktima.idioktitis and ktima.idioktitis.apothiki_items:
+        required_materials = []
+        if any("Χαλκ" in p for p in protaseis): required_materials.append(("Χαλκό", "χαλκ"))
+        if any("Βόριο" in p for p in protaseis): required_materials.append(("Βόριο", "βόρι"))
+        if any("Δάκο" in p for p in protaseis): required_materials.append(("Εντομοκτόνο/Δόλωμα", "δάκ"))
+
+        for mat_name, keyword in required_materials:
+            has_stock = any(keyword in item.onoma_proiontos.lower() or keyword in item.eidos.lower() for item in ktima.idioktitis.apothiki_items)
+            if not has_stock:
+                protaseis.append(f"🛒 Λίστα Αγορών: Ο σύμβουλος πρότεινε {mat_name}, αλλά δεν βρέθηκε σχετικό προϊόν στην Αποθήκη σας.")
 
     return protaseis
 

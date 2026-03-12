@@ -61,6 +61,8 @@ class Ktima(vasi.Model):
     puknotita_dentron = vasi.Column(vasi.String(50), default='Κανονική')
     diacheirisi_edafous = vasi.Column(vasi.String(50), default='Άγνωστη')
     ekkremis_erotisi_ai = vasi.Column(vasi.Text, nullable=True)
+    gdd_target_anthisi = vasi.Column(vasi.Integer, default=600)
+    gdd_target_sygkomidi = vasi.Column(vasi.Integer, default=2500)
 
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"

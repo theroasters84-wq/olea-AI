@@ -1,0 +1,40 @@
+<!-- NDVI Agromonitoring Modal -->
+<div class="modal fade ndvi-modal" id="modalNdvi{{ ktima.id }}" tabindex="-1" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="ndviMap{{ ktima.id }}" data-ktima-id="{{ ktima.id }}">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-satellite"></i> Δορυφορική Ανάλυση (NDVI) - {{ ktima.onoma_ktimatos }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fas fa-info-circle fa-lg me-2 text-info"></i>
+                        <strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong>
+                    </div>
+                    <ul class="mb-1 ps-3">
+                        <li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li>
+                        <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο (π.χ. δρόμους ή γειτονικά χωράφια) για να μπορέσει να ολοκληρωθεί η ανάλυση!</li>
+                    </ul>
+                </div>
+                <div id="ndviMap{{ ktima.id }}" style="height: 500px; width: 100%; border-radius: 8px;"></div>
+                <div class="text-center mt-3">
+                    <button id="btnAnalyze{{ ktima.id }}" class="btn btn-success d-none"><i class="fas fa-search"></i> Ανάλυση Υγείας (NDVI)</button>
+                    <div id="ndviLoading{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
+                    <div id="ndviError{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
+                    <div id="ndviResult{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                    <div id="ndviChatContainer{{ ktima.id }}" class="d-none mt-3 p-3 bg-light border border-primary rounded">
+                        <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
+                        <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
+                        <div class="input-group">
+                            <input type="text" id="ndviUserInput{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
+                            <button class="btn btn-primary" id="btnNdviChat{{ ktima.id }}">Αποστολή</button>
+                        </div>
+                        <div id="ndviChatLoading{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
+                        <div id="ndviRefinedResult{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

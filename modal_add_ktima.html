@@ -1,0 +1,111 @@
+<!-- Add Ktima Modal -->
+<div class="modal fade" id="addKtimaModal" tabindex="-1" aria-labelledby="addKtimaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="addKtimaModalLabel"><i class="fas fa-tree"></i> Προσθήκη Νέου Κτήματος</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fas fa-info-circle fa-lg me-2 text-info"></i>
+                        <strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong>
+                    </div>
+                    <ul class="mb-1 ps-3">
+                        <li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li>
+                        <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο (π.χ. δρόμους ή γειτονικά χωράφια) για να μπορέσει να ολοκληρωθεί η ανάλυση!</li>
+                    </ul>
+                </div>
+                <div id="map" class="mb-3"></div>
+                
+                <form action="{{ url_for('core_app.prosthes_ktima') }}" method="POST">
+                    <!-- Κρυφό πεδίο για το GeoJSON -->
+                    <input type="hidden" id="polygon_geojson" name="polygon_geojson">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Όνομα Κτήματος</label>
+                            <input type="text" name="onoma_ktimatos" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Γεωγραφικό Πλάτος</label>
+                            <input type="text" id="geografiko_platos" name="geografiko_platos" class="form-control" required readonly>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Γεωγραφικό Μήκος</label>
+                            <input type="text" id="geografiko_mikos" name="geografiko_mikos" class="form-control" required readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Τύπος Εδάφους</label>
+                            <select name="typos_edafous" class="form-select"><option value="Αμμώδες">Αμμώδες</option><option value="Αργιλώδες">Αργιλώδες</option><option value="Πηλώδες">Πηλώδες</option><option value="Πετρώδες">Πετρώδες</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Κλίση</label>
+                            <select name="klisi" class="form-select"><option value="Πεδινό">Πεδινό</option><option value="Επικλινές/Πλαγιά">Επικλινές/Πλαγιά</option><option value="Ορεινό">Ορεινό</option><option value="Ρέμα/Κοιλότητα">Ρέμα/Κοιλότητα</option><option value="Δεν γνωρίζω">Δεν γνωρίζω</option></select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Άρδευση</label>
+                            <select name="ardefsi" class="form-select"><option value="Ξηρικό">Ξηρικό</option><option value="Αρδευόμενο">Αρδευόμενο</option></select>
+                        </div>
+                    </div>
+
+                    <!-- Αγρονομικά Χαρακτηριστικά -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Ηλικία Δέντρων</label>
+                            <select class="form-select" name="ilikia_dentron">
+                                <option value="Νεαρά (1-5 ετών)">Νεαρά (1-5 ετών)</option>
+                                <option value="Παραγωγικά (6-30 ετών)" selected>Παραγωγικά (6-30 ετών)</option>
+                                <option value="Γηραιά (30+ ετών)">Γηραιά (30+ ετών)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Πυκνότητα</label>
+                            <select class="form-select" name="puknotita_dentron">
+                                <option value="Αραιή">Αραιή</option>
+                                <option value="Κανονική" selected>Κανονική</option>
+                                <option value="Πυκνή/Υπέρπυκνη">Πυκνή / Υπέρπυκνη</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Έδαφος & Ζιζάνια</label>
+                            <select class="form-select" name="diacheirisi_edafous">
+                                <option value="Καθαρό (Οργωμένο/Ζιζανιοκτονία)">Καθαρό (Χωρίς χόρτα)</option>
+                                <option value="Φυσική Βλάστηση (Άκοπα χόρτα)">Φυσική Βλάστηση</option>
+                                <option value="Κομμένα Χόρτα">Κομμένα Χόρτα</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Νέα Δυναμική Ενότητα για Ποικιλίες -->
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <label class="form-label">Ποικιλίες & Αριθμός Δέντρων</label>
+                            <div id="poikilies-container-add" class="mb-2">
+                                <!-- Οι δυναμικές γραμμές θα εισαχθούν εδώ μέσω JS -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addVarietyRow('poikilies-container-add')">
+                                <i class="fas fa-plus"></i> Προσθήκη Ποικιλίας
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Συνολικός Αριθμός Δέντρων</label>
+                            <input type="number" id="arithmos_dentron_total_add" name="arithmos_dentron" class="form-control" readonly placeholder="Υπολογίζεται αυτόματα">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Στρέμματα</label>
+                            <input type="number" name="stremmata" class="form-control" step="0.01" placeholder="π.χ. 10.50">
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="submit" class="btn btn-success">Αποθήκευση Κτήματος</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

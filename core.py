@@ -11,8 +11,8 @@ from google import genai
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
-# Preserving template_folder='.'
-efarmogi = Flask(__name__, template_folder='.')
+# Preserving template_folder='.' and setting static_folder to basedir to reliably serve files
+efarmogi = Flask(__name__, template_folder='.', static_folder=basedir, static_url_path='/static')
 database_url = os.getenv('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -27,7 +27,7 @@ vasi = SQLAlchemy(efarmogi)
 migrate = Migrate(efarmogi, vasi)
 kryptografhsh = Bcrypt(efarmogi)
 diaxeiristh_syndeshs = LoginManager(efarmogi)
-diaxeiristh_syndeshs.login_view = 'eisodos'
+diaxeiristh_syndeshs.login_view = 'auth.eisodos'
 diaxeiristh_syndeshs.login_message = "Παρακαλώ συνδεθείτε για να δείτε αυτή τη σελίδα."
 serializer = URLSafeTimedSerializer(efarmogi.config['SECRET_KEY'])
 

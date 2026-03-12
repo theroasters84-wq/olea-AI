@@ -1,0 +1,65 @@
+:root {
+    --primary-color: #386641; /* Premium Olive Green */
+    --secondary-color: #6A994E;
+    --accent-color: #A3B18A;
+    --bg-color: #f4f7f6;
+    --text-color: #2c3e50;
+    --card-bg: #ffffff;
+}
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+h1, h2, h3, h4, h5, h6 {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+.btn-success {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    background-color: var(--card-bg);
+    transition: transform 0.2s;
+}
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+    border-radius: 8px;
+}
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #eee;
+}
+.list-group-item:last-child {
+    border-bottom: none;
+}
+#map { height: 400px; width: 100%; border: 1px solid #ccc; border-radius: 8px; }
+
+#installBtn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Animation for AI Alerts */
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
