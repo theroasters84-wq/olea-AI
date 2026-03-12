@@ -76,9 +76,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .ktimata-responsive-card {
-    flex: 0 0 90vw; /* Σταθερό πλάτος στο 90% της οθόνης */
-    min-width: 90vw; /* Απαραίτητο: Απαγορεύει τη συμπίεση της κάρτας */
-    width: 90vw;
+    flex: 0 0 90vw !important; /* Force: Σταθερό πλάτος */
+    width: 90vw !important;    /* Force: Πλάτος 90% της οθόνης */
+    min-width: 90vw !important; /* Force: Απαγορεύει τη συμπίεση */
+    max-width: 90vw !important; /* Force: Απαγορεύει την επέκταση */
     scroll-snap-align: center; /* Κεντράρισμα μετά το swipe */
 }
 
@@ -91,8 +92,10 @@ h1, h2, h3, h4, h5, h6 {
         scroll-snap-type: none;
     }
     .ktimata-responsive-card {
-        flex: unset; /* Επαναφορά για το Grid */
-        width: 100%;
+        flex: unset !important; /* Επαναφορά για το Grid */
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
     }
 }
 
