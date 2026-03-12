@@ -42,6 +42,24 @@ def arxikh():
                 if latest_spray is None or ergasia.imerominia > latest_spray.imerominia:
                     latest_spray = ergasia
         ktima.meres_apo_psekasmo = (datetime.now() - latest_spray.imerominia).days if latest_spray else None
+
+        # --- ΟΔΗΓΟΣ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗΣ (Ελλείψεις Δεδομένων) ---
+        ktima.elleipseis = []
+        # 1. Έλεγχος Ανάλυσης Εδάφους
+        if not ktima.analuseis_edafous and not ktima.analysi_dedomena:
+            ktima.elleipseis.append("Ανάλυση Εδάφους (Φωτογραφία ή Χειροκίνητα)")
+        # 2. Έλεγχος AI Διάγνωσης
+        if not ktima.diagnoseis:
+            ktima.elleipseis.append("AI Διάγνωση (Φωτογραφία Δέντρου)")
+        # 3. Έλεγχος Νερού (μόνο αν είναι αρδευόμενο)
+        if ktima.ardefsi == 'Αρδευόμενο' and (ktima.nero_ph is None and ktima.nero_agwgimotita is None):
+            ktima.elleipseis.append("Ποιότητα Νερού (pH/EC)")
+        # 4. Έλεγχος Υγρασίας
+        if not ktima.ugrasies:
+            ktima.elleipseis.append("Καταγραφή Υγρασίας")
+        # 5. Έλεγχος Δορυφόρου
+        if not ktima.polygon_geojson:
+            ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
             
     return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata)
 
@@ -285,8 +303,14 @@ def steile_anafora():
 @login_required
 def diagrafi_ktimatos(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
-    vasi.session.delete(ktima)
-    vasi.session.commit()
+    if ktima:
+        if ktima.idioktitis != current_user:
+            flash('Δεν έχετε δικαίωμα διαγραφής αυτού του κτήματος.', 'danger')
+            return redirect(url_for('core_app.arxikh'))
+        
+        vasi.session.delete(ktima)
+        vasi.session.commit()
+        flash('Το κτήμα διαγράφηκε επιτυχώς.', 'success')
     return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/oristiki_diagrafi_ktimatos/<int:id>', methods=['POST'])
@@ -310,6 +334,81 @@ def arxeiothetisi_ktimatos(id):
 def ektyposi_anaforas(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     return render_template('anafora.html', ktima=ktima)
+
+@core_bp.route('/ndvi_analyze/<int:ktima_id>', methods=['POST'])
+@login_required
+def ndvi_analyze(ktima_id):
+    import json
+    import requests
+    import time
+    
+    try:
+        ktima = vasi.session.get(Ktima, ktima_id)
+        if not ktima or ktima.idioktitis != current_user:
+            return jsonify({'error': 'Άρνηση πρόσβασης'}), 403
+        
+        data = request.get_json()
+        geo_json = data.get('geo_json')
+        
+        if geo_json:
+            # Αποθήκευση του πολυγώνου στη βάση
+            ktima.polygon_geojson = json.dumps(geo_json)
+            vasi.session.commit()
+            
+            # Εδώ θα μπορούσε να μπει η λογική σύνδεσης με το Agromonitoring API
+            # Προς το παρόν επιστρέφουμε επιτυχία αποθήκευσης ώστε να φύγει το warning
+            
+            # Αν υπάρχει API Key, δοκιμάζουμε μια κλήση (προαιρετικό)
+            api_key = os.getenv('AGROMONITORING_API_KEY')
+            if api_key:
+                # (Placeholder για μελλοντική υλοποίηση σύνδεσης με API)
+                pass
+            
+            return jsonify({
+                'message': 'Το πολύγωνο αποθηκεύτηκε επιτυχώς.',
+                'ai_message': 'Ο χάρτης ενημερώθηκε. Τα δορυφορικά δεδομένα θα ληφθούν στον επόμενο προγραμματισμένο έλεγχο.',
+                # Επιστροφή dummy image ή κενού αν δεν έχουμε live API, 
+                # για να μην σκάσει το frontend JS που περιμένει URL
+                'ndvi_url': '' 
+            })
+        
+        return jsonify({'error': 'Δεν βρέθηκαν δεδομένα χάρτη'}), 400
+
+    except Exception as e:
+        print(f"NDVI Error: {e}")
+        return jsonify({'error': 'Σφάλμα διακομιστή'}), 500
+
+@core_bp.route('/diorthosi_gdd')
+@login_required
+def diorthosi_gdd():
+    import requests
+    ktimata = current_user.ktimata
+    count = 0
+    
+    now = datetime.now()
+    current_year = now.year
+    start_date = f"{current_year}-01-01"
+    yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    for ktima in ktimata:
+        try:
+            # Ανάκτηση ιστορικού καιρού από 1η Ιανουαρίου
+            hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={yesterday}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+            resp = requests.get(hist_url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json().get('daily', {})
+                t_max = data.get('temperature_2m_max', [])
+                t_min = data.get('temperature_2m_min', [])
+                
+                total_gdd = sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx and mn and ((mx + mn)/2.0 > 10.0)])
+                ktima.gdd_accumulated = total_gdd
+                count += 1
+        except Exception as e:
+            print(f"Σφάλμα GDD Update για κτήμα {ktima.id}: {e}")
+            
+    vasi.session.commit()
+    flash(f'Έγινε επανυπολογισμός GDD από 1/1 για {count} κτήματα!', 'success')
+    return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/updb')
 def update_db_schema():

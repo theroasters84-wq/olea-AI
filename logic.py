@@ -225,6 +225,7 @@ def generate_local_tasks_via_ai(ktima):
 def aytomatizomenos_elegxos():
     with efarmogi.app_context():
         print("🔄 Εκτέλεση αυτοματοποιημένου ελέγχου πρόγνωσης...")
+        import requests # Εισαγωγή για τον έλεγχο GDD
         xrhstes = Xrhsths.query.all()
         for xrhsths in xrhstes:
             for ktima in xrhsths.ktimata:
@@ -232,20 +233,27 @@ def aytomatizomenos_elegxos():
                 prognosi = pare_prognosi_kairou(ktima.geografiko_platos, ktima.geografiko_mikos)
                 
                 if prognosi:
-                    # GDD Calculation (Improved: (Tmax + Tmin) / 2 - Tbase)
+                    # ΑΥΤΟΜΑΤΗ ΔΙΟΡΘΩΣΗ GDD ΚΑΘΗΜΕΡΙΝΑ (Re-calc από 1η Ιανουαρίου για ακρίβεια)
                     try:
-                        # Παίρνουμε τις προβλέψεις του επόμενου 24ωρου (8 διαστήματα των 3 ωρών)
-                        next_24h = prognosi[:8]
-                        temps = [item['main']['temp'] for item in next_24h]
-                        t_max = max(temps)
-                        t_min = min(temps)
+                        now = datetime.now()
+                        start_date = f"{now.year}-01-01"
+                        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
                         
-                        avg_daily_temp = (t_max + t_min) / 2
-                        if avg_daily_temp > 9.0:
-                            ktima.gdd_accumulated = (ktima.gdd_accumulated or 0.0) + (avg_daily_temp - 9.0)
+                        # Ανάκτηση ιστορικού καιρού για όλη τη χρονιά μέχρι χθες
+                        hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={yesterday}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                        resp = requests.get(hist_url, timeout=10)
+                        
+                        if resp.status_code == 200:
+                            data = resp.json().get('daily', {})
+                            t_max = data.get('temperature_2m_max', [])
+                            t_min = data.get('temperature_2m_min', [])
+                            
+                            # Υπολογισμός Accumulation (Base 10C για ελιά)
+                            total_gdd = sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
+                            ktima.gdd_accumulated = total_gdd
                             vasi.session.commit()
                     except Exception as e:
-                        print(f"GDD Error {ktima.id}: {e}")
+                        print(f"Daily GDD Sync Error {ktima.id}: {e}")
                         vasi.session.rollback()
 
                     apeiles = []

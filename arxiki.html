@@ -81,16 +81,17 @@
             <!-- Responsive Card -->
             <div class="card ktima-responsive-card shadow border-0">
                 <div class="card-body position-relative d-flex flex-column flex-grow-1 p-2" style="overflow: hidden;">
-                    <!-- Κουμπί Αρχειοθέτησης -->
-                    <form action="{{ url_for('core_app.diagrafi_ktimatos', ktima_id=ktima.id) }}" method="POST" class="d-inline" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Είστε σίγουροι ότι θέλετε να διαγράψετε ΟΡΙΣΤΙΚΑ αυτό το κτήμα; Θα διαγραφεί και από τον δορυφόρο. Αυτή η ενέργεια δεν αναιρείται.');">
-                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Οριστική Διαγραφή Κτήματος">
-                            <i class="fas fa-times"></i> Διαγραφή
-                        </button>
-                    </form>
-
                     <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός) -->
                     <div class="flex-shrink-0">
-                    <h4 class="mb-1">{{ ktima.onoma_ktimatos }}</h4>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h4 class="mb-1" style="word-break: break-word;">{{ ktima.onoma_ktimatos }}</h4>
+                        <!-- Κουμπί Αρχειοθέτησης -->
+                        <form action="{{ url_for('core_app.diagrafi_ktimatos', ktima_id=ktima.id) }}" method="POST" class="ms-2" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Είστε σίγουροι ότι θέλετε να διαγράψετε ΟΡΙΣΤΙΚΑ αυτό το κτήμα; Θα διαγραφεί και από τον δορυφόρο. Αυτή η ενέργεια δεν αναιρείται.');">
+                            <button type="submit" class="btn btn-danger rounded-circle shadow-sm" title="Οριστική Διαγραφή Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </form>
+                    </div>
                     <div class="d-flex justify-content-between small text-muted mb-1">
                         <span><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}</span>
                         <span>🌳 {{ ktima.stremmata }} στρ. | {{ ktima.arithmos_dentron }} δέντρα</span>
@@ -176,6 +177,21 @@
 
                     <hr class="my-2">
                     </div>
+
+                    <!-- Οδηγός Βελτιστοποίησης (Setup Wizard) -->
+                    {% if ktima.elleipseis %}
+                    <div class="alert alert-info border-info shadow-sm p-2 mb-2" style="font-size: 0.9em; background-color: #f0f8ff;">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="fas fa-info-circle fa-lg me-2 text-primary"></i>
+                            <strong class="text-primary">Για μέγιστη ακρίβεια AI:</strong>
+                        </div>
+                        <ul class="mb-0 ps-3 text-muted small">
+                            {% for elleipsi in ktima.elleipseis %}
+                                <li>Προσθέστε: <strong>{{ elleipsi }}</strong></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
 
                     <!-- Preventive Advisor (Scrollable context) -->
                     <div class="alert alert-light border overflow-auto" role="alert" style="flex-grow: 1; min-height: 0;">

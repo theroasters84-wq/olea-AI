@@ -53,6 +53,42 @@
                 
                     <h6 class="text-danger border-bottom pb-1 mt-4"><i class="fas fa-bug"></i> Κίνδυνος Εντόμων (Ραντάρ)</h6>
                     
+                    {% set prays_pct = ((gdd_acc / 150) * 100) | round | int %}
+                    {% set prays_pct = 100 if prays_pct > 100 else prays_pct %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Πυρηνοτρήτης (Ανθόβια Γενιά)</span>
+                            <span>{{ prays_pct }}% (Στόχος: 150 GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-warning text-dark {% if prays_pct > 90 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ prays_pct }}%;"></div>
+                        </div>
+                    </div>
+
+                    {% set psylla_pct = ((gdd_acc / 200) * 100) | round | int %}
+                    {% set psylla_pct = 100 if psylla_pct > 100 else psylla_pct %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Βαμβακάδα (Ψύλλα)</span>
+                            <span>{{ psylla_pct }}% (Στόχος: 200 GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-light text-dark border {% if psylla_pct > 90 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ psylla_pct }}%;"></div>
+                        </div>
+                    </div>
+
+                    {% set prays_karp_pct = ((gdd_acc / 330) * 100) | round | int %}
+                    {% set prays_karp_pct = 100 if prays_karp_pct > 100 else prays_karp_pct %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Πυρηνοτρήτης (Καρπόβια Γενιά)</span>
+                            <span>{{ prays_karp_pct }}% (Στόχος: 330 GDD)</span>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar bg-danger {% if prays_karp_pct > 90 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ prays_karp_pct }}%;"></div>
+                        </div>
+                    </div>
+
                     {% set dakos_pct = ((gdd_acc / 450) * 100) | round | int %}
                     {% set dakos_pct = 100 if dakos_pct > 100 else dakos_pct %}
                     <div class="mb-2">
@@ -78,7 +114,8 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer justify-content-between">
+                <a href="{{ url_for('core_app.diorthosi_gdd') }}" class="btn btn-outline-warning btn-sm" title="Επανυπολογισμός από 1η Ιανουαρίου"><i class="fas fa-sync-alt"></i> Διόρθωση GDD</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κατάλαβα</button>
             </div>
         </div>
