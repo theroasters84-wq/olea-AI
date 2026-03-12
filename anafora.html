@@ -75,6 +75,7 @@
                 <tr>
                     <td>{{ exodo.perigrafi }}</td>
                     <td class="text-end">{{ "%.2f"|format(exodo.poso) }}</td>
+                    <td class="text-end">{{ "%.2f"|format(exodo.poso or 0) }}</td>
                 </tr>
                 {% endif %}
                 {% endfor %}

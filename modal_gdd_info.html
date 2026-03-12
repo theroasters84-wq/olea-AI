@@ -22,24 +22,29 @@
                 <div class="gdd-progress-section mt-4">
                     <h6 class="text-success border-bottom pb-1"><i class="fas fa-leaf"></i> Ανάπτυξη Δέντρου & Συγκομιδή</h6>
                     
-                    {% set anth_pct = ((ktima.gdd_accumulated / ktima.gdd_target_anthisi) * 100) | round | int %}
+                    {% set gdd_acc = ktima.gdd_accumulated or 0 %}
+                    {% set target_anth = ktima.gdd_target_anthisi or 1 %}
+                    {% set anth_pct = ((gdd_acc / target_anth) * 100) | round | int %}
+                    {% set anth_pct = 0 if target_anth == 1 else anth_pct %}
                     {% set anth_pct = 100 if anth_pct > 100 else anth_pct %}
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small text-muted mb-1">
                             <span>Πορεία προς Άνθιση ({{ ktima.poikilia }})</span>
-                            <span>{{ anth_pct }}% (Στόχος: {{ ktima.gdd_target_anthisi }} GDD)</span>
+                            <span>{{ anth_pct }}% (Στόχος: {{ target_anth }} GDD)</span>
                         </div>
                         <div class="progress" style="height: 12px;">
                             <div class="progress-bar bg-success {% if anth_pct == 100 %}progress-bar-striped progress-bar-animated{% endif %}" role="progressbar" style="width: {{ anth_pct }}%;"></div>
                         </div>
                     </div>
                 
-                    {% set harv_pct = ((ktima.gdd_accumulated / ktima.gdd_target_sygkomidi) * 100) | round | int %}
+                    {% set target_harv = ktima.gdd_target_sygkomidi or 1 %}
+                    {% set harv_pct = ((gdd_acc / target_harv) * 100) | round | int %}
+                    {% set harv_pct = 0 if target_harv == 1 else harv_pct %}
                     {% set harv_pct = 100 if harv_pct > 100 else harv_pct %}
                     <div class="mb-3">
                         <div class="d-flex justify-content-between small text-muted mb-1">
                             <span>Ιδανική Ωρίμανση (Λάδωμα)</span>
-                            <span>{{ harv_pct }}% (Στόχος: {{ ktima.gdd_target_sygkomidi }} GDD)</span>
+                            <span>{{ harv_pct }}% (Στόχος: {{ target_harv }} GDD)</span>
                         </div>
                         <div class="progress" style="height: 12px;">
                             <div class="progress-bar bg-info" role="progressbar" style="width: {{ harv_pct }}%;"></div>
@@ -48,7 +53,7 @@
                 
                     <h6 class="text-danger border-bottom pb-1 mt-4"><i class="fas fa-bug"></i> Κίνδυνος Εντόμων (Ραντάρ)</h6>
                     
-                    {% set dakos_pct = ((ktima.gdd_accumulated / 450) * 100) | round | int %}
+                    {% set dakos_pct = ((gdd_acc / 450) * 100) | round | int %}
                     {% set dakos_pct = 100 if dakos_pct > 100 else dakos_pct %}
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small text-muted mb-1">
@@ -60,7 +65,7 @@
                         </div>
                     </div>
                 
-                    {% set lekanio_pct = ((ktima.gdd_accumulated / 800) * 100) | round | int %}
+                    {% set lekanio_pct = ((gdd_acc / 800) * 100) | round | int %}
                     {% set lekanio_pct = 100 if lekanio_pct > 100 else lekanio_pct %}
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small text-muted mb-1">

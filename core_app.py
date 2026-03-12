@@ -33,7 +33,7 @@ def arxikh():
 
         completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
         ktima.pending_tasks = [task for task in ideal_tasks if task not in completed_tasks]
-        ktima.synoliko_kostos = sum(exodo.poso for exodo in ktima.exoda if not exodo.archived)
+        ktima.synoliko_kostos = sum((exodo.poso or 0) for exodo in ktima.exoda if not exodo.archived)
         
         # PHI Logic
         latest_spray = None

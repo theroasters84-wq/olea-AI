@@ -33,7 +33,7 @@
                                         <span>{{ exodo.perigrafi }}</span><br>
                                         <small class="text-muted">{{ exodo.imerominia.strftime('%d/%m/%Y') }}</small>
                                     </div>
-                                    <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(exodo.poso) }}€</span>
+                                    <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(exodo.poso or 0) }}€</span>
                                 </li>
                               {% endif %}
                             {% endfor %}
@@ -45,7 +45,7 @@
 
                 <div style="background-color: #fff; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
                     <strong>Συνολικό Κόστος: </strong> 
-                    <span style="color: #c0392b; font-size: 1.1em;">{{ "%.2f"|format(ktima.synoliko_kostos) }}€</span>
+                    <span style="color: #c0392b; font-size: 1.1em;">{{ "%.2f"|format(ktima.synoliko_kostos or 0) }}€</span>
                 </div>
 
                 <hr>
@@ -90,8 +90,8 @@
                             <tr>
                                 <td>{{ arxeio.imerominia.strftime('%d/%m/%Y') }}</td>
                                 <td>{{ arxeio.tonoi }}</td>
-                                <td>{{ "%.1f"|format(arxeio.kila_ana_dentro) }}</td>
-                                <td>{{ "%.2f"|format(arxeio.synoliko_kostos) }}€</td>
+                                <td>{{ "%.1f"|format(arxeio.kila_ana_dentro or 0) }}</td>
+                                <td>{{ "%.2f"|format(arxeio.synoliko_kostos or 0) }}€</td>
                             </tr>
                             {% endfor %}
                         </tbody>
