@@ -214,6 +214,9 @@ def ai_input_scan(ktima_id):
 @login_required
 def ai_vision():
     if 'image' not in request.files: return jsonify({'error': 'No image'}), 400
+    try:
+        img = PIL.Image.open(request.files['image'])
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=["Analyze this...", img])
         return jsonify({'result': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
