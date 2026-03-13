@@ -304,6 +304,7 @@ def generate_smart_tasks(ktima):
         
         return tasks_str.split(',')
     except Exception as e:
+        vasi.session.rollback()
         print(f"Smart Task AI Error: {e}")
         return get_epoxikes_ergasies(now.month) # Fallback σε στατικές εργασίες
 

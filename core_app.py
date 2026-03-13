@@ -156,6 +156,7 @@ def arxikh():
                 if not ktima.polygon_geojson: ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
 
             except Exception as e_ktima:
+                vasi.session.rollback()
                 print(f"Σφάλμα φόρτωσης δεδομένων για το κτήμα '{ktima.onoma_ktimatos}': {e_ktima}")
                 # Σε περίπτωση σφάλματος, δίνουμε κενές τιμές για να μην "σπάσει" η HTML σελίδα.
                 if not hasattr(ktima, 'kairos'): ktima.kairos = None
@@ -170,8 +171,9 @@ def arxikh():
         return render_template('arxiki.html', xrhsths=provalomenos_xrhsths, ktimata=ktimata, datetime=datetime, is_geoponos_view=is_geoponos_view)
 
     except Exception as e:
+        vasi.session.rollback()
         print(f"CRITICAL ERROR IN ARXIKI: {e}") # Εμφάνιση στο τερματικό για έλεγχο
-        flash(f"Σφάλμα φόρτωσης: {str(e)}", "danger")
+        flash("Υπήρξε στιγμιαίο πρόβλημα στη φόρτωση κάποιων δεδομένων. Έγινε ασφαλής επαναφορά.", "warning")
         
         safe_ktimata = current_user.ktimata if current_user.is_authenticated else []
         for k in safe_ktimata:

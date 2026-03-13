@@ -149,7 +149,7 @@
                                 <div class="col-md-9">
                                     <strong><i class="fas fa-chart-line"></i> Τελευταία Μέτρηση:</strong><br>
                                     <span style="font-family: monospace; font-size: 1.1em;">
-                                        {{ ktima.diagnoseis[-1].apotelesma if ktima.diagnoseis and '🛰️' in ktima.diagnoseis[-1].apotelesma else 'Δεν υπάρχουν πρόσφατα δεδομένα.' }}
+                                        {{ ktima.diagnoseis[-1].apotelesma if ktima.diagnoseis and ktima.diagnoseis[-1].apotelesma and '🛰️' in ktima.diagnoseis[-1].apotelesma else 'Δεν υπάρχουν πρόσφατα δεδομένα.' }}
                                     </span>
                                 </div>
                                 <div class="col-md-3 text-end">
