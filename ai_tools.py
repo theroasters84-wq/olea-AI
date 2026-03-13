@@ -42,6 +42,8 @@ def rwta_ai(ktima_id):
     full_prompt = f"{plires_context}\n\nΕΡΩΤΗΣΗ/ΣΥΝΘΗΚΕΣ ΑΠΟ ΧΡΗΣΤΗ: Το AI ενημερώνεται για τον καιρό ({thermokrasia}°C, {ygrasia}%). Επιπλέον σχόλιο: {data.get('perigrafi', '')}"
     apantisi = pare_simvouli_ai(thermokrasia, ygrasia, full_prompt)
     
+    apantisi += "\n\n⚠️ Σημαντικό: Οι παραπάνω συμβουλές είναι αυτοματοποιημένες και ενδέχεται να μην είναι κατάλληλες για κάθε περίπτωση. Συμβουλευτείτε έναν ειδικό γεωπόνο πριν προβείτε σε οποιαδήποτε ενέργεια."
+    
     if not apantisi:
         apantisi = "Το σύστημα AI είναι προσωρινά μη διαθέσιμο. Δοκιμάστε ξανά σε λίγο."
     elif "μη διαθέσιμο" not in apantisi:
@@ -321,6 +323,7 @@ def paragogi_syntaghs(ktima_id):
         vasi.session.commit()
         return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs']})
         
+
     except Exception as e:
         vasi.session.rollback()
         print(f"Σφάλμα AI Συνταγής: {e}")
