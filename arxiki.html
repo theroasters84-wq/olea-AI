@@ -17,6 +17,37 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
+        /* Mobile Layout: Swipe/Carousel για τα κτήματα */
+        @media (max-width: 768px) {
+            .ktimata-wrapper {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory; /* Ενεργοποίηση "μαγνητισμού" */
+                gap: 15px;
+                padding-bottom: 15px;
+                -webkit-overflow-scrolling: touch; /* Ομαλό scroll σε iOS */
+                scrollbar-width: none; /* Απόκρυψη μπάρας κύλισης (Firefox) */
+            }
+            .ktimata-wrapper::-webkit-scrollbar {
+                display: none; /* Απόκρυψη μπάρας κύλισης (Chrome/Safari) */
+            }
+            .ktima-responsive-card {
+                flex: 0 0 92%; /* Η κάρτα πιάνει το 92% του πλάτους */
+                scroll-snap-align: center; /* Κεντράρισμα κάρτας στο σταμάτημα */
+            }
+        }
+
+        /* Desktop Layout: Κλασικό Grid */
+        @media (min-width: 769px) {
+            .ktimata-wrapper {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                gap: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Global Navigation Bar -->
