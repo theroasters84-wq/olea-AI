@@ -254,6 +254,24 @@
                             </div>
                         {% endif %}
 
+                        <!-- Agromonitoring Live Data -->
+                        {% if ktima.agro_data %}
+                        <div class="d-flex justify-content-between align-items-center bg-white border p-2 rounded mb-2 shadow-sm" style="font-size: 0.85em;">
+                            {% if ktima.agro_data.soil %}
+                                <span title="Θερμοκρασία Εδάφους στα 10cm" class="text-secondary"><i class="fas fa-temperature-low"></i> Έδαφος: {{ "%.1f"|format(ktima.agro_data.soil.t10 - 273.15) if ktima.agro_data.soil.t10 else '-' }}°C</span>
+                                <span title="Ογκομετρική Υγρασία Εδάφους" class="text-info"><i class="fas fa-water"></i> Υγρασία: {{ "%.1f"|format(ktima.agro_data.soil.moisture * 100) if ktima.agro_data.soil.moisture else '-' }}%</span>
+                            {% endif %}
+                            {% if ktima.agro_data.uvi %}
+                                <span title="Δείκτης Υπεριώδους Ακτινοβολίας (UVI)">
+                                    <i class="fas fa-sun text-warning"></i> UVI: 
+                                    <strong class="{% if ktima.agro_data.uvi.uvi >= 8 %}text-danger{% elif ktima.agro_data.uvi.uvi >= 5 %}text-warning{% else %}text-success{% endif %}">
+                                        {{ "%.1f"|format(ktima.agro_data.uvi.uvi) }}
+                                    </strong>
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
                         <!-- Κουμπί AI & Email -->
                         {% if not is_geoponos_view %}
                         <div class="mt-2">
@@ -835,6 +853,53 @@
                 }
             });
         }
+
+        // Override της λειτουργίας παραγωγής συνταγής για δυναμική εισαγωγή χωρίς ανανέωση της σελίδας
+        window.generateAISyntagh = function(ktimaId, btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Παραγωγή Συνταγής...';
+            btn.disabled = true;
+
+            fetch('/paragogi_syntaghs/' + ktimaId, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                if (data.error) {
+                    alert('Σφάλμα: ' + data.error);
+                } else if (data.success) {
+                    const containers = document.querySelectorAll('#syntagesContainer' + ktimaId);
+                    const now = new Date();
+                    const dateString = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                    
+                    const newCard = `
+                        <div class="card border-success mb-2 shadow-sm">
+                            <div class="card-header bg-success text-white py-1 small d-flex justify-content-between">
+                                <span><i class="fas fa-robot"></i> Νέα Συνταγή</span>
+                                <span>${dateString}</span>
+                            </div>
+                            <div class="card-body p-2" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div>
+                        </div>
+                    `;
+                    
+                    containers.forEach(container => {
+                        container.insertAdjacentHTML('afterbegin', newCard);
+                    });
+                    
+                    document.querySelectorAll('#noSyntagh' + ktimaId).forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
+            })
+            .catch(err => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert('Σφάλμα επικοινωνίας. Παρακαλώ προσπαθήστε ξανά.');
+            });
+        };
     </script>
 </body>
 </html>

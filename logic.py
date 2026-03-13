@@ -194,6 +194,20 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
             if not has_stock:
                 protaseis.append(f"🛒 Λίστα Αγορών: Ο σύμβουλος πρότεινε {mat_name}, αλλά δεν βρέθηκε σχετικό προϊόν στην Αποθήκη σας.")
 
+    # --- ΝΕΑ ΔΥΝΑΤΟΤΗΤΑ: Agromonitoring Live Δεδομένα Εδάφους & UVI ---
+    if hasattr(ktima, 'agro_data') and ktima.agro_data:
+        soil = ktima.agro_data.get('soil')
+        if soil and 'moisture' in soil:
+            moisture_val = soil['moisture'] # Μετριέται σε m3/m3
+            if moisture_val < 0.20 and mhnas in [5, 6, 7, 8, 9, 10]:
+                protaseis.append(f"💧 Κρίσιμη Υγρασία Εδάφους Δορυφόρου ({moisture_val*100:.1f}%): Τα αποθέματα νερού στη ριζόσφαιρα εξαντλούνται. Απαιτείται άμεση άρδευση!")
+        
+        uvi_data = ktima.agro_data.get('uvi')
+        if uvi_data and 'uvi' in uvi_data:
+            uvi_val = uvi_data['uvi']
+            if uvi_val >= 8:
+                protaseis.append(f"☀️ Ακραίος Δείκτης UV ({uvi_val:.1f}): Υψηλός κίνδυνος ηλιακού εγκαύματος. ΑΠΑΓΟΡΕΥΟΝΤΑΙ οι ψεκασμοί τις μεσημεριανές ώρες (κίνδυνος φυτοτοξικότητας)!")
+
     return protaseis
 
 def generate_smart_tasks(ktima):
@@ -228,15 +242,25 @@ def generate_smart_tasks(ktima):
             stock.append(f"{i.eidos}: {i.onoma_proiontos}")
     stock_str = ", ".join(stock) if stock else "Άδεια αποθήκη."
 
+    # Agromonitoring Δεδομένα
+    agro_str = "Δεν υπάρχουν live δεδομένα εδάφους."
+    if hasattr(ktima, 'agro_data') and ktima.agro_data:
+        s_data = ktima.agro_data.get('soil', {})
+        u_data = ktima.agro_data.get('uvi', {})
+        sm = f"{s_data.get('moisture')*100:.1f}%" if s_data and 'moisture' in s_data else 'N/A'
+        uv = u_data.get('uvi', 'N/A') if u_data and 'uvi' in u_data else 'N/A'
+        agro_str = f"Υγρασία Εδάφους (10cm): {sm}, UVI: {uv}."
+
     # 3. Κατασκευή του Smart Prompt
     prompt = (f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε 3-5 κρίσιμες εργασίες για ΣΗΜΕΡΑ ({now.strftime('%d/%m')}).\n"
               f"--- ΔΕΔΟΜΕΝΑ ---\n"
               f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Ηλικία: {ktima.ilikia_dentron}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated is not None else 0:.0f}.\n"
               f"Καιρός Τώρα: {w_str}.\n"
+              f"Agromonitoring Data: {agro_str}\n"
               f"Ευρήματα (AI/Δορυφόρος): {diag_str}.\n"
               f"Διαθέσιμα Υλικά: {stock_str}.\n"
               f"--- ΟΔΗΓΙΑ ---\n"
-              f"Συνδύασε τα ευρήματα με τον καιρό και τα υλικά. Αν π.χ. ο δορυφόρος είδε πρόβλημα και υπάρχει το φάρμακο, πρότεινε ψεκασμό.\n"
+              f"Συνδύασε τα ευρήματα με τον καιρό και τα υλικά. Αν το UVI είναι >= 8, ΜΗΝ προτείνεις ψεκασμό (κίνδυνος εγκαύματος). Αν η υγρασία εδάφους είναι πολύ χαμηλή (< 20%), πρότεινε οπωσδήποτε άρδευση (αν είναι εφικτό).\n"
               f"Δώσε ΜΟΝΟ μια λίστα εργασιών χωρισμένη με κόμμα (,). Χωρίς αρίθμηση ή εισαγωγή.\n"
               f"Παράδειγμα: Ψεκασμός με Χαλκό (υπάρχει απόθεμα),Λίπανση Βορίου,Καθαρισμός Χόρτων")
 

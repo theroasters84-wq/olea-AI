@@ -7,7 +7,7 @@ from sqlalchemy import text
 from core import vasi, ai_client, api_key_ai, kryptografhsh
 from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
-from geoponika import pare_kairo, steile_email, geoponikos_elegxos
+from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd
 
 core_bp = Blueprint('core_app', __name__)
 
@@ -35,6 +35,17 @@ def arxikh():
             ktimata = [k for k in current_user.ktimata if k.is_active]
 
         for ktima in ktimata:
+            # Ενσωμάτωση Agromonitoring API
+            ktima.agro_data = None
+            if ktima.agromonitoring_poly_id:
+                soil = get_agro_soil_data(ktima.agromonitoring_poly_id)
+                uvi = get_agro_uvi(ktima.agromonitoring_poly_id)
+                agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
+                
+                if soil or uvi:
+                    ktima.agro_data = {'soil': soil, 'uvi': uvi}
+                ktima.agro_forecast = agro_forecast
+
             ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
             if ktima.kairos:
                 ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
