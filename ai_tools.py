@@ -35,8 +35,11 @@ def rwta_ai(ktima_id):
         if (now - ktima.ai_sumvouli_date).total_seconds() < 21600:
             return jsonify({'apantisi': ktima.ai_sumvouli_cache + " (Αποθηκευμένη)"})
 
-    context_msg = f"Ο ελαιώνας είναι {ktima.stremmata} στρέμματα και έχει {ktima.arithmos_dentron} δέντρα. Χρησιμοποίησε αυτά τα δεδομένα για να υπολογίσεις ακριβείς δόσεις φαρμάκων ή λιπασμάτων αν σου ζητηθεί."
-    full_prompt = f"{context_msg} Θερμοκρασία: {thermokrasia}, Υγρασία: {ygrasia}, Καιρός: {perigrafi}. {data.get('perigrafi', '')}"
+    # ΟΛΙΚΗ ΕΝΣΩΜΑΤΩΣΗ ΔΕΔΟΜΕΝΩΝ ΓΙΑ ΤΟ CHAT
+    from logic import xtise_plires_context
+    plires_context = xtise_plires_context(ktima)
+    
+    full_prompt = f"{plires_context}\n\nΕΡΩΤΗΣΗ/ΣΥΝΘΗΚΕΣ ΑΠΟ ΧΡΗΣΤΗ: Το AI ενημερώνεται για τον καιρό ({thermokrasia}°C, {ygrasia}%). Επιπλέον σχόλιο: {data.get('perigrafi', '')}"
     apantisi = pare_simvouli_ai(thermokrasia, ygrasia, full_prompt)
     
     if not apantisi:
@@ -124,6 +127,11 @@ def analysi_egrafou(ktima_id):
         
         ktima.analysi_dedomena = response.text if response else "Αδυναμία ανάλυσης κειμένου."
         
+        # Καταγραφή στο ημερολόγιο διαγνώσεων για να μετράμε τον χρόνο (Ανάλυση Φύλλων/Εγγράφου)
+        if response:
+            nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma="📄 Έγγραφο Ανάλυσης: Ολοκληρώθηκε", imerominia=datetime.now())
+            vasi.session.add(nea_diagnosi)
+        
         extraction_prompt = """Extract soil data... return ONLY JSON..."""
         ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt, content_part])
         
@@ -152,6 +160,12 @@ def anagnorisi_stadiou(ktima_id):
         prompt = "Είσαι κορυφαίος γεωπόνος... Σε ποιο φαινολογικό στάδιο βρίσκεται;..."
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
         ktima.fainologiko_stadio = response.text.strip().replace('.', '') if response else "Άγνωστο"
+        
+        # Καταγραφή της ημερομηνίας που βρέθηκε το στάδιο
+        if response:
+            nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🌿 Αναγνώριση Σταδίου: {ktima.fainologiko_stadio}", imerominia=datetime.now())
+            vasi.session.add(nea_diagnosi)
+            
         vasi.session.commit()
         flash(f'Στάδιο: {ktima.fainologiko_stadio}', 'success')
     return redirect(url_for('core_app.arxikh'))
@@ -255,16 +269,21 @@ def paragogi_syntaghs(ktima_id):
 
     try:
         # Συλλογή δεδομένων κτήματος για το AI
-        dedomena = f"Έκταση: {ktima.stremmata} στρ, Δέντρα: {ktima.arithmos_dentron}. Ποικιλία: {ktima.poikilia}. Στάδιο: {ktima.fainologiko_stadio}."
-        if ktima.diagnoseis: 
-            dedomena += f" Τελευταία διάγνωση: {ktima.diagnoseis[-1].apotelesma}."
+        from logic import xtise_plires_context
+        dedomena = xtise_plires_context(ktima)
             
         # Το μαγικό Prompt που αναγκάζει το AI να απαντήσει με JSON
-        prompt = (f"Είσαι Επαγγελματίας Γεωπόνος. Δεδομένα κτήματος: {dedomena}. "
-                  f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
-                  f"{{\"keimeno_syntaghs\": \"Εδώ γράψε την επίσημη συνταγή και τις οδηγίες.\", "
-                  f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα\", \"farmaka\": \"Ονόματα φαρμάκων/λιπασμάτων\"}}]}} "
-                  f"Μην γράψεις markdown κώδικα (όπως ```json), επέστρεψε απευθείας το καθαρό JSON object.")
+        prompt = (
+            f"Είσαι Επαγγελματίας Γεωπόνος. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
+            f"ΟΔΗΓΙΕΣ ΓΙΑ ΤΗ ΣΥΝΤΑΓΗ:\n"
+            f"1. ΜΗΝ ΠΡΟΤΕΙΝΕΙΣ εργασίες που έγιναν πρόσφατα (δες το Ιστορικό).\n"
+            f"2. Αν η Υγρασία Εδάφους είναι κάτω από 20% ή το UVI πάνω από 8, εφάρμοσε περιορισμούς στους ψεκασμούς.\n"
+            f"3. Δώσε ΠΡΟΤΕΡΑΙΟΤΗΤΑ στα υλικά της Αποθήκης.\n"
+            f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
+            f"{{\"keimeno_syntaghs\": \"Εδώ γράψε την επίσημη συνταγή και τις οδηγίες.\", "
+            f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα\", \"farmaka\": \"Ονόματα φαρμάκων/λιπασμάτων\"}}]}} "
+            f"Μην γράψεις markdown κώδικα (όπως ```json), επέστρεψε απευθείας το καθαρό JSON object."
+        )
         
         # Παραγωγή περιεχομένου από το Gemini
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)

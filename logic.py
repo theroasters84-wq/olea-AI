@@ -3,7 +3,7 @@ import time
 from datetime import datetime, timedelta
 from core import vasi, efarmogi, ai_client
 from models import Ktima, Ergasia, Exodo, Xrhsths, AnalysiEdafous
-from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, steile_email, get_epoxikes_ergasies
+from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, steile_email, get_epoxikes_ergasies, get_agro_soil_data, get_agro_uvi, ypologismos_anagkon_nerou
 
 # Προληπτικός Σύμβουλος (Εγκυκλοπαίδεια)
 def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
@@ -181,6 +181,13 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         if mhnas in [2, 3]:
             protaseis.append("🌱 Νεαρά Δέντρα: Απαγορεύεται το αυστηρό κλάδεμα καρποφορίας. Περιοριστείτε σε ελαφρύ καθάρισμα διαμόρφωσης.")
     
+    # --- ΝΕΑ ΔΥΝΑΤΟΤΗΤΑ: Προσαρμογή Βάσει Υψομέτρου ---
+    if ktima.ypsometro and ktima.ypsometro > 400:
+        if mhnas in [3, 4]:
+            protaseis.append(f"⛰️ Ορεινό Κτήμα (Υψόμετρο {ktima.ypsometro}m): Η άνθιση και η βλαστική ανάπτυξη αναμένεται να καθυστερήσουν 1-2 εβδομάδες σε σχέση με τα πεδινά. Προσαρμόστε τους ψεκασμούς σας.")
+        elif mhnas in [11, 12, 1, 2] and thermokrasia < 5:
+            protaseis.append(f"⛰️ Ορεινό Κτήμα (Υψόμετρο {ktima.ypsometro}m): Πολύ υψηλός κίνδυνος παγετού λόγω υψομέτρου.")
+
     # --- ΝΕΑ ΔΥΝΑΤΟΤΗΤΑ: Έξυπνος Έλεγχος Αποθήκης ---
     # Ελέγχουμε αν ο χρήστης έχει στην αποθήκη τα υλικά που προτείνει ο σύμβουλος
     if ktima.idioktitis and ktima.idioktitis.apothiki_items:
@@ -200,7 +207,11 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         if soil and 'moisture' in soil:
             moisture_val = soil['moisture'] # Μετριέται σε m3/m3
             if moisture_val < 0.20 and mhnas in [5, 6, 7, 8, 9, 10]:
-                protaseis.append(f"💧 Κρίσιμη Υγρασία Εδάφους Δορυφόρου ({moisture_val*100:.1f}%): Τα αποθέματα νερού στη ριζόσφαιρα εξαντλούνται. Απαιτείται άμεση άρδευση!")
+                if ktima.ardefsi == 'Αρδευόμενο':
+                    litra = ypologismos_anagkon_nerou(thermokrasia, mhnas, ktima.arithmos_dentron, ktima.stremmata)
+                    protaseis.append(f"💧 Κρίσιμη Υγρασία Εδάφους ({moisture_val*100:.1f}%): Απαιτείται άμεση άρδευση. Βάσει θερμοκρασίας, ρίξτε περίπου {litra*4} λίτρα ανά δέντρο (δόση για 4 ημέρες).")
+                else:
+                    protaseis.append(f"💧 Κρίσιμη Υγρασία Εδάφους Δορυφόρου ({moisture_val*100:.1f}%): Τα αποθέματα νερού στη ριζόσφαιρα εξαντλούνται. Απαιτείται άμεση άρδευση!")
         
         uvi_data = ktima.agro_data.get('uvi')
         if uvi_data and 'uvi' in uvi_data:
@@ -209,6 +220,48 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
                 protaseis.append(f"☀️ Ακραίος Δείκτης UV ({uvi_val:.1f}): Υψηλός κίνδυνος ηλιακού εγκαύματος. ΑΠΑΓΟΡΕΥΟΝΤΑΙ οι ψεκασμοί τις μεσημεριανές ώρες (κίνδυνος φυτοτοξικότητας)!")
 
     return protaseis
+
+# --- ΝΕΑ ΛΕΙΤΟΥΡΓΙΑ: Κεντρικός Συλλέκτης Δεδομένων για το AI (Holistic Context) ---
+def xtise_plires_context(ktima):
+    now = datetime.now()
+    
+    ctx = (f"--- ΠΡΟΦΙΛ ΚΤΗΜΑΤΟΣ ---\n"
+           f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
+           f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
+           f"Ηλικία: {ktima.ilikia_dentron}, Πυκνότητα: {ktima.puknotita_dentron}\n"
+           f"Έδαφος: {ktima.typos_edafous}, Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ktima.ardefsi}\n"
+           f"Στάδιο: {ktima.fainologiko_stadio}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated else 0:.0f}\n\n")
+           
+    kairos = getattr(ktima, 'kairos', None) or pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
+    if kairos:
+        ctx += f"--- ΚΑΙΡΟΣ & ΔΟΡΥΦΟΡΟΣ (LIVE) ---\nΚαιρός: Θερμοκρασία {kairos['thermokrasia']}°C, Υγρασία {kairos['ygrasia']}%, {kairos['perigrafi']}\n"
+        
+    agro_data = getattr(ktima, 'agro_data', None)
+    if not agro_data and ktima.agromonitoring_poly_id:
+        soil = get_agro_soil_data(ktima.agromonitoring_poly_id)
+        uvi = get_agro_uvi(ktima.agromonitoring_poly_id)
+        if soil or uvi: agro_data = {'soil': soil, 'uvi': uvi}
+        
+    if agro_data:
+        s_data = agro_data.get('soil', {})
+        u_data = agro_data.get('uvi', {})
+        sm = f"{s_data.get('moisture')*100:.1f}%" if s_data and 'moisture' in s_data else 'N/A'
+        uv = u_data.get('uvi', 'N/A') if u_data and 'uvi' in u_data else 'N/A'
+        ctx += f"Δορυφόρος (Agromonitoring): Υγρασία Εδάφους (10cm): {sm}, UVI: {uv}\n\n"
+        
+    if ktima.diagnoseis:
+        recent = [d.apotelesma for d in sorted(ktima.diagnoseis, key=lambda x: x.imerominia, reverse=True)[:3] if (now - d.imerominia).days < 45]
+        if recent: ctx += f"--- ΠΡΟΣΦΑΤΑ ΕΥΡΗΜΑΤΑ/ΑΝΑΛΥΣΕΙΣ ---\n{' | '.join(recent)}\n\n"
+            
+    if ktima.ergasies:
+        completed = [f"{e.eidos_ergasias} ({e.imerominia.strftime('%d/%m')})" for e in sorted(ktima.ergasies, key=lambda x: x.imerominia, reverse=True) if not e.archived and e.katastasi == 'Ολοκληρώθηκε'][:4]
+        if completed: ctx += f"--- ΙΣΤΟΡΙΚΟ ΕΡΓΑΣΙΩΝ ---\nΤελευταίες Ολοκληρωμένες: {', '.join(completed)}\n\n"
+            
+    if ktima.idioktitis and ktima.idioktitis.apothiki_items:
+        stock = [f"{i.onoma_proiontos}" for i in ktima.idioktitis.apothiki_items]
+        if stock: ctx += f"--- ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ ---\nΔιαθέσιμα: {', '.join(stock)}\n"
+            
+    return ctx
 
 def generate_smart_tasks(ktima):
     """
@@ -222,47 +275,23 @@ def generate_smart_tasks(ktima):
        ktima.topikes_ergasies:
         return ktima.topikes_ergasies.split(',')
 
-    # 2. Συλλογή Δεδομένων
-    # Καιρός
-    kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
-    w_str = f"Temp: {kairos['thermokrasia']}C, Hum: {kairos['ygrasia']}%, Desc: {kairos['perigrafi']}" if kairos else "N/A"
+    # 2. Ανάκτηση πλήρους Context
+    plires_context = xtise_plires_context(ktima)
+    
+    kairos = getattr(ktima, 'kairos', None) or pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
+    thermokrasia_now = kairos['thermokrasia'] if kairos else 25
+    litra_ana_dentro = ypologismos_anagkon_nerou(thermokrasia_now, now.month, ktima.arithmos_dentron, ktima.stremmata)
 
-    # Ιστορικό Διαγνώσεων (Τελευταίες 30 μέρες)
-    diags = []
-    if ktima.diagnoseis:
-        for d in sorted(ktima.diagnoseis, key=lambda x: x.imerominia, reverse=True)[:5]:
-            if (now - d.imerominia).days < 30:
-                diags.append(f"[{d.imerominia.strftime('%d/%m')}] {d.apotelesma}")
-    diag_str = " | ".join(diags) if diags else "Καμία πρόσφατη διάγνωση."
-
-    # Απόθεμα Αποθήκης
-    stock = []
-    if ktima.idioktitis and ktima.idioktitis.apothiki_items:
-        for i in ktima.idioktitis.apothiki_items:
-            stock.append(f"{i.eidos}: {i.onoma_proiontos}")
-    stock_str = ", ".join(stock) if stock else "Άδεια αποθήκη."
-
-    # Agromonitoring Δεδομένα
-    agro_str = "Δεν υπάρχουν live δεδομένα εδάφους."
-    if hasattr(ktima, 'agro_data') and ktima.agro_data:
-        s_data = ktima.agro_data.get('soil', {})
-        u_data = ktima.agro_data.get('uvi', {})
-        sm = f"{s_data.get('moisture')*100:.1f}%" if s_data and 'moisture' in s_data else 'N/A'
-        uv = u_data.get('uvi', 'N/A') if u_data and 'uvi' in u_data else 'N/A'
-        agro_str = f"Υγρασία Εδάφους (10cm): {sm}, UVI: {uv}."
-
-    # 3. Κατασκευή του Smart Prompt
-    prompt = (f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε 3-5 κρίσιμες εργασίες για ΣΗΜΕΡΑ ({now.strftime('%d/%m')}).\n"
-              f"--- ΔΕΔΟΜΕΝΑ ---\n"
-              f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Ηλικία: {ktima.ilikia_dentron}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated is not None else 0:.0f}.\n"
-              f"Καιρός Τώρα: {w_str}.\n"
-              f"Agromonitoring Data: {agro_str}\n"
-              f"Ευρήματα (AI/Δορυφόρος): {diag_str}.\n"
-              f"Διαθέσιμα Υλικά: {stock_str}.\n"
-              f"--- ΟΔΗΓΙΑ ---\n"
-              f"Συνδύασε τα ευρήματα με τον καιρό και τα υλικά. Αν το UVI είναι >= 8, ΜΗΝ προτείνεις ψεκασμό (κίνδυνος εγκαύματος). Αν η υγρασία εδάφους είναι πολύ χαμηλή (< 20%), πρότεινε οπωσδήποτε άρδευση (αν είναι εφικτό).\n"
-              f"Δώσε ΜΟΝΟ μια λίστα εργασιών χωρισμένη με κόμμα (,). Χωρίς αρίθμηση ή εισαγωγή.\n"
-              f"Παράδειγμα: Ψεκασμός με Χαλκό (υπάρχει απόθεμα),Λίπανση Βορίου,Καθαρισμός Χόρτων")
+    # 3. Κατασκευή του Smart Prompt (Ενοποιημένο)
+    prompt = (
+        f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε 3-5 κρίσιμες εργασίες για ΣΗΜΕΡΑ ({now.strftime('%d/%m')}).\n"
+        f"{plires_context}\n"
+        f"--- ΟΔΗΓΙΑ ---\n"
+        f"Λάβε υπόψη τον καιρό, το ιστορικό εργασιών (μην επαναλαμβάνεις πρόσφατες ενέργειες), και τα αποθέματα. Αν το UVI είναι >= 8, ΜΗΝ προτείνεις ψεκασμό. Αν η υγρασία εδάφους είναι πολύ χαμηλή (< 20%), πρότεινε οπωσδήποτε άρδευση (αν είναι εφικτό).\n"
+        f"Αν προτείνεις 'Άρδευση' (επειδή είναι αρδευόμενο και η υγρασία είναι χαμηλή), γράψε δίπλα στην παρένθεση ακριβώς: '({litra_ana_dentro * 4} Λίτρα/δέντρο)' ώστε ο αγρότης να ξέρει τη δοσολογία.\n"
+        f"Δώσε ΜΟΝΟ μια λίστα εργασιών χωρισμένη με κόμμα (,). Χωρίς αρίθμηση ή εισαγωγή.\n"
+        f"Παράδειγμα: Ψεκασμός με Χαλκό (υπάρχει απόθεμα),Λίπανση Βορίου,Καθαρισμός Χόρτων"
+    )
 
     try:
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
@@ -290,11 +319,13 @@ def generate_local_tasks_via_ai(ktima):
 
     # Call AI
     try:
-        prompt = (f"Είσαι ειδικός γεωπόνος. Το ελαιόκτημα βρίσκεται στις συντεταγμένες {ktima.geografiko_platos}, {ktima.geografiko_mikos} στην Ελλάδα "
-                  f"(υπολόγισε το τοπικό μικροκλίμα, π.χ. παραθαλάσσιο vs ορεινό). Ο τρέχων μήνας είναι ο {now.month}. "
-                  f"Δώσε μου ΜΟΝΟ μια λίστα με τις 3-5 απολύτως απαραίτητες εργασίες για αυτή την περιοχή αυτόν τον μήνα, "
-                  f"χωρισμένες με κόμμα (,). Μην γράψεις καμία άλλη λέξη ή εισαγωγή. "
-                  f"Παράδειγμα: Διαχείριση Ζιζανίων,Ψεκασμός με Χαλκό,Βασική Λίπανση")
+        plires_context = xtise_plires_context(ktima)
+        prompt = (
+            f"Είσαι ειδικός γεωπόνος. Ο τρέχων μήνας είναι ο {now.month}. Εδώ είναι η πλήρης εικόνα του ελαιώνα:\n{plires_context}\n"
+            f"Δώσε μου ΜΟΝΟ μια λίστα με τις 3-5 απολύτως απαραίτητες εργασίες για αυτή την περιοχή αυτόν τον μήνα, "
+            f"βάσει των συνθηκών, των εργασιών που ΗΔΗ έγιναν και της αποθήκης. Χωρισμένες με κόμμα (,). Μην γράψεις καμία άλλη λέξη ή εισαγωγή. "
+            f"Παράδειγμα: Διαχείριση Ζιζανίων,Ψεκασμός με Χαλκό,Βασική Λίπανση"
+        )
         
         # Retry Logic
         response = None

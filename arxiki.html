@@ -128,7 +128,7 @@
                             <tbody>
                                 <tr>
                                     <th class="bg-light w-25">Κτήμα</th>
-                                    <td>{{ ktima.onoma_ktimatos }}</td>
+                                    <td>{{ ktima.onoma_ktimatos }} {% if ktima.ypsometro %}<br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td>
                                     <th class="bg-light w-25">Χάρτης</th>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
@@ -213,7 +213,7 @@
                         </form>
                     </div>
                     <div class="d-flex justify-content-between small text-muted mb-1">
-                        <span><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}</span>
+                        <span><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} | ⛰️ {{ ktima.ypsometro }}m{% endif %}</span>
                         <span>🌳 {{ ktima.stremmata }} στρ. | {{ ktima.arithmos_dentron }} δέντρα</span>
                     </div>
                     <p class="text-muted mb-1 small">
@@ -258,11 +258,11 @@
                         {% if ktima.agro_data %}
                         <div class="d-flex justify-content-between align-items-center bg-white border p-2 rounded mb-2 shadow-sm" style="font-size: 0.85em;">
                             {% if ktima.agro_data.soil %}
-                                <span title="Θερμοκρασία Εδάφους στα 10cm" class="text-secondary"><i class="fas fa-temperature-low"></i> Έδαφος: {{ "%.1f"|format(ktima.agro_data.soil.t10 - 273.15) if ktima.agro_data.soil.t10 else '-' }}°C</span>
-                                <span title="Ογκομετρική Υγρασία Εδάφους" class="text-info"><i class="fas fa-water"></i> Υγρασία: {{ "%.1f"|format(ktima.agro_data.soil.moisture * 100) if ktima.agro_data.soil.moisture else '-' }}%</span>
+                                <span style="cursor: pointer;" onclick="alert('Η μέτρηση εδάφους πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-secondary"><i class="fas fa-temperature-low"></i> Έδαφος: {{ "%.1f"|format(ktima.agro_data.soil.t10 - 273.15) if ktima.agro_data.soil.t10 else '-' }}°C</span>
+                                <span style="cursor: pointer;" onclick="alert('Η μέτρηση υγρασίας πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-info"><i class="fas fa-water"></i> Υγρασία: {{ "%.1f"|format(ktima.agro_data.soil.moisture * 100) if ktima.agro_data.soil.moisture else '-' }}%</span>
                             {% endif %}
                             {% if ktima.agro_data.uvi %}
-                                <span title="Δείκτης Υπεριώδους Ακτινοβολίας (UVI)">
+                                <span style="cursor: pointer;" onclick="alert('Ο δείκτης UVI μετρήθηκε στις:\n{{ ktima.agro_data.uvi.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.uvi.dt_formatted }}">
                                     <i class="fas fa-sun text-warning"></i> UVI: 
                                     <strong class="{% if ktima.agro_data.uvi.uvi >= 8 %}text-danger{% elif ktima.agro_data.uvi.uvi >= 5 %}text-warning{% else %}text-success{% endif %}">
                                         {{ "%.1f"|format(ktima.agro_data.uvi.uvi) }}
@@ -435,7 +435,7 @@
                             <div class="modal-body bg-light">
                                 <table class="table table-bordered table-sm bg-white shadow-sm">
                                     <tbody>
-                                        <tr><th class="bg-light w-25">Κτήμα</th><td>{{ ktima.onoma_ktimatos }}</td><th class="bg-light w-25">Τοποθεσία</th><td>{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}</td></tr>
+                                        <tr><th class="bg-light w-25">Κτήμα</th><td>{{ ktima.onoma_ktimatos }}</td><th class="bg-light w-25">Τοποθεσία</th><td>{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} <br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td></tr>
                                         <tr><th class="bg-light">Έκταση</th><td>{{ ktima.stremmata }} στρ. ({{ ktima.arithmos_dentron }} δέντρα)</td><th class="bg-light">Ποικιλία</th><td>{{ ktima.poikilia }}</td></tr>
                                         <tr><th class="bg-light">Ηλικία / Πυκνότητα</th><td>{{ ktima.ilikia_dentron }} / {{ ktima.puknotita_dentron }}</td><th class="bg-light">Έδαφος</th><td>{{ ktima.typos_edafous }} ({{ ktima.diacheirisi_edafous }})</td></tr>
                                         <tr><th class="bg-light">Άρδευση</th><td>{{ ktima.ardefsi }}</td><th class="bg-light">Στάδιο (GDD)</th><td>{{ ktima.fainologiko_stadio }} ({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</td></tr>

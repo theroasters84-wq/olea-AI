@@ -67,6 +67,7 @@ class Ktima(vasi.Model):
     ekkremis_erotisi_ai = vasi.Column(vasi.Text, nullable=True)
     gdd_target_anthisi = vasi.Column(vasi.Integer, default=600)
     gdd_target_sygkomidi = vasi.Column(vasi.Integer, default=2500)
+    ypsometro = vasi.Column(vasi.Float, nullable=True)
 
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"

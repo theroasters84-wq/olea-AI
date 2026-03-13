@@ -81,6 +81,14 @@ def update_db():
             except Exception as e:
                 print(f"ℹ️ Η στήλη 'polygon_geojson' υπάρχει ήδη ({e})")
                 conn.rollback()
+                
+            # Προσθήκη στήλης ypsometro
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN ypsometro FLOAT"))
+                print("✅ Προστέθηκε η στήλη 'ypsometro'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'ypsometro' υπάρχει ήδη ({e})")
+                conn.rollback()
             
             # Προσθήκη νέων GDD στόχων
             try:

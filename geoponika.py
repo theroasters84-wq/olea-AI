@@ -68,9 +68,11 @@ def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
         return "Το σύστημα AI δεν είναι ενεργοποιημένο (λείπει το κλειδί)."
 
     try:
-        prompt = (f"Είσαι ένας ειδικός γεωπόνος. Με θερμοκρασία {thermokrasia}°C, "
-                  f"υγρασία {ygrasia}% και καιρό {perigrafi}, δώσε μια σύντομη συμβουλή "
-                  f"(1-2 προτάσεις) για την καλλιέργεια της ελιάς.")
+        prompt = (
+            f"Είσαι ένας ειδικός γεωπόνος. Λάβε υπόψη τα εξής δεδομένα:\n"
+            f"{perigrafi}\n\n"
+            f"Δώσε μια στοχευμένη, σύντομη συμβουλή (2-3 προτάσεις) για τις άμεσες ενέργειες στο κτήμα."
+        )
         
         # Simple Retry Logic for Rate Limiting
         for attempt in range(3):
@@ -175,4 +177,38 @@ def get_agro_gdd(poly_id):
         res = requests.get(f"http://api.agromonitoring.com/agro/1.0/weather/history/accumulated_temperature?polyid={poly_id}&threshold=10&start={start}&end={end}&appid={api_key}")
         if res.status_code == 200: return res.json()
     except Exception as e: print(f"Agro GDD Error: {e}")
+    return None
+
+def ypologismos_anagkon_nerou(thermokrasia, mhnas, arithmos_dentron, stremmata):
+    if not arithmos_dentron or not stremmata or arithmos_dentron <= 0 or stremmata <= 0:
+        return 0
+        
+    # Συντελεστής Καλλιέργειας Ελιάς (Kc)
+    if mhnas in [6, 7, 8]:
+        kc = 0.65
+    elif mhnas in [4, 5, 9, 10]:
+        kc = 0.55
+    else:
+        kc = 0.40
+        
+    # Προσεγγιστική Ημερήσια Εξατμισοδιαπνοή (ETo) σε mm
+    if thermokrasia > 33: eto = 6.5
+    elif thermokrasia > 28: eto = 5.5
+    elif thermokrasia > 22: eto = 4.0
+    else: eto = 2.5
+        
+    tetragonika_ana_dentro = (stremmata * 1000) / arithmos_dentron
+    litra_ana_dentro_imera = eto * kc * tetragonika_ana_dentro * 0.5
+    return int(litra_ana_dentro_imera)
+
+def pare_ypsometro(lat, lng):
+    try:
+        url = f"https://api.open-meteo.com/v1/elevation?latitude={lat}&longitude={lng}"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if 'elevation' in data and data['elevation']:
+                return float(data['elevation'][0])
+    except Exception as e:
+        print(f"Σφάλμα λήψης υψομέτρου: {e}")
     return None

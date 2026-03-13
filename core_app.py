@@ -7,7 +7,7 @@ from sqlalchemy import text
 from core import vasi, ai_client, api_key_ai, kryptografhsh
 from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
-from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd
+from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro
 
 core_bp = Blueprint('core_app', __name__)
 
@@ -41,6 +41,12 @@ def arxikh():
                 soil = get_agro_soil_data(ktima.agromonitoring_poly_id)
                 uvi = get_agro_uvi(ktima.agromonitoring_poly_id)
                 agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
+                
+                # Μετατροπή της ώρας του Δορυφόρου σε αναγνώσιμη μορφή (π.χ. 13/03/2026 14:30)
+                if soil and 'dt' in soil:
+                    soil['dt_formatted'] = datetime.fromtimestamp(soil['dt']).strftime('%d/%m/%Y %H:%M')
+                if uvi and 'dt' in uvi:
+                    uvi['dt_formatted'] = datetime.fromtimestamp(uvi['dt']).strftime('%d/%m/%Y %H:%M')
                 
                 if soil or uvi:
                     ktima.agro_data = {'soil': soil, 'uvi': uvi}
@@ -105,19 +111,63 @@ def arxikh():
 
             # --- ΟΔΗΓΟΣ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗΣ (Ελλείψεις Δεδομένων) ---
             ktima.elleipseis = []
-            # 1. Έλεγχος Ανάλυσης Εδάφους
-            if not ktima.analuseis_edafous and not ktima.analysi_dedomena:
-                ktima.elleipseis.append("Ανάλυση Εδάφους (Φωτογραφία ή Χειροκίνητα)")
-            # 2. Έλεγχος AI Διάγνωσης
-            if not ktima.diagnoseis:
-                ktima.elleipseis.append("AI Διάγνωση (Φωτογραφία Δέντρου)")
-            # 3. Έλεγχος Νερού (μόνο αν είναι αρδευόμενο)
-            if ktima.ardefsi == 'Αρδευόμενο' and (ktima.nero_ph is None and ktima.nero_agwgimotita is None):
-                ktima.elleipseis.append("Ποιότητα Νερού (pH/EC)")
-            # 4. Έλεγχος Υγρασίας
+            now = datetime.now()
+            
+            last_soil = max([a.imerominia for a in ktima.analuseis_edafous]) if ktima.analuseis_edafous else None
+            last_leaf = None
+            last_water = None
+            last_stage = None
+            last_disease = None
+            
+            if ktima.diagnoseis:
+                for d in ktima.diagnoseis:
+                    res = d.apotelesma or ""
+                    if "📄 Έγγραφο Ανάλυσης" in res or "Εργαστηριακή Ανάλυση" in res:
+                        if not last_leaf or d.imerominia > last_leaf: last_leaf = d.imerominia
+                    elif "💧 Ανάλυση Νερού" in res:
+                        if not last_water or d.imerominia > last_water: last_water = d.imerominia
+                    elif "🌿 Αναγνώριση Σταδίου" in res:
+                        if not last_stage or d.imerominia > last_stage: last_stage = d.imerominia
+                    elif not any(k in res for k in ["Δορυφόρος", "Chat", "Answered", "📄", "💧", "🌿"]):
+                        if not last_disease or d.imerominia > last_disease: last_disease = d.imerominia
+
+            # 1. Ανάλυση Εδάφους (Κάθε 3 χρόνια)
+            if not last_soil:
+                ktima.elleipseis.append("Ανάλυση Εδάφους (Εκκρεμεί - Ανεβάστε αρχείο)")
+            elif (now - last_soil).days > (3 * 365):
+                ktima.elleipseis.append("Ανάλυση Εδάφους (Έχει περάσει 3ετία - Απαιτείται νέα)")
+
+            # 2. Ανάλυση Φύλλων (Κάθε 2 χρόνια)
+            if not last_leaf:
+                ktima.elleipseis.append("Ανάλυση Φύλλων (Εκκρεμεί - Ανεβάστε αρχείο)")
+            elif (now - last_leaf).days > (2 * 365):
+                ktima.elleipseis.append("Ανάλυση Φύλλων (Έχει περάσει 2ετία - Απαιτείται νέα)")
+
+            # 3. Ανάλυση Νερού (Χειμώνα & Καλοκαίρι)
+            if ktima.ardefsi == 'Αρδευόμενο':
+                if not ktima.nero_ph and not last_water:
+                    ktima.elleipseis.append("Ανάλυση Νερού (Εκκρεμεί αρχική μέτρηση)")
+                else:
+                    if now.month in [12, 1, 2, 6, 7, 8]:
+                        if not last_water or (now - last_water).days > 120:
+                            epoxi = "Χειμερινή" if now.month in [12, 1, 2] else "Καλοκαιρινή"
+                            ktima.elleipseis.append(f"Ανάλυση Νερού (Απαιτείται {epoxi} επικαιροποίηση)")
+
+            # 4. Στάδιο (Κάθε μήνα)
+            if ktima.fainologiko_stadio == 'Άγνωστο' or not last_stage:
+                ktima.elleipseis.append("Αναγνώριση Σταδίου (AI Εργαλεία -> Βρες Στάδιο)")
+            elif (now - last_stage).days > 30:
+                ktima.elleipseis.append("Αναγνώριση Σταδίου (Απαιτείται μηνιαία επικαιροποίηση)")
+
+            # 5. AI Διάγνωση Ασθενειών (Κάθε μήνα)
+            if not last_disease:
+                ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Εκκρεμεί - Φωτογραφία)")
+            elif (now - last_disease).days > 30:
+                ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Μηνιαίος προληπτικός έλεγχος)")
+
+            # 6. Δορυφόρος & Υγρασία (Σταθερά)
             if not ktima.ugrasies:
-                ktima.elleipseis.append("Καταγραφή Υγρασίας")
-            # 5. Έλεγχος Δορυφόρου
+                ktima.elleipseis.append("Καταγραφή Υγρασίας (Προσθέστε μέτρηση)")
             if not ktima.polygon_geojson:
                 ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
                 
@@ -251,6 +301,12 @@ def prosthes_ktima():
                 gdd_target_anthisi=target_a,
                 gdd_target_sygkomidi=target_s
             )
+            
+            # --- Υπολογισμός Υψομέτρου ---
+            yps_val = pare_ypsometro(float(platos), float(mikos))
+            if yps_val is not None:
+                neo.ypsometro = yps_val
+                
             vasi.session.add(neo)
             vasi.session.flush()
             
@@ -417,6 +473,10 @@ def enimerosi_nerou(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     ktima.nero_ph = float(request.form.get('nero_ph') or 0)
     ktima.nero_agwgimotita = float(request.form.get('nero_agwgimotita') or 0)
+    
+    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"💧 Ανάλυση Νερού: pH {ktima.nero_ph}, EC {ktima.nero_agwgimotita}", imerominia=datetime.now())
+    vasi.session.add(nea_diagnosi)
+    
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
 
