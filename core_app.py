@@ -24,152 +24,147 @@ def arxikh():
         is_geoponos_view = False
         
         if getattr(current_user, 'rolos', '') == 'geoponos' and pelatis_id:
-            provalomenos_xrhsths = vasi.session.get(Xrhsths, int(pelatis_id))
-            if not provalomenos_xrhsths:
-                flash('Δεν βρέθηκε ο πελάτης.', 'danger')
+            try:
+                pelatis_id_int = int(pelatis_id)
+                provalomenos_xrhsths = vasi.session.get(Xrhsths, pelatis_id_int)
+                if not provalomenos_xrhsths:
+                    flash('Δεν βρέθηκε ο πελάτης.', 'danger')
+                    return redirect(url_for('core_app.dashboard_geoponou'))
+                ktimata = [k for k in provalomenos_xrhsths.ktimata if k.is_active]
+                is_geoponos_view = True
+            except ValueError:
+                flash('Μη έγκυρο ID πελάτη.', 'danger')
                 return redirect(url_for('core_app.dashboard_geoponou'))
-            ktimata = [k for k in provalomenos_xrhsths.ktimata if k.is_active]
-            is_geoponos_view = True
         else:
             provalomenos_xrhsths = current_user
             ktimata = [k for k in current_user.ktimata if k.is_active]
 
         for ktima in ktimata:
-            # Ενσωμάτωση Agromonitoring API
-            ktima.agro_data = None
-            if ktima.agromonitoring_poly_id:
-                soil = get_agro_soil_data(ktima.agromonitoring_poly_id)
-                uvi = get_agro_uvi(ktima.agromonitoring_poly_id)
-                agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
-                
-                # Μετατροπή της ώρας του Δορυφόρου σε αναγνώσιμη μορφή (π.χ. 13/03/2026 14:30)
-                if soil and 'dt' in soil:
-                    soil['dt_formatted'] = datetime.fromtimestamp(soil['dt']).strftime('%d/%m/%Y %H:%M')
-                if uvi and 'dt' in uvi:
-                    uvi['dt_formatted'] = datetime.fromtimestamp(uvi['dt']).strftime('%d/%m/%Y %H:%M')
-                
-                if soil or uvi:
-                    ktima.agro_data = {'soil': soil, 'uvi': uvi}
-                ktima.agro_forecast = agro_forecast
+            try:
+                # Ενσωμάτωση Agromonitoring API
+                ktima.agro_data = None
+                if ktima.agromonitoring_poly_id:
+                    soil = get_agro_soil_data(ktima.agromonitoring_poly_id)
+                    uvi = get_agro_uvi(ktima.agromonitoring_poly_id)
+                    agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
+                    
+                    # Μετατροπή της ώρας του Δορυφόρου σε αναγνώσιμη μορφή (π.χ. 13/03/2026 14:30)
+                    if soil and 'dt' in soil:
+                        soil['dt_formatted'] = datetime.fromtimestamp(soil['dt']).strftime('%d/%m/%Y %H:%M')
+                    if uvi and 'dt' in uvi:
+                        uvi['dt_formatted'] = datetime.fromtimestamp(uvi['dt']).strftime('%d/%m/%Y %H:%M')
+                    
+                    if soil or uvi:
+                        ktima.agro_data = {'soil': soil, 'uvi': uvi}
+                    ktima.agro_forecast = agro_forecast
 
-            ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
-            if ktima.kairos:
-                ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
-                ktima.protaseis = paragwgi_protasewn(ktima, ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], ktima.kairos['perigrafi'])
-            else:
-                ktima.protaseis = []
-            
-            ideal_tasks = generate_smart_tasks(ktima)
-            if isinstance(ideal_tasks, list):
-                 ideal_tasks = [t.strip() for t in ideal_tasks if t.strip()]
-            else:
-                 ideal_tasks = []
-            
-            # (GDD logic omitted for brevity, same as original)
-
-            completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
-            ktima.pending_tasks = [task for task in ideal_tasks if task not in completed_tasks]
-            
-            # --- SMART INTERACTION: COPPER -> AMINO ACIDS LOGIC ---
-            # Check if Copper was applied recently and manage the Amino Acid task automatically.
-            latest_copper = None
-            latest_amino = None
-            
-            for t in ktima.ergasies:
-                if not t.archived:
-                    if 'Χαλκ' in t.eidos_ergasias or (t.farmaka_lipasmata and 'Χαλκ' in t.farmaka_lipasmata):
-                        if latest_copper is None or t.imerominia > latest_copper.imerominia:
-                            latest_copper = t
-                    if 'Αμινοξ' in t.eidos_ergasias or (t.farmaka_lipasmata and 'Αμινοξ' in t.farmaka_lipasmata):
-                        if latest_amino is None or t.imerominia > latest_amino.imerominia:
-                            latest_amino = t
-            
-            if latest_copper:
-                days_diff = (datetime.now() - latest_copper.imerominia).days
-                # Check if Amino Acids were done AFTER the last copper
-                amino_done_after = latest_amino and latest_amino.imerominia > latest_copper.imerominia
-                
-                if not amino_done_after and days_diff < 40: # Relevance window ~40 days
-                    if days_diff < 7:
-                        # Too soon - Show with countdown
-                        wait_days = 7 - days_diff
-                        ktima.pending_tasks.insert(0, f"⏳ Αναμονή: Αμινοξέα (σε {wait_days} μέρες)")
-                    else:
-                        # Safe time - Add to tasks if not explicitly there
-                        if not any('Αμινοξ' in t for t in ktima.pending_tasks):
-                            ktima.pending_tasks.insert(0, "Διαφυλλική με Αμινοξέα (Ενίσχυση)")
-
-            ktima.synoliko_kostos = sum((exodo.poso or 0) for exodo in ktima.exoda if not exodo.archived)
-            
-            # PHI Logic
-            latest_spray = None
-            for ergasia in ktima.ergasies:
-                if not ergasia.archived and 'Ψεκασμός' in ergasia.eidos_ergasias:
-                    if latest_spray is None or ergasia.imerominia > latest_spray.imerominia:
-                        latest_spray = ergasia
-            ktima.meres_apo_psekasmo = (datetime.now() - latest_spray.imerominia).days if latest_spray else None
-
-            # --- ΟΔΗΓΟΣ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗΣ (Ελλείψεις Δεδομένων) ---
-            ktima.elleipseis = []
-            now = datetime.now()
-            
-            last_soil = max([a.imerominia for a in ktima.analuseis_edafous]) if ktima.analuseis_edafous else None
-            last_leaf = None
-            last_water = None
-            last_stage = None
-            last_disease = None
-            
-            if ktima.diagnoseis:
-                for d in ktima.diagnoseis:
-                    res = d.apotelesma or ""
-                    if "📄 Έγγραφο Ανάλυσης" in res or "Εργαστηριακή Ανάλυση" in res:
-                        if not last_leaf or d.imerominia > last_leaf: last_leaf = d.imerominia
-                    elif "💧 Ανάλυση Νερού" in res:
-                        if not last_water or d.imerominia > last_water: last_water = d.imerominia
-                    elif "🌿 Αναγνώριση Σταδίου" in res:
-                        if not last_stage or d.imerominia > last_stage: last_stage = d.imerominia
-                    elif not any(k in res for k in ["Δορυφόρος", "Chat", "Answered", "📄", "💧", "🌿"]):
-                        if not last_disease or d.imerominia > last_disease: last_disease = d.imerominia
-
-            # 1. Ανάλυση Εδάφους (Κάθε 3 χρόνια)
-            if not last_soil:
-                ktima.elleipseis.append("Ανάλυση Εδάφους (Εκκρεμεί - Ανεβάστε αρχείο)")
-            elif (now - last_soil).days > (3 * 365):
-                ktima.elleipseis.append("Ανάλυση Εδάφους (Έχει περάσει 3ετία - Απαιτείται νέα)")
-
-            # 2. Ανάλυση Φύλλων (Κάθε 2 χρόνια)
-            if not last_leaf:
-                ktima.elleipseis.append("Ανάλυση Φύλλων (Εκκρεμεί - Ανεβάστε αρχείο)")
-            elif (now - last_leaf).days > (2 * 365):
-                ktima.elleipseis.append("Ανάλυση Φύλλων (Έχει περάσει 2ετία - Απαιτείται νέα)")
-
-            # 3. Ανάλυση Νερού (Χειμώνα & Καλοκαίρι)
-            if ktima.ardefsi == 'Αρδευόμενο':
-                if not ktima.nero_ph and not last_water:
-                    ktima.elleipseis.append("Ανάλυση Νερού (Εκκρεμεί αρχική μέτρηση)")
+                ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
+                if ktima.kairos:
+                    ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
+                    ktima.protaseis = paragwgi_protasewn(ktima, ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], ktima.kairos['perigrafi'])
                 else:
-                    if now.month in [12, 1, 2, 6, 7, 8]:
-                        if not last_water or (now - last_water).days > 120:
-                            epoxi = "Χειμερινή" if now.month in [12, 1, 2] else "Καλοκαιρινή"
-                            ktima.elleipseis.append(f"Ανάλυση Νερού (Απαιτείται {epoxi} επικαιροποίηση)")
+                    ktima.protaseis = []
+                
+                ideal_tasks = generate_smart_tasks(ktima)
+                if isinstance(ideal_tasks, list):
+                     ideal_tasks = [t.strip() for t in ideal_tasks if t.strip()]
+                else:
+                     ideal_tasks = []
+                
+                completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
+                ktima.pending_tasks = [task for task in ideal_tasks if task not in completed_tasks]
+                
+                # --- SMART INTERACTION: COPPER -> AMINO ACIDS LOGIC ---
+                latest_copper = None
+                latest_amino = None
+                
+                for t in ktima.ergasies:
+                    if not t.archived:
+                        if 'Χαλκ' in t.eidos_ergasias or (t.farmaka_lipasmata and 'Χαλκ' in t.farmaka_lipasmata):
+                            if latest_copper is None or t.imerominia > latest_copper.imerominia:
+                                latest_copper = t
+                        if 'Αμινοξ' in t.eidos_ergasias or (t.farmaka_lipasmata and 'Αμινοξ' in t.farmaka_lipasmata):
+                            if latest_amino is None or t.imerominia > latest_amino.imerominia:
+                                latest_amino = t
+                
+                if latest_copper:
+                    days_diff = (datetime.now() - latest_copper.imerominia).days
+                    amino_done_after = latest_amino and latest_amino.imerominia > latest_copper.imerominia
+                    
+                    if not amino_done_after and days_diff < 40:
+                        if days_diff < 7:
+                            wait_days = 7 - days_diff
+                            ktima.pending_tasks.insert(0, f"⏳ Αναμονή: Αμινοξέα (σε {wait_days} μέρες)")
+                        else:
+                            if not any('Αμινοξ' in t for t in ktima.pending_tasks):
+                                ktima.pending_tasks.insert(0, "Διαφυλλική με Αμινοξέα (Ενίσχυση)")
 
-            # 4. Στάδιο (Κάθε μήνα)
-            if ktima.fainologiko_stadio == 'Άγνωστο' or not last_stage:
-                ktima.elleipseis.append("Αναγνώριση Σταδίου (AI Εργαλεία -> Βρες Στάδιο)")
-            elif (now - last_stage).days > 30:
-                ktima.elleipseis.append("Αναγνώριση Σταδίου (Απαιτείται μηνιαία επικαιροποίηση)")
+                ktima.synoliko_kostos = sum((exodo.poso or 0) for exodo in ktima.exoda if not exodo.archived)
+                
+                # PHI Logic
+                latest_spray = None
+                for ergasia in ktima.ergasies:
+                    if not ergasia.archived and 'Ψεκασμός' in ergasia.eidos_ergasias:
+                        if latest_spray is None or ergasia.imerominia > latest_spray.imerominia:
+                            latest_spray = ergasia
+                ktima.meres_apo_psekasmo = (datetime.now() - latest_spray.imerominia).days if latest_spray else None
 
-            # 5. AI Διάγνωση Ασθενειών (Κάθε μήνα)
-            if not last_disease:
-                ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Εκκρεμεί - Φωτογραφία)")
-            elif (now - last_disease).days > 30:
-                ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Μηνιαίος προληπτικός έλεγχος)")
+                # --- ΟΔΗΓΟΣ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗΣ (Ελλείψεις Δεδομένων) ---
+                ktima.elleipseis = []
+                now = datetime.now()
+                
+                last_soil = max([a.imerominia for a in ktima.analuseis_edafous]) if ktima.analuseis_edafous else None
+                last_leaf = None
+                last_water = None
+                last_stage = None
+                last_disease = None
+                
+                if ktima.diagnoseis:
+                    for d in ktima.diagnoseis:
+                        res = d.apotelesma or ""
+                        if "📄 Έγγραφο Ανάλυσης" in res or "Εργαστηριακή Ανάλυση" in res:
+                            if not last_leaf or d.imerominia > last_leaf: last_leaf = d.imerominia
+                        elif "💧 Ανάλυση Νερού" in res:
+                            if not last_water or d.imerominia > last_water: last_water = d.imerominia
+                        elif "🌿 Αναγνώριση Σταδίου" in res:
+                            if not last_stage or d.imerominia > last_stage: last_stage = d.imerominia
+                        elif not any(k in res for k in ["Δορυφόρος", "Chat", "Answered", "📄", "💧", "🌿"]):
+                            if not last_disease or d.imerominia > last_disease: last_disease = d.imerominia
 
-            # 6. Δορυφόρος & Υγρασία (Σταθερά)
-            if not ktima.ugrasies:
-                ktima.elleipseis.append("Καταγραφή Υγρασίας (Προσθέστε μέτρηση)")
-            if not ktima.polygon_geojson:
-                ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
+                # 1. Ανάλυση Εδάφους
+                if not last_soil: ktima.elleipseis.append("Ανάλυση Εδάφους (Εκκρεμεί - Ανεβάστε αρχείο)")
+                elif (now - last_soil).days > (3 * 365): ktima.elleipseis.append("Ανάλυση Εδάφους (Έχει περάσει 3ετία - Απαιτείται νέα)")
+                # 2. Ανάλυση Φύλλων
+                if not last_leaf: ktima.elleipseis.append("Ανάλυση Φύλλων (Εκκρεμεί - Ανεβάστε αρχείο)")
+                elif (now - last_leaf).days > (2 * 365): ktima.elleipseis.append("Ανάλυση Φύλλων (Έχει περάσει 2ετία - Απαιτείται νέα)")
+                # 3. Ανάλυση Νερού
+                if ktima.ardefsi == 'Αρδευόμενο':
+                    if not ktima.nero_ph and not last_water: ktima.elleipseis.append("Ανάλυση Νερού (Εκκρεμεί αρχική μέτρηση)")
+                    else:
+                        if now.month in [12, 1, 2, 6, 7, 8]:
+                            if not last_water or (now - last_water).days > 120:
+                                epoxi = "Χειμερινή" if now.month in [12, 1, 2] else "Καλοκαιρινή"
+                                ktima.elleipseis.append(f"Ανάλυση Νερού (Απαιτείται {epoxi} επικαιροποίηση)")
+                # 4. Στάδιο
+                if ktima.fainologiko_stadio == 'Άγνωστο' or not last_stage: ktima.elleipseis.append("Αναγνώριση Σταδίου (AI Εργαλεία -> Βρες Στάδιο)")
+                elif (now - last_stage).days > 30: ktima.elleipseis.append("Αναγνώριση Σταδίου (Απαιτείται μηνιαία επικαιροποίηση)")
+                # 5. AI Διάγνωση Ασθενειών
+                if not last_disease: ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Εκκρεμεί - Φωτογραφία)")
+                elif (now - last_disease).days > 30: ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Μηνιαίος προληπτικός έλεγχος)")
+                # 6. Δορυφόρος & Υγρασία
+                if not ktima.ugrasies: ktima.elleipseis.append("Καταγραφή Υγρασίας (Προσθέστε μέτρηση)")
+                if not ktima.polygon_geojson: ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
+
+            except Exception as e_ktima:
+                print(f"Σφάλμα φόρτωσης δεδομένων για το κτήμα '{ktima.onoma_ktimatos}': {e_ktima}")
+                # Σε περίπτωση σφάλματος, δίνουμε κενές τιμές για να μην "σπάσει" η HTML σελίδα.
+                if not hasattr(ktima, 'kairos'): ktima.kairos = None
+                if not hasattr(ktima, 'protaseis'): ktima.protaseis = []
+                if not hasattr(ktima, 'pending_tasks'): ktima.pending_tasks = []
+                if not hasattr(ktima, 'synoliko_kostos'): ktima.synoliko_kostos = 0
+                if not hasattr(ktima, 'meres_apo_psekasmo'): ktima.meres_apo_psekasmo = None
+                if not hasattr(ktima, 'elleipseis'): ktima.elleipseis = []
+                if not hasattr(ktima, 'agro_data'): ktima.agro_data = None
                 
         # Περνάμε το datetime ΡΗΤΑ για να αποφύγουμε σφάλματα στα templates
         return render_template('arxiki.html', xrhsths=provalomenos_xrhsths, ktimata=ktimata, datetime=datetime, is_geoponos_view=is_geoponos_view)
@@ -177,7 +172,17 @@ def arxikh():
     except Exception as e:
         print(f"CRITICAL ERROR IN ARXIKI: {e}") # Εμφάνιση στο τερματικό για έλεγχο
         flash(f"Σφάλμα φόρτωσης: {str(e)}", "danger")
-        return render_template('arxiki.html', xrhsths=current_user, ktimata=current_user.ktimata, datetime=datetime, is_geoponos_view=False)
+        
+        safe_ktimata = current_user.ktimata if current_user.is_authenticated else []
+        for k in safe_ktimata:
+            if not hasattr(k, 'kairos'): k.kairos = None
+            if not hasattr(k, 'protaseis'): k.protaseis = []
+            if not hasattr(k, 'pending_tasks'): k.pending_tasks = []
+            if not hasattr(k, 'synoliko_kostos'): k.synoliko_kostos = 0
+            if not hasattr(k, 'meres_apo_psekasmo'): k.meres_apo_psekasmo = None
+            if not hasattr(k, 'elleipseis'): k.elleipseis = []
+            if not hasattr(k, 'agro_data'): k.agro_data = None
+        return render_template('arxiki.html', xrhsths=current_user, ktimata=safe_ktimata, datetime=datetime, is_geoponos_view=False)
 
 @core_bp.route('/ananeosi_ergasion/<int:ktima_id>')
 @login_required
