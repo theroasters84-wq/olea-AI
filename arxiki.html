@@ -149,7 +149,15 @@
                                 <div class="col-md-9">
                                     <strong><i class="fas fa-chart-line"></i> Τελευταία Μέτρηση:</strong><br>
                                     <span style="font-family: monospace; font-size: 1.1em;">
-                                        {{ ktima.diagnoseis[-1].apotelesma if ktima.diagnoseis and ktima.diagnoseis[-1].apotelesma and '🛰️' in ktima.diagnoseis[-1].apotelesma else 'Δεν υπάρχουν πρόσφατα δεδομένα.' }}
+                                        {% set ns_sat1 = namespace(found=false) %}
+                                        {% if ktima.diagnoseis %}
+                                            {% set last_d1 = ktima.diagnoseis|last %}
+                                            {% if last_d1 and last_d1.apotelesma and '🛰️' in last_d1.apotelesma %}
+                                                {{ last_d1.apotelesma }}
+                                                {% set ns_sat1.found = true %}
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if not ns_sat1.found %}Δεν υπάρχουν πρόσφατα δεδομένα.{% endif %}
                                     </span>
                                 </div>
                                 <div class="col-md-3 text-end">

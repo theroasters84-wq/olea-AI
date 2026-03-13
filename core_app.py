@@ -156,7 +156,6 @@ def arxikh():
                 if not ktima.polygon_geojson: ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
 
             except Exception as e_ktima:
-                vasi.session.rollback()
                 print(f"Σφάλμα φόρτωσης δεδομένων για το κτήμα '{ktima.onoma_ktimatos}': {e_ktima}")
                 # Σε περίπτωση σφάλματος, δίνουμε κενές τιμές για να μην "σπάσει" η HTML σελίδα.
                 if not hasattr(ktima, 'kairos'): ktima.kairos = None
@@ -167,24 +166,15 @@ def arxikh():
                 if not hasattr(ktima, 'elleipseis'): ktima.elleipseis = []
                 if not hasattr(ktima, 'agro_data'): ktima.agro_data = None
                 
+        # Μαζική αποθήκευση τυχόν νέων AI tasks (Cache)
+        vasi.session.commit()
         # Περνάμε το datetime ΡΗΤΑ για να αποφύγουμε σφάλματα στα templates
         return render_template('arxiki.html', xrhsths=provalomenos_xrhsths, ktimata=ktimata, datetime=datetime, is_geoponos_view=is_geoponos_view)
 
     except Exception as e:
-        vasi.session.rollback()
         print(f"CRITICAL ERROR IN ARXIKI: {e}") # Εμφάνιση στο τερματικό για έλεγχο
-        flash("Υπήρξε στιγμιαίο πρόβλημα στη φόρτωση κάποιων δεδομένων. Έγινε ασφαλής επαναφορά.", "warning")
-        
-        safe_ktimata = current_user.ktimata if current_user.is_authenticated else []
-        for k in safe_ktimata:
-            if not hasattr(k, 'kairos'): k.kairos = None
-            if not hasattr(k, 'protaseis'): k.protaseis = []
-            if not hasattr(k, 'pending_tasks'): k.pending_tasks = []
-            if not hasattr(k, 'synoliko_kostos'): k.synoliko_kostos = 0
-            if not hasattr(k, 'meres_apo_psekasmo'): k.meres_apo_psekasmo = None
-            if not hasattr(k, 'elleipseis'): k.elleipseis = []
-            if not hasattr(k, 'agro_data'): k.agro_data = None
-        return render_template('arxiki.html', xrhsths=current_user, ktimata=safe_ktimata, datetime=datetime, is_geoponos_view=False)
+        flash("Υπήρξε πρόβλημα στη φόρτωση της σελίδας. Παρακαλώ προσπαθήστε ξανά.", "danger")
+        return redirect(url_for('auth.eisodos'))
 
 @core_bp.route('/ananeosi_ergasion/<int:ktima_id>')
 @login_required

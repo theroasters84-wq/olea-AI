@@ -15,7 +15,7 @@ def pare_kairo(lat, lng):
 
     try:
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         data = response.json()
         if response.status_code == 200:
             return {
@@ -38,7 +38,7 @@ def pare_prognosi_kairou(lat, lng):
 
     try:
         url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         data = response.json()
         if response.status_code == 200:
             return data['list']
@@ -145,7 +145,7 @@ def get_agro_soil_data(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
     try:
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/soil?polyid={poly_id}&appid={api_key}")
+        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/soil?polyid={poly_id}&appid={api_key}", timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e: print(f"Soil Data Error: {e}")
     return None
@@ -154,7 +154,7 @@ def get_agro_uvi(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
     try:
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/uvi?polyid={poly_id}&appid={api_key}")
+        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/uvi?polyid={poly_id}&appid={api_key}", timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e: print(f"UVI Error: {e}")
     return None
@@ -163,7 +163,7 @@ def get_agro_forecast(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
     try:
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid={poly_id}&appid={api_key}")
+        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid={poly_id}&appid={api_key}", timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e: print(f"Agro Forecast Error: {e}")
     return None
@@ -174,7 +174,7 @@ def get_agro_gdd(poly_id):
     try:
         end = int(time.time())
         start = int(datetime(datetime.now().year, 1, 1).timestamp())
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/weather/history/accumulated_temperature?polyid={poly_id}&threshold=10&start={start}&end={end}&appid={api_key}")
+        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/weather/history/accumulated_temperature?polyid={poly_id}&threshold=10&start={start}&end={end}&appid={api_key}", timeout=5)
         if res.status_code == 200: return res.json()
     except Exception as e: print(f"Agro GDD Error: {e}")
     return None

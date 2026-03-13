@@ -300,11 +300,9 @@ def generate_smart_tasks(ktima):
         # Αποθήκευση στη βάση (Caching)
         ktima.topikes_ergasies = tasks_str
         ktima.teleftaia_enimerosi_ergasion = now
-        vasi.session.commit()
         
         return tasks_str.split(',')
     except Exception as e:
-        vasi.session.rollback()
         print(f"Smart Task AI Error: {e}")
         return get_epoxikes_ergasies(now.month) # Fallback σε στατικές εργασίες
 
@@ -345,12 +343,10 @@ def generate_local_tasks_via_ai(ktima):
         
         ktima.topikes_ergasies = tasks_str
         ktima.teleftaia_enimerosi_ergasion = now
-        vasi.session.commit()
         
         return tasks_str.split(',')
     except Exception as e:
         print(f"AI Task Error: {e}")
-        vasi.session.rollback()
         # Fallback to static logic if AI fails
         return get_epoxikes_ergasies(now.month)
 
