@@ -459,40 +459,54 @@ def oloklirosi_ergasias(ktima_id):
 @core_bp.route('/prosthes_ugrasia/<int:ktima_id>', methods=['POST'])
 @login_required
 def prosthes_ugrasia(ktima_id):
-    nea = KatagrafiUgrasias(ktima_id=ktima_id, pososto=float(request.form.get('pososto')))
-    vasi.session.add(nea)
-    vasi.session.commit()
+    try:
+        pososto = float(request.form.get('pososto', 0))
+        nea = KatagrafiUgrasias(ktima_id=ktima_id, pososto=pososto)
+        vasi.session.add(nea)
+        vasi.session.commit()
+    except ValueError:
+        flash('Μη έγκυρη τιμή υγρασίας.', 'danger')
     return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/enimerosi_nerou/<int:ktima_id>', methods=['POST'])
 @login_required
 def enimerosi_nerou(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
-    ktima.nero_ph = float(request.form.get('nero_ph') or 0)
-    ktima.nero_agwgimotita = float(request.form.get('nero_agwgimotita') or 0)
-    
-    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"💧 Ανάλυση Νερού: pH {ktima.nero_ph}, EC {ktima.nero_agwgimotita}", imerominia=datetime.now())
-    vasi.session.add(nea_diagnosi)
-    
-    vasi.session.commit()
+    try:
+        ktima.nero_ph = float(request.form.get('nero_ph') or 0)
+        ktima.nero_agwgimotita = float(request.form.get('nero_agwgimotita') or 0)
+        
+        nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"💧 Ανάλυση Νερού: pH {ktima.nero_ph}, EC {ktima.nero_agwgimotita}", imerominia=datetime.now())
+        vasi.session.add(nea_diagnosi)
+        vasi.session.commit()
+    except ValueError:
+        flash('Εισάγετε έγκυρους αριθμούς για την ανάλυση νερού.', 'danger')
     return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/prosthes_exodo/<int:ktima_id>', methods=['POST'])
 @login_required
 def prosthes_exodo(ktima_id):
-    neo = Exodo(ktima_id=ktima_id, perigrafi=request.form.get('perigrafi'), poso=float(request.form.get('poso')), imerominia=datetime.now())
-    vasi.session.add(neo)
-    vasi.session.commit()
+    try:
+        poso = float(request.form.get('poso', 0))
+        neo = Exodo(ktima_id=ktima_id, perigrafi=request.form.get('perigrafi', 'Έξοδο'), poso=poso, imerominia=datetime.now())
+        vasi.session.add(neo)
+        vasi.session.commit()
+    except ValueError:
+        flash('Μη έγκυρο ποσό.', 'danger')
     return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/apothiki', methods=['GET', 'POST'])
 @login_required
 def apothiki():
     if request.method == 'POST':
-        neo = Apothiki(xrhsths_id=current_user.id, eidos=request.form.get('eidos'), onoma_proiontos=request.form.get('onoma_proiontos'), posotita=float(request.form.get('posotita')), monada_metrisis=request.form.get('monada_metrisis'))
-        vasi.session.add(neo)
-        vasi.session.commit()
-        flash('Προστέθηκε!', 'success')
+        try:
+            posotita = float(request.form.get('posotita', 0))
+            neo = Apothiki(xrhsths_id=current_user.id, eidos=request.form.get('eidos'), onoma_proiontos=request.form.get('onoma_proiontos'), posotita=posotita, monada_metrisis=request.form.get('monada_metrisis'))
+            vasi.session.add(neo)
+            vasi.session.commit()
+            flash('Προστέθηκε!', 'success')
+        except ValueError:
+            flash('Η ποσότητα πρέπει να είναι αριθμός.', 'danger')
         return redirect(url_for('core_app.apothiki'))
     return render_template('apothiki.html', proionta=Apothiki.query.filter_by(xrhsths_id=current_user.id).all())
 
@@ -507,12 +521,16 @@ def diagrafi_apothikis(item_id):
 @login_required
 def lixi_xronias(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
-    arxeio = ArxeioSygkomidis(ktima_id=ktima.id, tonoi=float(request.form.get('tonoi_paragogis')), kila_ana_dentro=0, synoliko_kostos=0, imerominia=datetime.now())
-    vasi.session.add(arxeio)
-    for e in ktima.ergasies: e.archived = True
-    for ex in ktima.exoda: ex.archived = True
-    vasi.session.commit()
-    flash('Χρονιά έκλεισε.', 'success')
+    try:
+        tonoi = float(request.form.get('tonoi_paragogis', 0))
+        arxeio = ArxeioSygkomidis(ktima_id=ktima.id, tonoi=tonoi, kila_ana_dentro=0, synoliko_kostos=0, imerominia=datetime.now())
+        vasi.session.add(arxeio)
+        for e in ktima.ergasies: e.archived = True
+        for ex in ktima.exoda: ex.archived = True
+        vasi.session.commit()
+        flash('Χρονιά έκλεισε.', 'success')
+    except ValueError:
+        flash('Παρακαλώ εισάγετε έγκυρο αριθμό τόνων παραγωγής.', 'danger')
     return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/epeksergasia_poikiliwn/<int:ktima_id>', methods=['POST'])
