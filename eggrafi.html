@@ -37,6 +37,25 @@
 
                         <form method="POST" action="/eggrafi">
                             <div class="mb-3">
+                                <label for="onoma" class="form-label">Ονοματεπώνυμο</label>
+                                <input type="text" class="form-control form-control-lg bg-light" id="onoma" name="onoma" required placeholder="π.χ. Γιάννης Παπαδόπουλος">
+                            </div>
+                            <div class="mb-3">
+                                <label for="rolos" class="form-label">Ιδιότητα</label>
+                                <select class="form-select form-select-lg bg-light" id="rolos" name="rolos">
+                                    <option value="agroths" selected>Αγρότης</option>
+                                    <option value="geoponos">Γεωπόνος</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="afm" class="form-label">ΑΦΜ (Για ταυτοποίηση)</label>
+                                <input type="text" class="form-control form-control-lg bg-light" id="afm" name="afm" maxlength="9" required placeholder="π.χ. 123456789">
+                            </div>
+                            <div class="mb-3">
+                                <label for="ar_tautotitas" class="form-label">Αρ. Ταυτότητας (Προαιρετικό)</label>
+                                <input type="text" class="form-control form-control-lg bg-light" id="ar_tautotitas" name="ar_tautotitas">
+                            </div>
+                            <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" class="form-control form-control-lg bg-light" id="email" name="email" required autocomplete="username">
                             </div>

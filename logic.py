@@ -231,7 +231,7 @@ def generate_smart_tasks(ktima):
     # 3. Κατασκευή του Smart Prompt
     prompt = (f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε 3-5 κρίσιμες εργασίες για ΣΗΜΕΡΑ ({now.strftime('%d/%m')}).\n"
               f"--- ΔΕΔΟΜΕΝΑ ---\n"
-              f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Ηλικία: {ktima.ilikia_dentron}, GDD: {ktima.gdd_accumulated:.0f}.\n"
+              f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Ηλικία: {ktima.ilikia_dentron}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated is not None else 0:.0f}.\n"
               f"Καιρός Τώρα: {w_str}.\n"
               f"Ευρήματα (AI/Δορυφόρος): {diag_str}.\n"
               f"Διαθέσιμα Υλικά: {stock_str}.\n"

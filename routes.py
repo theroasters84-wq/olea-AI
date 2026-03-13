@@ -6,10 +6,6 @@ from ai_tools import ai_bp
 from core_app import core_bp
 from models import Xrhsths
 
-efarmogi.register_blueprint(auth_bp)
-efarmogi.register_blueprint(ai_bp)
-efarmogi.register_blueprint(core_bp)
-
 @core_bp.route('/dashboard_geoponou', methods=['GET', 'POST'])
 @login_required
 def dashboard_geoponou():
@@ -27,3 +23,7 @@ def dashboard_geoponou():
                 flash('Δεν βρέθηκε αγρότης με αυτό το ΑΦΜ.', 'warning')
                 
     return render_template('geoponos.html', pelatis=pelatis)
+
+efarmogi.register_blueprint(auth_bp)
+efarmogi.register_blueprint(ai_bp)
+efarmogi.register_blueprint(core_bp)

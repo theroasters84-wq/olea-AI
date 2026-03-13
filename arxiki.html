@@ -75,6 +75,9 @@
                 <span class="navbar-text me-3 text-white d-none d-lg-inline-block">
                     {{ current_user.email }}
                 </span>
+                <button class="btn btn-outline-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalProfile">
+                    <i class="fas fa-user-cog"></i> Προφίλ
+                </button>
                 <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
             </div>
         </div>
@@ -112,11 +115,92 @@
     </div>
     {% endif %}
     <!-- Responsive Container: Swipe σε κινητά, Grid σε PC -->
-    <div class="ktimata-wrapper">
+    <div class="ktimata-wrapper" {% if is_geoponos_view %}style="display: block;"{% endif %}>
         {% for ktima in ktimata %}
             <!-- Responsive Card -->
-            <div class="card ktima-responsive-card shadow border-0">
+            <div class="card ktima-responsive-card shadow border-0" {% if is_geoponos_view %}style="width: 100%; margin-bottom: 30px;"{% endif %}>
                 <div class="card-body position-relative d-flex flex-column flex-grow-1 p-2" style="overflow: hidden;">
+                    {% if is_geoponos_view %}
+                        <!-- GEOPONOS VIEW: Αυστηρή Προβολή Αναλυτικής Καρτέλας -->
+                        <h6 class="bg-dark text-white p-2 rounded text-center mb-3"><i class="fas fa-microscope"></i> Αναλυτική Καρτέλα Γεωπόνου</h6>
+                        
+                        <table class="table table-bordered table-sm bg-white shadow-sm small mb-3">
+                            <tbody>
+                                <tr>
+                                    <th class="bg-light w-25">Κτήμα</th>
+                                    <td>{{ ktima.onoma_ktimatos }}</td>
+                                    <th class="bg-light w-25">Χάρτης</th>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
+                                            <i class="fas fa-map-marked-alt"></i> Χάρτης & Δεδομένα
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr><th class="bg-light">Έκταση</th><td>{{ ktima.stremmata }} στρ. ({{ ktima.arithmos_dentron }} δέντρα)</td><th class="bg-light">Ποικιλία</th><td>{{ ktima.poikilia }}</td></tr>
+                                <tr><th class="bg-light">Ηλικία / Πυκνότητα</th><td>{{ ktima.ilikia_dentron }} / {{ ktima.puknotita_dentron }}</td><th class="bg-light">Έδαφος</th><td>{{ ktima.typos_edafous }} ({{ ktima.diacheirisi_edafous }})</td></tr>
+                                <tr><th class="bg-light">Άρδευση</th><td>{{ ktima.ardefsi }}</td><th class="bg-light">Στάδιο (GDD)</th><td>{{ ktima.fainologiko_stadio }} ({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</td></tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Κουτί Δορυφορικών Δεδομένων (Live) -->
+                        <h6 class="text-success border-bottom border-success pb-1"><i class="fas fa-satellite"></i> Δορυφορική Κατάσταση (Agromonitoring)</h6>
+                        <div class="alert alert-light border-success shadow-sm mb-3 position-relative">
+                            <div class="row align-items-center">
+                                <div class="col-md-9">
+                                    <strong><i class="fas fa-chart-line"></i> Τελευταία Μέτρηση:</strong><br>
+                                    <span style="font-family: monospace; font-size: 1.1em;">
+                                        {{ ktima.diagnoseis[-1].apotelesma if ktima.diagnoseis and '🛰️' in ktima.diagnoseis[-1].apotelesma else 'Δεν υπάρχουν πρόσφατα δεδομένα.' }}
+                                    </span>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <a href="{{ url_for('core_app.trexe_doriforo', ktima_id=ktima.id) }}" class="btn btn-success btn-sm w-100 mb-1">
+                                        <i class="fas fa-sync-alt"></i> Ανανέωση ΤΩΡΑ
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="text-primary border-bottom border-primary pb-1"><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</h6>
+                        <div class="table-responsive mb-3" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-sm table-hover bg-white small border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ημ/νία</th>
+                                        <th>Είδος</th>
+                                        <th>Φάρμακα/Υλικά</th>
+                                        <th>Ποιος το έδωσε</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set ns = namespace(found=false) %}
+                                    {% for erg in ktima.ergasies|reverse %}
+                                        {% if erg.katastasi == 'Ολοκληρώθηκε' %}
+                                            {% set ns.found = true %}
+                                            <tr>
+                                                <td>{{ erg.imerominia.strftime('%d/%m/%Y') }}</td>
+                                                <td><strong>{{ erg.eidos_ergasias }}</strong></td>
+                                                <td>{{ erg.farmaka_lipasmata or '-' }}</td>
+                                                <td>
+                                                    <span class="badge {% if erg.proelevsi == 'AI Γεωπόνος' %}bg-info{% elif erg.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                        {{ erg.proelevsi or 'Αγρότης' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if not ns.found %}
+                                        <tr><td colspan="4" class="text-muted text-center fst-italic">Δεν υπάρχουν ολοκληρωμένες εφαρμογές.</td></tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark"><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</h6>
+                        <div class="bg-white p-2 border rounded small mb-4">
+                            <strong>Συμπεράσματα Ανάλυσης:</strong><br>
+                            {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                        </div>
+                    {% else %}
                     <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός) -->
                     <div class="flex-shrink-0">
                     <div class="d-flex justify-content-between align-items-start">
@@ -171,16 +255,18 @@
                         {% endif %}
 
                         <!-- Κουμπί AI & Email -->
+                        {% if not is_geoponos_view %}
                         <div class="mt-2">
                             <button class="btn btn-sm btn-outline-primary" onclick="rwtaAI('{{ ktima.id }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.kairos.perigrafi }}', this)"><i class="fas fa-robot"></i> Ρώτα το AI</button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="steileAnafora('{{ ktima.onoma_ktimatos }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.id }}')"><i class="fas fa-envelope"></i> Email</button>
                         </div>
                         <div id="ai-apantisi-{{ ktima.id }}" style="margin-top: 5px; font-style: italic; color: #006400; font-size: 0.85em;"></div>
+                        {% endif %}
                     {% else %}
                         <p>Δεν υπάρχουν δεδομένα καιρού.</p>
                     {% endif %}
 
-                    {% if ktima.ekkremis_erotisi_ai %}
+                    {% if ktima.ekkremis_erotisi_ai and not is_geoponos_view %}
                     <div class="alert alert-warning p-2 mt-2 mb-2 d-flex align-items-center justify-content-between border-warning shadow-sm" style="animation: pulse 2s infinite;">
                         <span><i class="fas fa-robot text-danger fa-bounce fa-lg me-2"></i> <strong>Το AI ρωτάει:</strong> {{ ktima.ekkremis_erotisi_ai }}</span>
                         <button type="button" class="btn btn-sm btn-danger ms-2 text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση</button>
@@ -230,6 +316,7 @@
                     {% endif %}
 
                     <!-- Preventive Advisor (Scrollable context) -->
+                    {% if not is_geoponos_view %}
                     <div class="alert alert-light border overflow-auto" role="alert" style="flex-grow: 1; min-height: 0;">
                         <h5 class="alert-heading text-info"><i class="fas fa-book-open"></i> Προληπτικός Σύμβουλος</h5>
                         {% if ktima.protaseis %}
@@ -242,13 +329,16 @@
                             <p class="mb-0 small text-muted">Καμία επείγουσα ενέργεια.</p>
                         {% endif %}
                     </div>
+                    {% endif %}
 
                     <!-- Κουμπιά Ενεργειών (Old Style) -->
                     <div class="flex-shrink-0 mt-2">
                     <div class="d-flex flex-wrap gap-2 mb-2">
                         <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalErgasies{{ ktima.id }}">📋 Εργασίες</button>
                         <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnaluseis{{ ktima.id }}">🧪 Αναλύσεις</button>
+                        {% if not is_geoponos_view %}
                         <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalAI{{ ktima.id }}">📸 AI Εργαλεία</button>
+                        {% endif %}
                         <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalOikonomika{{ ktima.id }}">💶 Οικονομικά</button>
                         <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
                             <i class="fas fa-satellite"></i> Δορυφόρος & Υγεία
@@ -257,6 +347,7 @@
                         <button type="button" class="btn btn-outline-dark btn-sm w-100 mt-1" data-bs-toggle="modal" data-bs-target="#modalAnalytiki{{ ktima.id }}"><i class="fas fa-file-invoice"></i> Αναλυτική Καρτέλα & Συνταγή</button>
                     </div>
                     </div>
+                    {% endif %}
                 </div>
 
                 <!-- Include Modals for each Ktima -->
@@ -267,6 +358,53 @@
                 {% include 'modal_oikonomika.html' %}
                 {% include 'modal_ndvi.html' %}
                 {% include 'modal_gdd_info.html' %}
+
+                <!-- Modal Profile Update -->
+                <div class="modal fade" id="modalProfile" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title"><i class="fas fa-user-edit"></i> Επεξεργασία Προφίλ</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="{{ url_for('core_app.enimerosi_profil') }}" method="POST">
+                                    <h6 class="text-primary border-bottom pb-2">Προσωπικά Στοιχεία</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">Ονοματεπώνυμο</label>
+                                        <input type="text" name="onoma" class="form-control" value="{{ current_user.onoma or '' }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">ΑΦΜ</label>
+                                        <input type="text" name="afm" class="form-control" value="{{ current_user.afm or '' }}" maxlength="9">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Αρ. Ταυτότητας</label>
+                                        <input type="text" name="ar_tautotitas" class="form-control" value="{{ current_user.ar_tautotitas or '' }}">
+                                    </div>
+
+                                    <h6 class="text-danger border-bottom pb-2 mt-4">Αλλαγή Κωδικού (Προαιρετικό)</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">Τρέχων Κωδικός</label>
+                                        <input type="password" name="trexwn_kwdikos" class="form-control" placeholder="Συμπληρώστε ΜΟΝΟ αν αλλάζετε κωδικό">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Νέος Κωδικός</label>
+                                        <input type="password" name="neos_kwdikos" class="form-control">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Επιβεβαίωση Νέου Κωδικού</label>
+                                        <input type="password" name="epivevaiosi_kwdikou" class="form-control">
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary">Αποθήκευση Αλλαγών</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Modal Αναλυτικής Καρτέλας & Συνταγής -->
                 <div class="modal fade" id="modalAnalytiki{{ ktima.id }}" tabindex="-1">
@@ -285,6 +423,49 @@
                                         <tr><th class="bg-light">Άρδευση</th><td>{{ ktima.ardefsi }}</td><th class="bg-light">Στάδιο (GDD)</th><td>{{ ktima.fainologiko_stadio }} ({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</td></tr>
                                     </tbody>
                                 </table>
+
+                                <!-- Ιστορικό Εφαρμογών & Εργασιών -->
+                                <h6 class="mt-3 text-primary border-bottom border-primary pb-1"><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</h6>
+                                <div class="table-responsive mb-3" style="max-height: 200px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover bg-white small border">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Ημ/νία</th>
+                                                <th>Είδος</th>
+                                                <th>Φάρμακα/Υλικά</th>
+                                                <th>Ποιος το έδωσε</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% set ns = namespace(found=false) %}
+                                            {% for erg in ktima.ergasies|reverse %}
+                                                {% if erg.katastasi == 'Ολοκληρώθηκε' %}
+                                                    {% set ns.found = true %}
+                                                    <tr>
+                                                        <td>{{ erg.imerominia.strftime('%d/%m/%Y') }}</td>
+                                                        <td><strong>{{ erg.eidos_ergasias }}</strong></td>
+                                                        <td>{{ erg.farmaka_lipasmata or '-' }}</td>
+                                                        <td>
+                                                            <span class="badge {% if erg.proelevsi == 'AI Γεωπόνος' %}bg-info{% elif erg.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                                {{ erg.proelevsi or 'Αγρότης' }}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not ns.found %}
+                                                <tr><td colspan="4" class="text-muted text-center fst-italic">Δεν υπάρχουν ολοκληρωμένες εφαρμογές.</td></tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Ιστορικό Αναλύσεων -->
+                                <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark"><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</h6>
+                                <div class="bg-white p-2 border rounded small mb-4">
+                                    <strong>Συμπεράσματα Ανάλυσης:</strong><br>
+                                    {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                                </div>
 
                                 <h6 class="mt-4 text-success border-bottom border-success pb-1"><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</h6>
                                 <div id="syntagesContainer{{ ktima.id }}">

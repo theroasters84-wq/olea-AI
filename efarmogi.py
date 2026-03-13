@@ -1,6 +1,6 @@
 import os
 from core import efarmogi, vasi
-import routes  # This registers all the routes with the app
+import core_app # Loads routes and blueprints
 from apscheduler.schedulers.background import BackgroundScheduler
 from logic import aytomatizomenos_elegxos
 from models import Ktima, Diagnosi

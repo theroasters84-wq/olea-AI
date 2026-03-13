@@ -97,6 +97,38 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'gdd_target_sygkomidi' υπάρχει ήδη ή σφάλμα: {e}")
                 conn.rollback()
 
+            # --- Ενημέρωση Πίνακα Εργασιών (Ergasies) ---
+            try:
+                conn.execute(text("ALTER TABLE ergasies ADD COLUMN proelevsi VARCHAR(50) DEFAULT 'Αγρότης'"))
+                print("✅ Προστέθηκε η στήλη 'proelevsi' στον πίνακα 'ergasies'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'proelevsi' υπάρχει ήδη στον πίνακα 'ergasies' ({e})")
+                conn.rollback()
+
+            # --- Ενημέρωση Πίνακα Χρηστών (Xrhsths) ---
+            print("👤 Έλεγχος και ενημέρωση πίνακα χρηστών...")
+            
+            xrhstes_cols = [
+                ("rolos", "VARCHAR(20) DEFAULT 'agroths'"),
+                ("afm", "VARCHAR(9)"),
+                ("ar_tautotitas", "VARCHAR(20)"),
+                ("onoma", "VARCHAR(100)")
+            ]
+            
+            for col_name, col_type in xrhstes_cols:
+                try:
+                    # SQLite specific syntax check or strict try/catch
+                    conn.execute(text(f"ALTER TABLE xrhstes ADD COLUMN {col_name} {col_type}"))
+                    print(f"✅ Προστέθηκε η στήλη '{col_name}' στον πίνακα 'xrhstes'")
+                except Exception as e:
+                    # Αγνοούμε το σφάλμα αν η στήλη υπάρχει ήδη
+                    err_msg = str(e).lower()
+                    if "duplicate column" in err_msg or "already exists" in err_msg:
+                        print(f"ℹ️ Η στήλη '{col_name}' υπάρχει ήδη.")
+                    else:
+                        print(f"ℹ️ Σφάλμα κατά την προσθήκη της '{col_name}': {e}")
+                    conn.rollback()
+
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")
 

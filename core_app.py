@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, Response, make_response
 from flask_login import login_required, current_user, logout_user
 from sqlalchemy import text
-from core import vasi, ai_client, api_key_ai
-from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous
+from core import vasi, ai_client, api_key_ai, kryptografhsh
+from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
 from geoponika import pare_kairo, steile_email, geoponikos_elegxos
 
@@ -20,7 +20,20 @@ def inject_datetime():
 @login_required
 def arxikh():
     try:
-        ktimata = [k for k in current_user.ktimata if k.is_active]
+        pelatis_id = request.args.get('pelatis_id')
+        is_geoponos_view = False
+        
+        if getattr(current_user, 'rolos', '') == 'geoponos' and pelatis_id:
+            provalomenos_xrhsths = vasi.session.get(Xrhsths, int(pelatis_id))
+            if not provalomenos_xrhsths:
+                flash('Δεν βρέθηκε ο πελάτης.', 'danger')
+                return redirect(url_for('core_app.dashboard_geoponou'))
+            ktimata = [k for k in provalomenos_xrhsths.ktimata if k.is_active]
+            is_geoponos_view = True
+        else:
+            provalomenos_xrhsths = current_user
+            ktimata = [k for k in current_user.ktimata if k.is_active]
+
         for ktima in ktimata:
             ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
             if ktima.kairos:
@@ -98,12 +111,12 @@ def arxikh():
                 ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
                 
         # Περνάμε το datetime ΡΗΤΑ για να αποφύγουμε σφάλματα στα templates
-        return render_template('arxiki.html', xrhsths=current_user, ktimata=ktimata, datetime=datetime)
+        return render_template('arxiki.html', xrhsths=provalomenos_xrhsths, ktimata=ktimata, datetime=datetime, is_geoponos_view=is_geoponos_view)
 
     except Exception as e:
         print(f"CRITICAL ERROR IN ARXIKI: {e}") # Εμφάνιση στο τερματικό για έλεγχο
         flash(f"Σφάλμα φόρτωσης: {str(e)}", "danger")
-        return render_template('arxiki.html', xrhsths=current_user, ktimata=current_user.ktimata, datetime=datetime)
+        return render_template('arxiki.html', xrhsths=current_user, ktimata=current_user.ktimata, datetime=datetime, is_geoponos_view=False)
 
 @core_bp.route('/ananeosi_ergasion/<int:ktima_id>')
 @login_required
@@ -495,7 +508,7 @@ def ndvi_analyze(ktima_id):
     
     try:
         ktima = vasi.session.get(Ktima, ktima_id)
-        if not ktima or ktima.idioktitis != current_user:
+        if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
             return jsonify({'error': 'Άρνηση πρόσβασης'}), 403
         
         data = request.get_json()
@@ -585,7 +598,7 @@ def trexe_doriforo(ktima_id):
     import json
     
     ktima = vasi.session.get(Ktima, ktima_id)
-    if not ktima or ktima.idioktitis != current_user:
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
         flash('Δεν έχετε πρόσβαση.', 'danger')
         return redirect(url_for('core_app.arxikh'))
         
@@ -653,9 +666,28 @@ def trexe_doriforo(ktima_id):
                     prompt = "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. Δώσε μια σύντομη αναφορά (2-3 γραμμές) για την υγεία της βλάστησης."
                     response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                     
+                    # Λήψη Στατιστικών (Hard Data) από Agromonitoring
+                    stats_msg = ""
+                    try:
+                        stats_url = f"http://api.agromonitoring.com/agro/1.0/ndvi/history?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+                        stats_res = requests.get(stats_url)
+                        if stats_res.status_code == 200 and len(stats_res.json()) > 0:
+                            # Παίρνουμε το πιο πρόσφατο στατιστικό
+                            latest_stat = stats_res.json()[-1] 
+                            mean_ndvi = latest_stat.get('mean')
+                            max_ndvi = latest_stat.get('max')
+                            dt_stat = datetime.fromtimestamp(latest_stat.get('dt')).strftime('%d/%m/%Y')
+                            stats_msg = f"📊 Στατιστικά ({dt_stat}): Μέσος NDVI: {mean_ndvi:.2f}, Μέγιστο: {max_ndvi:.2f}. "
+                    except Exception as e:
+                        print(f"Stats Error: {e}")
+
                     # Αποθήκευση στη διάγνωση
-                    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🛰️ Δορυφόρος: {response.text}", imerominia=datetime.now())
+                    teliko_keimeno = f"🛰️ Δορυφόρος: {stats_msg}{response.text}"
+                    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=teliko_keimeno, imerominia=datetime.now())
                     vasi.session.add(nea_diagnosi)
+                    
+                    # Ενημέρωση και του πεδίου 'analysi_dedomena' για να φαίνεται στο κουτάκι
+                    ktima.analysi_dedomena = f"{stats_msg}\n{response.text}"
                     vasi.session.commit()
                     
                     flash('Η ανάλυση ολοκληρώθηκε! Δείτε το ιστορικό διαγνώσεων.', 'success')
@@ -670,6 +702,10 @@ def trexe_doriforo(ktima_id):
     except Exception as e:
         flash(f'Σφάλμα επικοινωνίας: {e}', 'danger')
 
+    # ΔΙΟΡΘΩΣΗ REDIRECT: Αν είναι γεωπόνος, επιστρέφουμε στην προβολή του πελάτη
+    if getattr(current_user, 'rolos', '') == 'geoponos':
+        return redirect(url_for('core_app.arxikh', pelatis_id=ktima.xrhsths_id))
+        
     return redirect(url_for('core_app.arxikh'))
 
 @core_bp.route('/diorthosi_gdd')
@@ -729,3 +765,39 @@ def service_worker():
 
 @core_bp.route('/favicon.ico')
 def favicon(): return "", 204
+
+@core_bp.route('/enimerosi_profil', methods=['POST'])
+@login_required
+def enimerosi_profil():
+    # Ενημέρωση βασικών στοιχείων
+    current_user.onoma = request.form.get('onoma')
+    current_user.afm = request.form.get('afm')
+    current_user.ar_tautotitas = request.form.get('ar_tautotitas')
+    
+    # Λογική Αλλαγής Κωδικού
+    neos_kwdikos = request.form.get('neos_kwdikos')
+    epivevaiosi_kwdikou = request.form.get('epivevaiosi_kwdikou')
+    trexwn_kwdikos = request.form.get('trexwn_kwdikos')
+    
+    if neos_kwdikos:
+        if not trexwn_kwdikos:
+             flash('Για να αλλάξετε κωδικό, πρέπει να συμπληρώσετε τον τρέχοντα κωδικό.', 'danger')
+             return redirect(url_for('core_app.arxikh'))
+        
+        if not kryptografhsh.check_password_hash(current_user.kwdikos, trexwn_kwdikos):
+             flash('Ο τρέχων κωδικός είναι λάθος.', 'danger')
+             return redirect(url_for('core_app.arxikh'))
+             
+        if neos_kwdikos != epivevaiosi_kwdikou:
+             flash('Οι νέοι κωδικοί δεν ταιριάζουν μεταξύ τους.', 'danger')
+             return redirect(url_for('core_app.arxikh'))
+
+        current_user.kwdikos = kryptografhsh.generate_password_hash(neos_kwdikos).decode('utf-8')
+        flash('Ο κωδικός πρόσβασης άλλαξε επιτυχώς!', 'success')
+
+    vasi.session.commit()
+    flash('Το προφίλ ενημερώθηκε.', 'success')
+    return redirect(url_for('core_app.arxikh'))
+
+# Import routes to register them with the blueprint before the blueprint is registered with the app
+import routes
