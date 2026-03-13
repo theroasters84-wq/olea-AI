@@ -133,7 +133,8 @@ def update_db():
                 ("rolos", "VARCHAR(20) DEFAULT 'agroths'"),
                 ("afm", "VARCHAR(9)"),
                 ("ar_tautotitas", "VARCHAR(20)"),
-                ("onoma", "VARCHAR(100)")
+                ("onoma", "VARCHAR(100)"),
+                ("is_verified", "BOOLEAN DEFAULT TRUE")
             ]
             
             for col_name, col_type in xrhstes_cols:

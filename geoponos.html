@@ -12,6 +12,7 @@
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold" href="#"><i class="fas fa-microscope me-2"></i> Olea AI - Portal Γεωπόνου</a>
             <span class="navbar-text me-3 text-white">Γεωπόνος: {{ current_user.onoma or current_user.email }}</span>
+            <a href="/" class="btn btn-outline-info btn-sm me-2"><i class="fas fa-tractor"></i> Τα δικά μου κτήματα</a>
             <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
         </div>
     </nav>
@@ -43,9 +44,9 @@
         {% if pelatis %}
             <h4 class="mb-3 text-success"><i class="fas fa-user-check"></i> Πελάτης: {{ pelatis.onoma or pelatis.email }} (ΑΦΜ: {{ pelatis.afm }})</h4>
             <hr>
-            {% if pelatis.ktimata %}
+            {% if energa_ktimata %}
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                    {% for ktima in pelatis.ktimata %}
+                    {% for ktima in energa_ktimata %}
                         <div class="col">
                             <div class="card h-100 shadow-sm border-success">
                                 <div class="card-header bg-success text-white">
@@ -66,7 +67,7 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="alert alert-info">Ο συγκεκριμένος παραγωγός δεν έχει καταχωρήσει ακόμα κτήματα.</div>
+                <div class="alert alert-info">Ο συγκεκριμένος παραγωγός δεν έχει καταχωρήσει ακόμα ενεργά κτήματα.</div>
             {% endif %}
         {% endif %}
     </div>

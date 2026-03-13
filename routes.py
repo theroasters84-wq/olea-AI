@@ -15,14 +15,17 @@ def dashboard_geoponou():
         return redirect(url_for('core_app.arxikh'))
     
     pelatis = None
+    energa_ktimata = []
     if request.method == 'POST':
         afm_anazitisis = request.form.get('afm_anazitisis')
         if afm_anazitisis:
             pelatis = Xrhsths.query.filter_by(afm=afm_anazitisis, rolos='agroths').first()
             if not pelatis:
                 flash('Δεν βρέθηκε αγρότης με αυτό το ΑΦΜ.', 'warning')
+            else:
+                energa_ktimata = [k for k in pelatis.ktimata if k.is_active]
                 
-    return render_template('geoponos.html', pelatis=pelatis)
+    return render_template('geoponos.html', pelatis=pelatis, energa_ktimata=energa_ktimata)
 
 efarmogi.register_blueprint(auth_bp)
 efarmogi.register_blueprint(ai_bp)

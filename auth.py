@@ -29,18 +29,53 @@ def eggrafi():
             return render_template('eggrafi.html')
             
         hash_kwdikou = kryptografhsh.generate_password_hash(kwdikos).decode('utf-8')
-        neos_xrhsths = Xrhsths(email=email, kwdikos=hash_kwdikou, rolos=rolos, afm=afm, ar_tautotitas=ar_tautotitas, onoma=onoma)
+        # Ο νέος χρήστης ξεκινάει ως ΜΗ επιβεβαιωμένος
+        neos_xrhsths = Xrhsths(email=email, kwdikos=hash_kwdikou, rolos=rolos, afm=afm, ar_tautotitas=ar_tautotitas, onoma=onoma, is_verified=False)
         
         try:
             vasi.session.add(neos_xrhsths)
             vasi.session.commit()
-            flash("Η εγγραφή ολοκληρώθηκε! Συνδεθείτε.", "success")
+            
+            # --- Αποστολή Email Επιβεβαίωσης ---
+            token = serializer.dumps(email, salt='email-verify')
+            link = url_for('auth.epivevaiosi_email', token=token, _external=True)
+            thema = "Επιβεβαίωση Email - Olea AI"
+            keimeno = f"Καλώς ήρθατε στο Olea AI!\n\nΓια να ενεργοποιήσετε τον λογαριασμό σας, πατήστε στον παρακάτω σύνδεσμο:\n{link}\n\nΑν δεν κάνατε εσείς την εγγραφή, αγνοήστε αυτό το μήνυμα."
+            
+            try:
+                steile_email(email, thema, keimeno)
+            except Exception as e:
+                print(f"Σφάλμα αποστολής email επιβεβαίωσης: {e}")
+                
+            flash("Η εγγραφή ολοκληρώθηκε! Έχει σταλεί email επιβεβαίωσης. Ελέγξτε τα εισερχόμενά σας (ή τα spam) για να ενεργοποιήσετε τον λογαριασμό σας.", "success")
             return redirect(url_for('auth.eisodos'))
         except:
             vasi.session.rollback()
             flash("Το Email, το ΑΦΜ ή η Ταυτότητα υπάρχει ήδη στο σύστημα.", "danger")
             
     return render_template('eggrafi.html')
+
+@auth_bp.route('/epivevaiosi_email/<token>')
+def epivevaiosi_email(token):
+    try:
+        # Ο σύνδεσμος λήγει σε 24 ώρες (86400 δευτερόλεπτα)
+        email = serializer.loads(token, salt='email-verify', max_age=86400)
+    except:
+        flash('Ο σύνδεσμος επιβεβαίωσης είναι άκυρος ή έχει λήξει.', 'danger')
+        return redirect(url_for('auth.eisodos'))
+    
+    xrhsths = Xrhsths.query.filter_by(email=email).first()
+    if xrhsths:
+        if getattr(xrhsths, 'is_verified', False):
+            flash('Ο λογαριασμός σας είναι ήδη ενεργοποιημένος. Μπορείτε να συνδεθείτε.', 'info')
+        else:
+            xrhsths.is_verified = True
+            vasi.session.commit()
+            flash('Το email σας επιβεβαιώθηκε επιτυχώς! Μπορείτε πλέον να συνδεθείτε.', 'success')
+    else:
+        flash('Δεν βρέθηκε λογαριασμός με αυτό το email.', 'warning')
+        
+    return redirect(url_for('auth.eisodos'))
 
 @auth_bp.route('/xexasa_kodiko', methods=['GET', 'POST'])
 def xexasa_kodiko():
@@ -104,6 +139,11 @@ def eisodos():
         xrhsths = Xrhsths.query.filter_by(email=email).first()
         
         if xrhsths and kryptografhsh.check_password_hash(xrhsths.kwdikos, kwdikos):
+            # Έλεγχος Επιβεβαίωσης (χρησιμοποιούμε getattr για ασφάλεια σε περίπτωση παλιάς βάσης)
+            if not getattr(xrhsths, 'is_verified', True):
+                flash("Ο λογαριασμός σας δεν είναι ενεργοποιημένος. Παρακαλώ ελέγξτε το email σας για τον σύνδεσμο επιβεβαίωσης.", "warning")
+                return render_template('eisodos.html')
+                
             login_user(xrhsths)
             if xrhsths.rolos == 'geoponos':
                 return redirect(url_for('core_app.dashboard_geoponou'))

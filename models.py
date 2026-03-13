@@ -20,6 +20,7 @@ class Xrhsths(vasi.Model, UserMixin):
     afm = vasi.Column(vasi.String(9), unique=True, nullable=True)
     ar_tautotitas = vasi.Column(vasi.String(20), unique=True, nullable=True)
     onoma = vasi.Column(vasi.String(100), nullable=True)
+    is_verified = vasi.Column(vasi.Boolean, default=False)
     ktimata = vasi.relationship('Ktima', backref='idioktitis', lazy=True)
     apothiki_items = vasi.relationship('Apothiki', backref='idioktitis_apothikis', lazy=True, cascade="all, delete-orphan")
 
