@@ -538,6 +538,17 @@ def diagrafi_ktimatos(ktima_id):
             flash('Δεν έχετε δικαίωμα διαγραφής αυτού του κτήματος.', 'danger')
             return redirect(url_for('core_app.arxikh'))
         
+        # --- ΔΙΑΓΡΑΦΗ ΑΠΟ AGROMONITORING ---
+        if ktima.agromonitoring_poly_id:
+            api_key = os.getenv('AGROMONITORING_API_KEY')
+            if api_key:
+                try:
+                    import requests
+                    url = f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}"
+                    requests.delete(url, timeout=5)
+                except Exception as e:
+                    print(f"Σφάλμα διαγραφής από Agromonitoring: {e}")
+
         vasi.session.delete(ktima)
         vasi.session.commit()
         flash('Το κτήμα διαγράφηκε επιτυχώς.', 'success')
@@ -547,6 +558,18 @@ def diagrafi_ktimatos(ktima_id):
 @login_required
 def oristiki_diagrafi_ktimatos(id):
     ktima = vasi.session.get(Ktima, id)
+    
+    # --- ΔΙΑΓΡΑΦΗ ΑΠΟ AGROMONITORING ---
+    if ktima.agromonitoring_poly_id:
+        api_key = os.getenv('AGROMONITORING_API_KEY')
+        if api_key:
+            try:
+                import requests
+                url = f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}"
+                requests.delete(url, timeout=5)
+            except Exception as e:
+                print(f"Σφάλμα διαγραφής από Agromonitoring: {e}")
+                
     vasi.session.delete(ktima)
     vasi.session.commit()
     return redirect(url_for('core_app.arxeio'))
