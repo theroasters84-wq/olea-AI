@@ -19,7 +19,12 @@
                 </div>
                 <div id="ndviMap{{ ktima.id }}" style="height: 500px; width: 100%; border-radius: 8px;"></div>
                 <div class="text-center mt-3">
-                    <button id="btnAnalyze{{ ktima.id }}" class="btn btn-success d-none"><i class="fas fa-search"></i> Ανάλυση Υγείας (NDVI)</button>
+                    <div class="btn-group">
+                        <button id="btnAnalyze{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
+                        <a href="{{ url_for('core_app.trexe_doriforo', ktima_id=ktima.id) }}" class="btn btn-success">
+                            <i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ
+                        </a>
+                    </div>
                     <div id="ndviLoading{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
                     <div id="ndviError{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
                     <div id="ndviResult{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>

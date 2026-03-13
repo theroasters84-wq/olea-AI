@@ -13,15 +13,18 @@ def fortwsh_xrhsth(xrhsths_id):
 # Μοντέλο Χρήστη (Database Model)
 class Xrhsths(vasi.Model, UserMixin):
     __tablename__ = 'xrhstes'
-
     id = vasi.Column(vasi.Integer, primary_key=True)
     email = vasi.Column(vasi.String(120), unique=True, nullable=False)
     kwdikos = vasi.Column(vasi.String(60), nullable=False)
+    rolos = vasi.Column(vasi.String(20), nullable=False, default='agroths') # 'agroths' ή 'geoponos'
+    afm = vasi.Column(vasi.String(9), unique=True, nullable=True)
+    ar_tautotitas = vasi.Column(vasi.String(20), unique=True, nullable=True)
+    onoma = vasi.Column(vasi.String(100), nullable=True)
     ktimata = vasi.relationship('Ktima', backref='idioktitis', lazy=True)
     apothiki_items = vasi.relationship('Apothiki', backref='idioktitis_apothikis', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"Xrhsths('{self.email}')"
+        return f"Xrhsths('{self.email}', Ρόλος: '{self.rolos}')"
 
 # Μοντέλο Κτήματος (Field Model)
 class Ktima(vasi.Model):
@@ -51,6 +54,7 @@ class Ktima(vasi.Model):
     diagnoseis = vasi.relationship('Diagnosi', backref='ktima', lazy=True, cascade="all, delete-orphan")
     ergasies = vasi.relationship('Ergasia', backref='ktima', lazy=True, cascade="all, delete-orphan")
     exoda = vasi.relationship('Exodo', backref='ktima', lazy=True, cascade="all, delete-orphan")
+    syntages = vasi.relationship('Syntagh', backref='ktima', lazy=True, cascade="all, delete-orphan")
     gdd_accumulated = vasi.Column(vasi.Float, default=0.0)
     polygon_geojson = vasi.Column(vasi.Text) # Αποθήκευση συντεταγμένων πολυγώνου
     poikilies_details = vasi.relationship('KtimaPoikilia', backref='ktima', lazy=True, cascade="all, delete-orphan")
@@ -91,6 +95,7 @@ class Ergasia(vasi.Model):
     farmaka_lipasmata = vasi.Column(vasi.String(255))
     simeiwseis = vasi.Column(vasi.Text)
     archived = vasi.Column(vasi.Boolean, default=False)
+    proelevsi = vasi.Column(vasi.String(50), default='Αγρότης') # Αγρότης, AI Γεωπόνος, Γεωπόνος
 
     def __repr__(self):
         return f"Ergasia('{self.eidos_ergasias}' on '{self.imerominia}')"
@@ -162,3 +167,13 @@ class Apothiki(vasi.Model):
     onoma_proiontos = vasi.Column(vasi.String(100), nullable=False)
     posotita = vasi.Column(vasi.Float, nullable=False)
     monada_metrisis = vasi.Column(vasi.String(20), nullable=False)
+
+# Μοντέλο Συνταγής (AI ή Γεωπόνου)
+class Syntagh(vasi.Model):
+    __tablename__ = 'syntages'
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
+    geoponos_id = vasi.Column(vasi.Integer, vasi.ForeignKey('xrhstes.id'), nullable=True) # Ποιος γεωπόνος την έδωσε
+    imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+    keimeno = vasi.Column(vasi.Text, nullable=False)
+    proelevsi = vasi.Column(vasi.String(50), default='AI Γεωπόνος') # AI Γεωπόνος ή Γεωπόνος

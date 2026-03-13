@@ -11,7 +11,7 @@
                 <div class="mb-3">
                     <form action="{{ url_for('ai.analysi_egrafou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
                         <div class="input-group input-group-sm">
-                            <input type="file" name="fwtografia_analysis" accept="image/*" class="form-control" required>
+                            <input type="file" name="fwtografia_analysis" accept="image/*,.pdf" class="form-control" required>
                             <button class="btn btn-secondary" type="submit"><i class="fas fa-file-medical-alt"></i> Ανάλυση</button>
                         </div>
                     </form>
@@ -19,6 +19,12 @@
                     <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
                         {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν έχουν καταχωρηθεί δεδομένα ανάλυσης.' }}
                     </div>
+                </div>
+
+                <div class="d-grid gap-2 mb-3">
+                    <a href="{{ url_for('core_app.trexe_doriforo', ktima_id=ktima.id) }}" class="btn btn-outline-success">
+                        <i class="fas fa-satellite"></i> Έλεγχος Υγείας (Δορυφόρος)
+                    </a>
                 </div>
 
                 <hr>

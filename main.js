@@ -83,40 +83,6 @@ async function steileAnafora(onoma, temp, hum, id) {
     }
 }
 
-function completeTask(ktimaId, taskName) {
-    // STEP 1: Έλεγχος για προτροπή αυτόματης καταγραφής (AI Auto-Log)
-    const keywords = ['Ψεκασμός', 'Λίπανση', 'Φάρμακο', 'Χαλκό', 'Σκεύασμα'];
-    const isChemicalTask = keywords.some(kw => taskName.toLowerCase().includes(kw.toLowerCase()));
-
-    if (isChemicalTask) {
-        if (confirm("Θέλετε να βγάλετε φωτογραφία την ετικέτα από το μπουκάλι/σακί για αυτόματη καταγραφή στο ψηφιακό αρχείο;")) {
-            // Προγραμματιστικό άνοιγμα της κάμερας από το αντίστοιχο modal
-            const modal = document.getElementById('modalErgasies' + ktimaId);
-            const fileInput = modal.querySelector('form[action*="ai_input_scan"] input[type="file"]');
-            if (fileInput) {
-                fileInput.click();
-                return; // Διακοπή της χειροκίνητης ολοκλήρωσης
-            }
-        }
-    }
-
-    let cost = prompt('Ποιο ήταν το κόστος αυτής της εργασίας; (Βάλτε 0 αν δεν υπήρχε έξοδο)', '0');
-    if (cost === null) return; // Cancelled
-    
-    // Create a form dynamically to submit
-    let form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/oloklirosi_ergasias/' + ktimaId;
-    
-    let fieldTask = document.createElement('input'); fieldTask.type = 'hidden'; fieldTask.name = 'eidos_ergasias'; fieldTask.value = taskName;
-    let fieldCost = document.createElement('input'); fieldCost.type = 'hidden'; fieldCost.name = 'kostos'; fieldCost.value = cost;
-    
-    form.appendChild(fieldTask);
-    form.appendChild(fieldCost);
-    document.body.appendChild(form);
-    form.submit();
-}
-
 // Share Logic
 document.getElementById('btnShareNative').addEventListener('click', async () => {
     const shareData = {
@@ -179,4 +145,23 @@ function addVarietyRow(containerId, totalOutputId = null) {
         <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove(); ${totalOutputId ? `updateTotalTrees('${containerId}', '${totalOutputId}')` : ''}"><i class="fas fa-times"></i></button>
     `;
     container.appendChild(newRow);
+}
+
+async function generateAISyntagh(ktimaId, btn) {
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Η AI αναλύει το κτήμα και γράφει τη συνταγή...';
+    try {
+        // Σημείωση: Το route έχει οριστεί στο ai_tools.py χωρίς prefix στο blueprint registration
+        const response = await fetch('/paragogi_syntaghs/' + ktimaId, { method: 'POST' }); 
+        const data = await response.json();
+        if (data.success) {
+            alert("Η συνταγή εκδόθηκε επιτυχώς!");
+            location.reload(); 
+        } else {
+            alert("Σφάλμα: " + (data.error || 'Άγνωστο σφάλμα'));
+        }
+    } catch (e) { alert("Σφάλμα επικοινωνίας."); }
+    btn.disabled = false;
+    btn.innerHTML = originalText;
 }

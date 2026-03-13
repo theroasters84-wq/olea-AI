@@ -15,17 +15,21 @@ def eggrafi():
         email = request.form.get('email')
         kwdikos = request.form.get('kwdikos')
         epivevaiosi = request.form.get('epivevaiosi_kwdikou')
+        rolos = request.form.get('rolos', 'agroths')
+        afm = request.form.get('afm')
+        ar_tautotitas = request.form.get('ar_tautotitas')
+        onoma = request.form.get('onoma')
         
         if not email or not kwdikos or not epivevaiosi:
-            flash("Συμπληρώστε όλα τα πεδία.", "warning")
+            flash("Συμπληρώστε τα βασικά πεδία.", "warning")
             return render_template('eggrafi.html')
-
+            
         if kwdikos != epivevaiosi:
             flash("Οι κωδικοί δεν ταιριάζουν.", "danger")
             return render_template('eggrafi.html')
             
         hash_kwdikou = kryptografhsh.generate_password_hash(kwdikos).decode('utf-8')
-        neos_xrhsths = Xrhsths(email=email, kwdikos=hash_kwdikou)
+        neos_xrhsths = Xrhsths(email=email, kwdikos=hash_kwdikou, rolos=rolos, afm=afm, ar_tautotitas=ar_tautotitas, onoma=onoma)
         
         try:
             vasi.session.add(neos_xrhsths)
@@ -33,7 +37,8 @@ def eggrafi():
             flash("Η εγγραφή ολοκληρώθηκε! Συνδεθείτε.", "success")
             return redirect(url_for('auth.eisodos'))
         except:
-            flash("Το Email υπάρχει ήδη.", "danger")
+            vasi.session.rollback()
+            flash("Το Email, το ΑΦΜ ή η Ταυτότητα υπάρχει ήδη στο σύστημα.", "danger")
             
     return render_template('eggrafi.html')
 
@@ -100,7 +105,10 @@ def eisodos():
         
         if xrhsths and kryptografhsh.check_password_hash(xrhsths.kwdikos, kwdikos):
             login_user(xrhsths)
-            return redirect(url_for('core_app.arxikh'))
+            if xrhsths.rolos == 'geoponos':
+                return redirect(url_for('core_app.dashboard_geoponou'))
+            else:
+                return redirect(url_for('core_app.arxikh'))
         else:
             flash("Λάθος email ή κωδικός", "danger")
 

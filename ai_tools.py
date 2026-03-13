@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import io
 import requests
@@ -7,9 +8,10 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from core import vasi, ai_client, api_key_ai
-from models import Ktima, Diagnosi, AnalysiEdafous, Ergasia
+from models import Ktima, Diagnosi, AnalysiEdafous, Ergasia, Syntagh
 from geoponika import pare_simvouli_ai
 from google import genai
+from google.genai import types
 
 ai_bp = Blueprint('ai', __name__)
 
@@ -108,14 +110,22 @@ def analysi_egrafou(ktima_id):
         return redirect(url_for('core_app.arxikh'))
 
     try:
-        img = PIL.Image.open(file)
         prompt = "Είσαι γεωπόνος. Διάβασε αυτό το έγγραφο ανάλυσης εδάφους/φύλλων..."
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
+        
+        mime_type = file.mimetype
+        file_data = file.read()
+        
+        if 'pdf' in mime_type:
+            content_part = types.Part.from_bytes(data=file_data, mime_type='application/pdf')
+        else:
+            content_part = PIL.Image.open(io.BytesIO(file_data))
+            
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, content_part])
         
         ktima.analysi_dedomena = response.text if response else "Αδυναμία ανάλυσης κειμένου."
         
         extraction_prompt = """Extract soil data... return ONLY JSON..."""
-        ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt, img])
+        ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt, content_part])
         
         if ext_response:
             try:
@@ -165,9 +175,16 @@ def ai_input_scan(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     file = request.files.get('fwtografia_input')
     if file:
-        img = PIL.Image.open(file)
         prompt = "Extract Product Name, Active Ingredient, Dosage..."
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
+        
+        mime_type = file.mimetype
+        file_data = file.read()
+        if 'pdf' in mime_type:
+            content_part = types.Part.from_bytes(data=file_data, mime_type='application/pdf')
+        else:
+            content_part = PIL.Image.open(io.BytesIO(file_data))
+            
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, content_part])
         ai_summary = response.text.strip() if response else "Αδυναμία ανάγνωσης."
         
         nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός/Λίπανση (AI)', katastasi='Ολοκληρώθηκε', farmaka_lipasmata=ai_summary, imerominia=datetime.now())
@@ -225,3 +242,67 @@ def apantisi_sto_ai(ktima_id):
     vasi.session.commit()
     flash('Απάντηση ελήφθη.', 'success')
     return redirect(url_for('core_app.arxikh'))
+
+@ai_bp.route('/paragogi_syntaghs/<int:ktima_id>', methods=['POST'])
+@login_required
+def paragogi_syntaghs(ktima_id):
+    from models import Ktima, Syntagh, Ergasia # Local imports to avoid circular dependencies
+    ktima = vasi.session.get(Ktima, ktima_id)
+    
+    # Access control: Must be owner or a geoponos
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', 'agroths') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+
+    try:
+        # Συλλογή δεδομένων κτήματος για το AI
+        dedomena = f"Έκταση: {ktima.stremmata} στρ, Δέντρα: {ktima.arithmos_dentron}. Ποικιλία: {ktima.poikilia}. Στάδιο: {ktima.fainologiko_stadio}."
+        if ktima.diagnoseis: 
+            dedomena += f" Τελευταία διάγνωση: {ktima.diagnoseis[-1].apotelesma}."
+            
+        # Το μαγικό Prompt που αναγκάζει το AI να απαντήσει με JSON
+        prompt = (f"Είσαι Επαγγελματίας Γεωπόνος. Δεδομένα κτήματος: {dedomena}. "
+                  f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
+                  f"{{\"keimeno_syntaghs\": \"Εδώ γράψε την επίσημη συνταγή και τις οδηγίες.\", "
+                  f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα\", \"farmaka\": \"Ονόματα φαρμάκων/λιπασμάτων\"}}]}} "
+                  f"Μην γράψεις markdown κώδικα (όπως ```json), επέστρεψε απευθείας το καθαρό JSON object.")
+        
+        # Παραγωγή περιεχομένου από το Gemini
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        
+        # Καθαρισμός του JSON
+        json_text = response.text.strip()
+        if json_text.startswith('```json'): 
+            json_text = json_text[7:-3].strip()
+        elif json_text.startswith('```'): 
+            json_text = json_text[3:-3].strip()
+            
+        data = json.loads(json_text)
+        
+        # 1. Αποθήκευση της Συνταγής
+        nea_syntagh = Syntagh(
+            ktima_id=ktima.id, 
+            keimeno=data['keimeno_syntaghs'], 
+            proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+            geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
+        )
+        vasi.session.add(nea_syntagh)
+        
+        # 2. ΑΥΤΟΜΑΤΗ ΔΗΜΙΟΥΡΓΙΑ ΕΡΓΑΣΙΩΝ
+        for erg in data.get('ergasies', []):
+            nea_ergasia = Ergasia(
+                ktima_id=ktima.id,
+                eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
+                farmaka_lipasmata=erg.get('farmaka', ''),
+                katastasi='Εκκρεμεί',
+                proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+                imerominia=datetime.now()
+            )
+            vasi.session.add(nea_ergasia)
+            
+        vasi.session.commit()
+        return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs']})
+        
+    except Exception as e:
+        vasi.session.rollback()
+        print(f"Σφάλμα AI Συνταγής: {e}")
+        return jsonify({'error': str(e)}), 500

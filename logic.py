@@ -94,9 +94,16 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
                 protaseis.append("💧 Υψηλή υγρασία: Συνιστάται προληπτικός ψεκασμός με χαλκούχα για το Κυκλοκόνιο.")
         
         days_since_copper, copper_date = get_last_task_info('Χαλκ')
-        if days_since_copper is not None and days_since_copper <= 7:
+        _, amino_date = get_last_task_info('Αμινοξ') # Check if Amino Acids exist
+        
+        # Logic: If Amino Acids were applied AFTER Copper, stop warning about the 7-day rule.
+        amino_done_after_copper = False
+        if copper_date and amino_date and amino_date >= copper_date:
+            amino_done_after_copper = True
+
+        if days_since_copper is not None and days_since_copper <= 7 and not amino_done_after_copper:
             protaseis.append(f"✅ Εφαρμόστηκε Χαλκός στις {copper_date.strftime('%d/%m')}. Αποφύγετε αμινοξέα για ακόμα {7 - days_since_copper} ημέρες.")
-        else:
+        elif not amino_done_after_copper:
             protaseis.append("⚠️ Προσοχή στους ψεκασμούς: ΜΗΝ αναμειγνύετε ποτέ χαλκό με αμινοξέα (κίνδυνος φυτοτοξικότητας)!")
     
     # Άνθιση / Αρχές Καλοκαιριού (Μάιος, Ιούνιος)
@@ -146,6 +153,18 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
         if teleytaia_analysi.ph and teleytaia_analysi.ph > 7.5:
             protaseis.append("⚠️ Υψηλό pH (>7.5): Κίνδυνος έλλειψης Βορίου και Ιχνοστοιχείων. Προτείνεται διαφυλλική εφαρμογή.")
 
+    # --- ΔΟΡΥΦΟΡΙΚΗ ΝΟΗΜΟΣΥΝΗ ---
+    # Ελέγχουμε αν υπάρχει πρόσφατη διάγνωση από τον δορυφόρο (τελευταίες 10 μέρες)
+    if ktima.diagnoseis:
+        for diag in reversed(ktima.diagnoseis):
+            result = diag.apotelesma or ""
+            if "Δορυφόρος" in result or "🛰️" in result:
+                days_ago = (now - diag.imerominia).days
+                if days_ago < 10:
+                    clean_msg = result.replace('🛰️ Δορυφόρος (Live):', '').replace('🛰️ Δορυφόρος:', '').strip()
+                    protaseis.append(f"🛰️ Δορυφόρος ({days_ago} ημ. πριν): {clean_msg[:150]}...")
+                break
+
     # GDD Model Logic (Precision Agriculture)
     gdd = ktima.gdd_accumulated or 0.0
     if 140 <= gdd <= 160:
@@ -176,6 +195,64 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
                 protaseis.append(f"🛒 Λίστα Αγορών: Ο σύμβουλος πρότεινε {mat_name}, αλλά δεν βρέθηκε σχετικό προϊόν στην Αποθήκη σας.")
 
     return protaseis
+
+def generate_smart_tasks(ktima):
+    """
+    ΝΕΑ ΛΕΙΤΟΥΡΓΙΑ: Συνδυάζει GDD, Δορυφόρο, Καιρό και Αποθήκη για έξυπνες προτάσεις.
+    """
+    now = datetime.now()
+    
+    # 1. Έλεγχος Cache (για να μην χρεώνουμε το AI σε κάθε refresh, κρατάμε τη συμβουλή για 1 μέρα)
+    if ktima.teleftaia_enimerosi_ergasion and \
+       ktima.teleftaia_enimerosi_ergasion.date() == now.date() and \
+       ktima.topikes_ergasies:
+        return ktima.topikes_ergasies.split(',')
+
+    # 2. Συλλογή Δεδομένων
+    # Καιρός
+    kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
+    w_str = f"Temp: {kairos['thermokrasia']}C, Hum: {kairos['ygrasia']}%, Desc: {kairos['perigrafi']}" if kairos else "N/A"
+
+    # Ιστορικό Διαγνώσεων (Τελευταίες 30 μέρες)
+    diags = []
+    if ktima.diagnoseis:
+        for d in sorted(ktima.diagnoseis, key=lambda x: x.imerominia, reverse=True)[:5]:
+            if (now - d.imerominia).days < 30:
+                diags.append(f"[{d.imerominia.strftime('%d/%m')}] {d.apotelesma}")
+    diag_str = " | ".join(diags) if diags else "Καμία πρόσφατη διάγνωση."
+
+    # Απόθεμα Αποθήκης
+    stock = []
+    if ktima.idioktitis and ktima.idioktitis.apothiki_items:
+        for i in ktima.idioktitis.apothiki_items:
+            stock.append(f"{i.eidos}: {i.onoma_proiontos}")
+    stock_str = ", ".join(stock) if stock else "Άδεια αποθήκη."
+
+    # 3. Κατασκευή του Smart Prompt
+    prompt = (f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε 3-5 κρίσιμες εργασίες για ΣΗΜΕΡΑ ({now.strftime('%d/%m')}).\n"
+              f"--- ΔΕΔΟΜΕΝΑ ---\n"
+              f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Ηλικία: {ktima.ilikia_dentron}, GDD: {ktima.gdd_accumulated:.0f}.\n"
+              f"Καιρός Τώρα: {w_str}.\n"
+              f"Ευρήματα (AI/Δορυφόρος): {diag_str}.\n"
+              f"Διαθέσιμα Υλικά: {stock_str}.\n"
+              f"--- ΟΔΗΓΙΑ ---\n"
+              f"Συνδύασε τα ευρήματα με τον καιρό και τα υλικά. Αν π.χ. ο δορυφόρος είδε πρόβλημα και υπάρχει το φάρμακο, πρότεινε ψεκασμό.\n"
+              f"Δώσε ΜΟΝΟ μια λίστα εργασιών χωρισμένη με κόμμα (,). Χωρίς αρίθμηση ή εισαγωγή.\n"
+              f"Παράδειγμα: Ψεκασμός με Χαλκό (υπάρχει απόθεμα),Λίπανση Βορίου,Καθαρισμός Χόρτων")
+
+    try:
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        tasks_str = response.text.strip().replace('\n', '').replace('.', '')
+        
+        # Αποθήκευση στη βάση (Caching)
+        ktima.topikes_ergasies = tasks_str
+        ktima.teleftaia_enimerosi_ergasion = now
+        vasi.session.commit()
+        
+        return tasks_str.split(',')
+    except Exception as e:
+        print(f"Smart Task AI Error: {e}")
+        return get_epoxikes_ergasies(now.month) # Fallback σε στατικές εργασίες
 
 def generate_local_tasks_via_ai(ktima):
     now = datetime.now()

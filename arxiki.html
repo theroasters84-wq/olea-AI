@@ -253,6 +253,8 @@
                         <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
                             <i class="fas fa-satellite"></i> Δορυφόρος & Υγεία
                         </button>
+                        <!-- Νέο Κουμπί Αναλυτικής Καρτέλας -->
+                        <button type="button" class="btn btn-outline-dark btn-sm w-100 mt-1" data-bs-toggle="modal" data-bs-target="#modalAnalytiki{{ ktima.id }}"><i class="fas fa-file-invoice"></i> Αναλυτική Καρτέλα & Συνταγή</button>
                     </div>
                     </div>
                 </div>
@@ -265,6 +267,51 @@
                 {% include 'modal_oikonomika.html' %}
                 {% include 'modal_ndvi.html' %}
                 {% include 'modal_gdd_info.html' %}
+
+                <!-- Modal Αναλυτικής Καρτέλας & Συνταγής -->
+                <div class="modal fade" id="modalAnalytiki{{ ktima.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-dark text-white">
+                                <h5 class="modal-title"><i class="fas fa-microscope"></i> Αναλυτική Καρτέλα Γεωπόνου</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body bg-light">
+                                <table class="table table-bordered table-sm bg-white shadow-sm">
+                                    <tbody>
+                                        <tr><th class="bg-light w-25">Κτήμα</th><td>{{ ktima.onoma_ktimatos }}</td><th class="bg-light w-25">Τοποθεσία</th><td>{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}</td></tr>
+                                        <tr><th class="bg-light">Έκταση</th><td>{{ ktima.stremmata }} στρ. ({{ ktima.arithmos_dentron }} δέντρα)</td><th class="bg-light">Ποικιλία</th><td>{{ ktima.poikilia }}</td></tr>
+                                        <tr><th class="bg-light">Ηλικία / Πυκνότητα</th><td>{{ ktima.ilikia_dentron }} / {{ ktima.puknotita_dentron }}</td><th class="bg-light">Έδαφος</th><td>{{ ktima.typos_edafous }} ({{ ktima.diacheirisi_edafous }})</td></tr>
+                                        <tr><th class="bg-light">Άρδευση</th><td>{{ ktima.ardefsi }}</td><th class="bg-light">Στάδιο (GDD)</th><td>{{ ktima.fainologiko_stadio }} ({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</td></tr>
+                                    </tbody>
+                                </table>
+
+                                <h6 class="mt-4 text-success border-bottom border-success pb-1"><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</h6>
+                                <div id="syntagesContainer{{ ktima.id }}">
+                                    {% if ktima.syntages %}
+                                        {% for syntagh in ktima.syntages|reverse %}
+                                            <div class="card border-success mb-2">
+                                                <div class="card-header bg-success text-white py-1 small d-flex justify-content-between">
+                                                    <span><i class="fas fa-robot"></i> {{ syntagh.proelevsi }}</span>
+                                                    <span>{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
+                                                </div>
+                                                <div class="card-body p-2" style="white-space: pre-wrap; font-size: 0.9em;">{{ syntagh.keimeno }}</div>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small italic" id="noSyntagh{{ ktima.id }}">Δεν υπάρχουν συνταγές για αυτό το κτήμα.</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="d-grid mt-3">
+                                    <button class="btn btn-primary shadow-sm" onclick="generateAISyntagh('{{ ktima.id }}', this)">
+                                        <i class="fas fa-magic"></i> Έκδοση Νέας AI Συνταγής
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
             </div>
         {% else %}
@@ -446,6 +493,7 @@
                         const analyzeBtn = document.getElementById('btnAnalyze' + ktimaId);
                         const loadingDiv = document.getElementById('ndviLoading' + ktimaId);
                         const errorDiv = document.getElementById('ndviError' + ktimaId);
+                        const layerControls = document.getElementById('layerControls' + ktimaId);
                         let ndviLayer = null;
 
                         // --- ΑΥΤΟΜΑΤΗ ΦΟΡΤΩΣΗ ΠΟΛΥΓΩΝΟΥ ---
@@ -483,6 +531,7 @@
                             analyzeBtn.classList.add('d-none');
                             loadingDiv.classList.remove('d-none');
                             errorDiv.classList.add('d-none');
+                            layerControls.classList.add('d-none');
                             
                             if(ndviLayer) map.removeLayer(ndviLayer);
 
@@ -504,6 +553,29 @@
                                 } else if(data.ndvi_url) {
                                     ndviLayer = L.imageOverlay(data.ndvi_url, currentBounds, { opacity: 0.75 }).addTo(map);
                                     map.fitBounds(currentBounds);
+                                    
+                                    // --- ΕΝΕΡΓΟΠΟΙΗΣΗ ΚΟΥΜΠΙΩΝ NDVI / NDWI ---
+                                    if (layerControls) {
+                                        layerControls.classList.remove('d-none');
+                                        const btnNDVI = document.getElementById('btnShowNDVI' + ktimaId);
+                                        const btnNDWI = document.getElementById('btnShowNDWI' + ktimaId);
+                                        
+                                        btnNDVI.onclick = function() {
+                                            if(ndviLayer) map.removeLayer(ndviLayer);
+                                            ndviLayer = L.imageOverlay(data.ndvi_url, currentBounds, { opacity: 0.75 }).addTo(map);
+                                            btnNDVI.classList.add('active');
+                                            btnNDWI.classList.remove('active');
+                                        };
+                                        
+                                        btnNDWI.onclick = function() {
+                                            if (data.ndwi_url) {
+                                                if(ndviLayer) map.removeLayer(ndviLayer);
+                                                ndviLayer = L.imageOverlay(data.ndwi_url, currentBounds, { opacity: 0.75 }).addTo(map);
+                                                btnNDWI.classList.add('active');
+                                                btnNDVI.classList.remove('active');
+                                            } else { alert("Δεν βρέθηκε χάρτης υγρασίας για αυτή τη λήψη."); }
+                                        };
+                                    }
                                     
                                     if(data.ai_message && resultDiv) {
                                         resultDiv.querySelector('.ai-text').innerText = data.ai_message;
@@ -567,6 +639,21 @@
                 });
             });
         });
+
+        function filterTasks(ktimaId, proelevsi) {
+            const tasks = document.querySelectorAll('.task-item-' + ktimaId);
+            tasks.forEach(task => {
+                if (proelevsi === 'Όλα') {
+                    task.style.display = 'block';
+                } else {
+                    if (task.getAttribute('data-proelevsi') === proelevsi) {
+                        task.style.display = 'block';
+                    } else {
+                        task.style.display = 'none';
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
