@@ -140,7 +140,7 @@ def update_db():
                 try:
                     # SQLite specific syntax check or strict try/catch
                     conn.execute(text(f"ALTER TABLE xrhstes ADD COLUMN {col_name} {col_type}"))
-                        conn.commit()
+                    conn.commit()
                     print(f"✅ Προστέθηκε η στήλη '{col_name}' στον πίνακα 'xrhstes'")
                 except Exception as e:
                     # Αγνοούμε το σφάλμα αν η στήλη υπάρχει ήδη

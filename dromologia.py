@@ -1,4 +1,5 @@
-~~~~from flask import Blueprint, url_for, redirect, request, jsonify
+# Κύρια δρομολόγια (Routes) της παλιάς δομής
+from flask import Blueprint, url_for, redirect, request, jsonify
 from efarmogi import vasi, kryptografhsh
 from efarmogi.montela import Xrhsths
 from flask_login import login_user, current_user, logout_user, login_required
