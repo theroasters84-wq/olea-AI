@@ -28,6 +28,7 @@ def prosthes_ktima():
     
     poikilia_onomata = request.form.getlist('poikilia_onoma')
     poikilia_dentra_str = request.form.getlist('poikilia_dentra')
+    poikilia_ilikies = request.form.getlist('poikilia_ilikia')
     
     if onoma and mikos and platos:
         try:
@@ -99,7 +100,9 @@ def prosthes_ktima():
             for i, onoma_p in enumerate(poikilia_onomata):
                 try:
                     d = int(poikilia_dentra_str[i])
-                    if d > 0: vasi.session.add(KtimaPoikilia(ktima_id=neo.id, poikilia_onoma=onoma_p, arithmos_dentron=d))
+                    ilikia_p = poikilia_ilikies[i] if i < len(poikilia_ilikies) else None
+                    if d > 0: 
+                        vasi.session.add(KtimaPoikilia(ktima_id=neo.id, poikilia_onoma=onoma_p, arithmos_dentron=d, ilikia_dentron=ilikia_p))
                 except: pass
             
             poly_json = request.form.get('polygon_geojson')

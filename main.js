@@ -131,7 +131,7 @@ function addVarietyRow(containerId, totalOutputId = null) {
     }
     
     newRow.innerHTML = `
-        <select name="poikilia_onoma" class="form-select" required>
+        <select name="poikilia_onoma" class="form-select form-select-sm" required style="max-width: 30%;">
             <option value="" disabled selected>Επιλέξτε ποικιλία...</option>
             <option value="Κορωνέικη">Κορωνέικη</option>
             <option value="Καλαμών">Καλαμών</option>
@@ -141,7 +141,13 @@ function addVarietyRow(containerId, totalOutputId = null) {
             <option value="Μεγαρίτικη">Μεγαρίτικη</option>
             <option value="Άλλη">Άλλη</option>
         </select>
-        <input type="number" name="poikilia_dentra" class="form-control" placeholder="Δέντρα" ${onInputAttr} style="max-width: 100px;" required>
+        <select name="poikilia_ilikia" class="form-select form-select-sm" required style="max-width: 35%;">
+            <option value="" disabled selected>Ηλικία...</option>
+            <option value="Νεαρά (1-5 ετών)">1-5 ετών</option>
+            <option value="Παραγωγικά (6-30 ετών)">6-30 ετών</option>
+            <option value="Γηραιά (30+ ετών)">30+ ετών</option>
+        </select>
+        <input type="number" name="poikilia_dentra" class="form-control form-control-sm" placeholder="Αριθμός" ${onInputAttr} style="max-width: 90px;" required>
         <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove(); ${totalOutputId ? `updateTotalTrees('${containerId}', '${totalOutputId}')` : ''}"><i class="fas fa-times"></i></button>
     `;
     container.appendChild(newRow);
@@ -165,3 +171,62 @@ async function generateAISyntagh(ktimaId, btn) {
     btn.disabled = false;
     btn.innerHTML = originalText;
 }
+
+// --- NDVI & Satellite Layer Management ---
+window.setupSatelliteLayers = function(map, bounds, data, mapId) {
+    const ktimaId = mapId.replace('ndviMap', '').replace('analytikiMapModal', '').replace('analytikiMapGeoponos', '');
+    
+    // Πρώτα ψάχνουμε αν υπάρχει layerControls ειδικά για αυτό τον χάρτη
+    let layerControls = document.getElementById('layerControls' + mapId);
+    if (!layerControls) {
+        // Αν όχι, χρησιμοποιούμε το γενικό του modal
+        layerControls = document.getElementById('layerControls' + ktimaId);
+    }
+    
+    if(window.ndviMapOverlays && window.ndviMapOverlays[mapId]) {
+        map.removeLayer(window.ndviMapOverlays[mapId]);
+    }
+    
+    if (!window.ndviMapOverlays) window.ndviMapOverlays = {};
+    
+    // Προσθήκη του προεπιλεγμένου (NDVI) overlay
+    if (data.ndvi_url) {
+        let overlay = L.imageOverlay(data.ndvi_url, bounds).addTo(map);
+        window.ndviMapOverlays[mapId] = overlay;
+    }
+
+    // Δημιουργία των κουμπιών επιλογής
+    if (layerControls) {
+        layerControls.innerHTML = '';
+        const createBtn = (text, url, colorClass) => {
+            if (!url) return '';
+            return `<button type="button" class="btn btn-sm ${colorClass} me-1 mb-1 shadow-sm" onclick="changeMapLayer('${mapId}', '${url}', '${ktimaId}')">${text}</button>`;
+        };
+
+        let buttonsHtml = '';
+        buttonsHtml += createBtn('NDVI (Βλάστηση)', data.ndvi_url, 'btn-success');
+        buttonsHtml += createBtn('NDWI (Υγρασία)', data.ndwi_url, 'btn-info text-white');
+        buttonsHtml += createBtn('EVI (Βλάστηση+)', data.evi_url, 'btn-primary');
+        buttonsHtml += createBtn('Φυσικό Χρώμα', data.truecolor_url, 'btn-secondary');
+        buttonsHtml += createBtn('Ψευδές Χρώμα', data.falsecolor_url, 'btn-warning text-dark');
+        
+        // Προσθήκη κουμπιού για Οδηγό Ανάγνωσης
+        buttonsHtml += `<button type="button" class="btn btn-sm btn-outline-dark mb-1 shadow-sm ms-1" data-bs-toggle="modal" data-bs-target="#modalMapLegend"><i class="fas fa-question-circle"></i> Τι σημαίνουν τα χρώματα;</button>`;
+
+        layerControls.innerHTML = buttonsHtml;
+        layerControls.classList.remove('d-none');
+    }
+};
+
+window.changeMapLayer = function(mapId, url, ktimaId) {
+    let map = (window.initializedMaps && window.initializedMaps[mapId]) ? window.initializedMaps[mapId] : (window.analytikiMaps && window.analytikiMaps[mapId] ? window.analytikiMaps[mapId] : null);
+    let bounds = window.ndviMapBounds ? window.ndviMapBounds[ktimaId] : null;
+    
+    if (map && bounds && url) {
+        if(window.ndviMapOverlays && window.ndviMapOverlays[mapId]) {
+            map.removeLayer(window.ndviMapOverlays[mapId]);
+        }
+        let overlay = L.imageOverlay(url, bounds).addTo(map);
+        window.ndviMapOverlays[mapId] = overlay;
+    }
+};

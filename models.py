@@ -159,6 +159,7 @@ class KtimaPoikilia(vasi.Model):
     ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
     poikilia_onoma = vasi.Column(vasi.String(100), nullable=False)
     arithmos_dentron = vasi.Column(vasi.Integer, nullable=False)
+    ilikia_dentron = vasi.Column(vasi.String(50), nullable=True)
 
 # Μοντέλο Αποθήκης
 class Apothiki(vasi.Model):

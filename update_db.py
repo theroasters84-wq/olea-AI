@@ -152,6 +152,15 @@ def update_db():
                         print(f"ℹ️ Σφάλμα κατά την προσθήκη της '{col_name}': {e}")
                     conn.rollback()
 
+            # --- Ενημέρωση Πίνακα Ποικιλιών Κτήματος (KtimaPoikilia) ---
+            try:
+                conn.execute(text("ALTER TABLE ktima_poikilies ADD COLUMN ilikia_dentron VARCHAR(50)"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'ilikia_dentron' στον πίνακα 'ktima_poikilies'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'ilikia_dentron' υπάρχει ήδη στον πίνακα 'ktima_poikilies' ({e})")
+                conn.rollback()
+
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")
 

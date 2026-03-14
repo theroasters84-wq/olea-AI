@@ -1,0 +1,56 @@
+<!-- Modal Οδηγός Ανάγνωσης Χαρτών -->
+<div class="modal fade" id="modalMapLegend" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-book-open"></i> Οδηγός Ανάγνωσης Δορυφορικών Χαρτών</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <p class="text-muted small mb-4">Εδώ θα βρείτε μια αναλυτική εξήγηση για το τι σημαίνουν οι χρωματικές αλλαγές στους διαφορετικούς δορυφορικούς δείκτες που σας παρέχει το Olea AI.</p>
+                
+                <!-- NDVI -->
+                <div class="card shadow-sm border-success mb-3">
+                    <div class="card-header bg-success text-white py-2"><strong>NDVI (Δείκτης Βλάστησης)</strong></div>
+                    <div class="card-body py-2">
+                        <p class="small mb-2">Το πιο σημαντικό εργαλείο. Μετράει την ποσότητα και υγεία της χλωροφύλλης στα φύλλα.</p>
+                        <ul class="list-unstyled small mb-0">
+                            <li><span style="display:inline-block; width:15px; height:15px; background-color:#28a745; margin-right:8px; border-radius:3px; border:1px solid #ccc;"></span> <strong>Σκούρο Πράσινο:</strong> Πολύ υγιής, πυκνή βλάστηση. Κανένα πρόβλημα.</li>
+                            <li><span style="display:inline-block; width:15px; height:15px; background-color:#ffc107; margin-right:8px; border-radius:3px; border:1px solid #ccc;"></span> <strong>Κίτρινο / Λαχανί:</strong> Αραιή βλάστηση ή φυτό σε στρες (από ασθένεια, έλλειψη θρεπτικών ή νερού).</li>
+                            <li><span style="display:inline-block; width:15px; height:15px; background-color:#dc3545; margin-right:8px; border-radius:3px; border:1px solid #ccc;"></span> <strong>Κόκκινο / Καφέ:</strong> Γυμνό έδαφος, δρόμοι, ξερά χόρτα ή νεκρά δέντρα.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- NDWI -->
+                <div class="card shadow-sm border-info mb-3">
+                    <div class="card-header bg-info text-white py-2"><strong>NDWI (Δείκτης Υγρασίας Φύλλων)</strong></div>
+                    <div class="card-body py-2">
+                        <p class="small mb-2">Δείχνει την περιεκτικότητα σε νερό μέσα στα φύλλα (Υδατικό Στρες).</p>
+                        <ul class="list-unstyled small mb-0">
+                            <li><span style="display:inline-block; width:15px; height:15px; background-color:#007bff; margin-right:8px; border-radius:3px; border:1px solid #ccc;"></span> <strong>Μπλε / Σκούρο Μπλε:</strong> Καλή υδάτωση, τα φυτά έχουν άφθονο νερό.</li>
+                            <li><span style="display:inline-block; width:15px; height:15px; background-color:#20c997; margin-right:8px; border-radius:3px; border:1px solid #ccc;"></span> <strong>Πράσινο / Γαλάζιο:</strong> Φυσιολογικά έως οριακά επίπεδα υγρασίας.</li>
+                            <li><span style="display:inline-block; width:15px; height:15px; background-color:#fd7e14; margin-right:8px; border-radius:3px; border:1px solid #ccc;"></span> <strong>Πορτοκαλί / Καφέ:</strong> Υδατικό στρες (τα φυτά διψάνε, κίνδυνος συρρίκνωσης καρπού).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- ΕVI & Λοιποί -->
+                <div class="card shadow-sm border-primary mb-3">
+                    <div class="card-header bg-primary text-white py-2"><strong>EVI (Ενισχυμένος Δείκτης) & Λοιποί</strong></div>
+                    <div class="card-body py-2">
+                        <ul class="list-unstyled small mb-0">
+                            <li class="mb-2"><strong>EVI:</strong> Λειτουργεί όπως το NDVI (Πράσινο=Υγιές, Κόκκινο=Στρες/Χώμα), αλλά "βλέπει" πιο καθαρά σε περιοχές με πολύ πυκνή βλάστηση ή όταν υπάρχει αραιή συννεφιά.</li>
+                            <li class="mb-2"><strong>Ψευδές Χρώμα (False Color):</strong> Χρησιμοποιεί υπέρυθρη ακτινοβολία. Το <strong>Έντονο Κόκκινο</strong> εδώ σημαίνει <strong>κορυφαία υγεία!</strong> (Το λευκό/γκρι είναι δρόμοι/χώμα).</li>
+                            <li><strong>Φυσικό Χρώμα (True Color):</strong> Πώς φαίνεται το κτήμα με γυμνό μάτι. Ιδανικό για να δείτε αν υπήρχαν <strong>σύννεφα</strong> την ώρα της δορυφορικής λήψης, τα οποία παραποιούν τα αποτελέσματα των άλλων χαρτών!</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+            </div>
+        </div>
+    </div>
+</div>

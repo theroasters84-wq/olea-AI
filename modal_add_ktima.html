@@ -53,15 +53,7 @@
 
                     <!-- Αγρονομικά Χαρακτηριστικά -->
                     <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Ηλικία Δέντρων</label>
-                            <select class="form-select" name="ilikia_dentron">
-                                <option value="Νεαρά (1-5 ετών)">Νεαρά (1-5 ετών)</option>
-                                <option value="Παραγωγικά (6-30 ετών)" selected>Παραγωγικά (6-30 ετών)</option>
-                                <option value="Γηραιά (30+ ετών)">Γηραιά (30+ ετών)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label">Πυκνότητα</label>
                             <select class="form-select" name="puknotita_dentron">
                                 <option value="Αραιή">Αραιή</option>
@@ -69,7 +61,7 @@
                                 <option value="Πυκνή/Υπέρπυκνη">Πυκνή / Υπέρπυκνη</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label">Έδαφος & Ζιζάνια</label>
                             <select class="form-select" name="diacheirisi_edafous">
                                 <option value="Καθαρό (Οργωμένο/Ζιζανιοκτονία)">Καθαρό (Χωρίς χόρτα)</option>
@@ -86,7 +78,7 @@
                             <div id="poikilies-container-add" class="mb-2">
                                 <!-- Οι δυναμικές γραμμές θα εισαχθούν εδώ μέσω JS -->
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addVarietyRow('poikilies-container-add')">
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addVarietyRow('poikilies-container-add', 'arithmos_dentron_total_add')">
                                 <i class="fas fa-plus"></i> Προσθήκη Ποικιλίας
                             </button>
                         </div>
@@ -94,7 +86,7 @@
                     <div class="row mt-3">
                         <div class="col-md-6 mb-2">
                             <label class="form-label">Συνολικός Αριθμός Δέντρων</label>
-                            <input type="number" id="arithmos_dentron_total_add" name="arithmos_dentron" class="form-control" placeholder="Αυτόματα ή Χειροκίνητα">
+                            <input type="number" id="arithmos_dentron_total_add" name="arithmos_dentron" class="form-control bg-light" placeholder="Αυτόματος Υπολογισμός" readonly>
                         </div>
                         <div class="col-md-6 mb-2">
                             <label class="form-label">Στρέμματα</label>
