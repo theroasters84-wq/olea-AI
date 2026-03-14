@@ -7,7 +7,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form action="{{ url_for('core_app.epeksergasia_poikiliwn', ktima_id=ktima.id) }}" method="POST">
+                <form action="{{ url_for('ktima_actions.epeksergasia_poikiliwn', ktima_id=ktima.id) }}" method="POST">
                     <div id="edit-poikilies-container-{{ ktima.id }}">
                         {% if ktima.poikilies_details %}
                             {% for detail in ktima.poikilies_details %}

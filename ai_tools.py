@@ -282,8 +282,9 @@ def paragogi_syntaghs(ktima_id):
             f"Είσαι Επαγγελματίας Γεωπόνος. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
             f"ΟΔΗΓΙΕΣ ΓΙΑ ΤΗ ΣΥΝΤΑΓΗ:\n"
             f"1. ΜΗΝ ΠΡΟΤΕΙΝΕΙΣ εργασίες που έγιναν πρόσφατα (δες το Ιστορικό).\n"
-            f"2. Αν η Υγρασία Εδάφους είναι κάτω από 20% ή το UVI πάνω από 8, εφάρμοσε περιορισμούς στους ψεκασμούς.\n"
-            f"3. Δώσε ΠΡΟΤΕΡΑΙΟΤΗΤΑ στα υλικά της Αποθήκης.\n"
+            f"2. ΔΙΑΧΕΙΡΙΣΗ ΥΓΡΑΣΙΑΣ & ΨΕΚΑΣΜΩΝ: Αν βλέπεις χαμηλή υγρασία (<20%) ΜΟΝΟ από τον 'Δορυφόρο', ΜΗΝ είσαι απόλυτος και ΜΗΝ απαγορεύεις τις εργασίες. Πρότεινε κανονικά τις επόμενες αναγκαίες ενέργειες (π.χ. τον επόμενο ψεκασμό βάσει σταδίου), αλλά δώσε την ενέργεια ως *πρόταση*, υπενθυμίζοντας στον αγρότη να επιβεβαιώσει πρώτα την υγρασία στο χωράφι και να ποτίσει αν χρειάζεται πριν ψεκάσει, για να μην κάψει τα δέντρα.\n"
+            f"3. ΜΟΝΟ αν η 'Χειροκίνητη Μέτρηση Υγρασίας' είναι <20% ή το UVI είναι επικίνδυνα υψηλό (>8), εφάρμοσε αυστηρούς περιορισμούς στους ψεκασμούς.\n"
+            f"4. Δώσε ΠΡΟΤΕΡΑΙΟΤΗΤΑ στα υλικά της Αποθήκης.\n"
             f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
             f"{{\"keimeno_syntaghs\": \"Εδώ γράψε την επίσημη συνταγή και τις οδηγίες.\", "
             f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα\", \"farmaka\": \"Ονόματα φαρμάκων/λιπασμάτων\"}}]}} "
@@ -324,10 +325,83 @@ def paragogi_syntaghs(ktima_id):
             vasi.session.add(nea_ergasia)
             
         vasi.session.commit()
-        return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs']})
+        return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs'], 'syntagh_id': nea_syntagh.id})
         
 
     except Exception as e:
         vasi.session.rollback()
         print(f"Σφάλμα AI Συνταγής: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/refine_syntagh/<int:ktima_id>', methods=['POST'])
+@login_required
+def refine_syntagh(ktima_id):
+    from models import Ktima, Syntagh, Ergasia
+    ktima = vasi.session.get(Ktima, ktima_id)
+    
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', 'agroths') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+
+    req_data = request.get_json()
+    previous_recipe = req_data.get('previous_recipe', '')
+    user_reply = req_data.get('user_reply', '')
+
+    try:
+        from logic import xtise_plires_context
+        dedomena = xtise_plires_context(ktima)
+            
+        prompt = (
+            f"Είσαι Επαγγελματίας Γεωπόνος. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
+            f"--- ΠΡΟΗΓΟΥΜΕΝΗ ΣΥΝΤΑΓΗ ΣΟΥ ---\n{previous_recipe}\n\n"
+            f"--- ΣΧΟΛΙΟ / ΔΙΕΥΚΡΙΝΙΣΗ ΑΓΡΟΤΗ ---\n{user_reply}\n\n"
+            f"ΟΔΗΓΙΑ: Αναπροσάρμοσε την προηγούμενη συνταγή σου με βάση το σχόλιο του αγρότη.\n"
+            f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
+            f"{{\"keimeno_syntaghs\": \"Εδώ γράψε τη νέα, αναθεωρημένη συνταγή απαντώντας και στο σχόλιο του αγρότη.\", "
+            f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα ή Άρδευση\", \"farmaka\": \"Ονόματα φαρμάκων/ενεργειών\"}}]}} "
+            f"Μην γράψεις markdown κώδικα, επέστρεψε απευθείας το καθαρό JSON object."
+        )
+        
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        
+        json_text = response.text.strip()
+        if json_text.startswith('```json'): 
+            json_text = json_text[7:-3].strip()
+        elif json_text.startswith('```'): 
+            json_text = json_text[3:-3].strip()
+            
+        data = json.loads(json_text)
+        
+        # --- ΕΞΥΠΝΗ ΔΙΑΧΕΙΡΙΣΗ ΕΡΓΑΣΙΩΝ ---
+        # Πριν δημιουργήσουμε τις νέες εργασίες από την αναθεωρημένη συνταγή,
+        # διαγράφουμε τις προηγούμενες εκκρεμείς εργασίες που είχε βγάλει το AI,
+        # ώστε να μην υπάρχουν διπλότυπα ή παλιές οδηγίες.
+        Ergasia.query.filter_by(
+            ktima_id=ktima.id, katastasi='Εκκρεμεί', proelevsi='AI Γεωπόνος'
+        ).delete(synchronize_session=False)
+        
+        nea_syntagh = Syntagh(
+            ktima_id=ktima.id, 
+            keimeno=data['keimeno_syntaghs'], 
+            proelevsi='AI Γεωπόνος (Αναθεωρημένη)' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+            geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
+        )
+        vasi.session.add(nea_syntagh)
+        
+        for erg in data.get('ergasies', []):
+            nea_ergasia = Ergasia(
+                ktima_id=ktima.id,
+                eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
+                farmaka_lipasmata=erg.get('farmaka', ''),
+                katastasi='Εκκρεμεί',
+                proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+                imerominia=datetime.now()
+            )
+            vasi.session.add(nea_ergasia)
+            
+        vasi.session.commit()
+        return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs'], 'syntagh_id': nea_syntagh.id})
+        
+    except Exception as e:
+        vasi.session.rollback()
+        print(f"Σφάλμα AI Αναθεώρησης Συνταγής: {e}")
         return jsonify({'error': str(e)}), 500

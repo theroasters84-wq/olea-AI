@@ -254,7 +254,7 @@ def xtise_plires_context(ktima):
         if recent: ctx += f"--- ΠΡΟΣΦΑΤΑ ΕΥΡΗΜΑΤΑ/ΑΝΑΛΥΣΕΙΣ ---\n{' | '.join(recent)}\n\n"
             
     if ktima.ergasies:
-        completed = [f"{e.eidos_ergasias} ({e.imerominia.strftime('%d/%m')})" for e in sorted(ktima.ergasies, key=lambda x: x.imerominia, reverse=True) if not e.archived and e.katastasi == 'Ολοκληρώθηκε'][:4]
+        completed = [f"{e.eidos_ergasias}{' - ' + e.farmaka_lipasmata if e.farmaka_lipasmata else ''} ({e.imerominia.strftime('%d/%m')})" for e in sorted(ktima.ergasies, key=lambda x: x.imerominia, reverse=True) if not e.archived and e.katastasi == 'Ολοκληρώθηκε'][:4]
         if completed: ctx += f"--- ΙΣΤΟΡΙΚΟ ΕΡΓΑΣΙΩΝ ---\nΤελευταίες Ολοκληρωμένες: {', '.join(completed)}\n\n"
             
     if ktima.idioktitis and ktima.idioktitis.apothiki_items:

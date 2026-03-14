@@ -19,7 +19,7 @@
                 </div>
                 <div id="map" class="mb-3"></div>
                 
-                <form action="{{ url_for('core_app.prosthes_ktima') }}" method="POST">
+                <form action="{{ url_for('ktima_actions.prosthes_ktima') }}" method="POST">
                     <!-- Κρυφό πεδίο για το GeoJSON -->
                     <input type="hidden" id="polygon_geojson" name="polygon_geojson">
                     <div class="row">

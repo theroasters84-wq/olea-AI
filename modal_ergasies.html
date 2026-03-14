@@ -24,7 +24,7 @@
                             <button type="button" class="btn btn-success btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#completeTaskModal{{ ktima.id }}_{{ loop.index }}" onclick="document.getElementById('taskNameInput{{ ktima.id }}_{{ loop.index }}').value = '{{ task }}';">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <form action="{{ url_for('core_app.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
+                            <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
                                 <input type="hidden" name="eidos_ergasias" value="{{ task }}">
                                 <input type="hidden" name="katastasi" value="Ακυρώθηκε">
                                 <button type="submit" class="btn btn-secondary btn-sm py-0 px-2"><i class="fas fa-times"></i></button>
@@ -41,7 +41,7 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <form action="{{ url_for('core_app.oloklirosi_ergasias', ktima_id=ktima.id) }}" method="POST">
+                            <form action="{{ url_for('ktima_actions.oloklirosi_ergasias', ktima_id=ktima.id) }}" method="POST">
                                 <input type="hidden" name="eidos_ergasias" id="taskNameInput{{ ktima.id }}_{{ loop.index }}" value="{{ task }}">
                                 
                                 <div class="mb-3">
@@ -83,7 +83,7 @@
                 </ul>
 
                 <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
-                <form action="{{ url_for('core_app.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;">
+                <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;">
                     <div class="mb-1">
                         <select name="eidos_ergasias" class="form-select form-select-sm" required>
                             <option value="" disabled selected>Επιλογή Εργασίας</option>

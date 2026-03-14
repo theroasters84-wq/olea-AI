@@ -41,6 +41,22 @@ def arxikh():
 
         for ktima in ktimata:
             try:
+                # --- ΑΥΤΟΜΑΤΗ ΕΠΙΔΙΟΡΘΩΣΗ: Ανάκτηση χαμένου πολυγώνου από τον Δορυφόρο ---
+                if ktima.agromonitoring_poly_id and not ktima.polygon_geojson:
+                    api_key = os.getenv('AGROMONITORING_API_KEY')
+                    if api_key:
+                        try:
+                            import requests
+                            import json
+                            poly_res = requests.get(f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}", timeout=5)
+                            if poly_res.status_code == 200:
+                                p_data = poly_res.json()
+                                if 'geo_json' in p_data:
+                                    ktima.polygon_geojson = json.dumps(p_data['geo_json'])
+                                    vasi.session.commit()
+                        except Exception as e:
+                            print(f"Auto-heal polygon error: {e}")
+
                 # Ενσωμάτωση Agromonitoring API
                 ktima.agro_data = None
                 if ktima.agromonitoring_poly_id:
@@ -337,7 +353,7 @@ def prosthes_ktima():
                             neo.agromonitoring_poly_id = poly_data.get('id')
                             
                             # --- ΑΥΤΟΜΑΤΗ ΑΝΑΛΥΣΗ (Τρέχει τώρα!) ---
-                            end_time = int(time.time())
+                            end_time = int(time.time()) - 60 # Αφαιρούμε 60 δευτερόλεπτα για να αποφύγουμε σφάλματα συγχρονισμού
                             start_time = end_time - (365 * 24 * 60 * 60) # 1 Έτος πίσω
                             img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={neo.agromonitoring_poly_id}&appid={api_key}"
                             
@@ -517,95 +533,6 @@ def diagrafi_apothikis(item_id):
     if item: vasi.session.delete(item); vasi.session.commit()
     return redirect(url_for('core_app.apothiki'))
 
-@core_bp.route('/lixi_xronias/<int:ktima_id>', methods=['POST'])
-@login_required
-def lixi_xronias(ktima_id):
-    ktima = vasi.session.get(Ktima, ktima_id)
-    try:
-        tonoi = float(request.form.get('tonoi_paragogis', 0))
-        arxeio = ArxeioSygkomidis(ktima_id=ktima.id, tonoi=tonoi, kila_ana_dentro=0, synoliko_kostos=0, imerominia=datetime.now())
-        vasi.session.add(arxeio)
-        for e in ktima.ergasies: e.archived = True
-        for ex in ktima.exoda: ex.archived = True
-        vasi.session.commit()
-        flash('Χρονιά έκλεισε.', 'success')
-    except ValueError:
-        flash('Παρακαλώ εισάγετε έγκυρο αριθμό τόνων παραγωγής.', 'danger')
-    return redirect(url_for('core_app.arxikh'))
-
-@core_bp.route('/epeksergasia_poikiliwn/<int:ktima_id>', methods=['POST'])
-@login_required
-def epeksergasia_poikiliwn(ktima_id):
-    # (Logic to update varieties)
-    flash('Ενημερώθηκε.', 'success')
-    return redirect(url_for('core_app.arxikh'))
-
-@core_bp.route('/steile_anafora', methods=['POST'])
-@login_required
-def steile_anafora():
-    data = request.get_json()
-    steile_email(current_user.email, f"Anafora {data.get('onoma_ktimatos')}", data.get('ai_sumvouli'))
-    return jsonify({'minima': 'Ok'})
-
-@core_bp.route('/diagrafi_ktimatos/<int:ktima_id>', methods=['POST'])
-@login_required
-def diagrafi_ktimatos(ktima_id):
-    ktima = vasi.session.get(Ktima, ktima_id)
-    if ktima:
-        if ktima.idioktitis != current_user:
-            flash('Δεν έχετε δικαίωμα διαγραφής αυτού του κτήματος.', 'danger')
-            return redirect(url_for('core_app.arxikh'))
-        
-        # --- ΔΙΑΓΡΑΦΗ ΑΠΟ AGROMONITORING ---
-        if ktima.agromonitoring_poly_id:
-            api_key = os.getenv('AGROMONITORING_API_KEY')
-            if api_key:
-                try:
-                    import requests
-                    url = f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}"
-                    requests.delete(url, timeout=5)
-                except Exception as e:
-                    print(f"Σφάλμα διαγραφής από Agromonitoring: {e}")
-
-        vasi.session.delete(ktima)
-        vasi.session.commit()
-        flash('Το κτήμα διαγράφηκε επιτυχώς.', 'success')
-    return redirect(url_for('core_app.arxikh'))
-
-@core_bp.route('/oristiki_diagrafi_ktimatos/<int:id>', methods=['POST'])
-@login_required
-def oristiki_diagrafi_ktimatos(id):
-    ktima = vasi.session.get(Ktima, id)
-    
-    # --- ΔΙΑΓΡΑΦΗ ΑΠΟ AGROMONITORING ---
-    if ktima.agromonitoring_poly_id:
-        api_key = os.getenv('AGROMONITORING_API_KEY')
-        if api_key:
-            try:
-                import requests
-                url = f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}"
-                requests.delete(url, timeout=5)
-            except Exception as e:
-                print(f"Σφάλμα διαγραφής από Agromonitoring: {e}")
-                
-    vasi.session.delete(ktima)
-    vasi.session.commit()
-    return redirect(url_for('core_app.arxeio'))
-
-@core_bp.route('/arxeiothetisi_ktimatos/<int:id>')
-@login_required
-def arxeiothetisi_ktimatos(id):
-    ktima = vasi.session.get(Ktima, id)
-    ktima.is_active = False
-    vasi.session.commit()
-    return redirect(url_for('core_app.arxikh'))
-
-@core_bp.route('/ektyposi_anaforas/<int:ktima_id>')
-@login_required
-def ektyposi_anaforas(ktima_id):
-    ktima = vasi.session.get(Ktima, ktima_id)
-    return render_template('anafora.html', ktima=ktima)
-
 @core_bp.route('/ndvi_analyze/<int:ktima_id>', methods=['POST'])
 @login_required
 def ndvi_analyze(ktima_id):
@@ -624,47 +551,107 @@ def ndvi_analyze(ktima_id):
         geo_json = data.get('geo_json')
         
         if geo_json:
-            # Αποθήκευση του πολυγώνου στη βάση
-            ktima.polygon_geojson = json.dumps(geo_json)
-            vasi.session.commit()
+            # Έλεγχος αν το πολύγωνο είναι ακριβώς το ίδιο για αποφυγή περιττών κλήσεων
+            saved_poly = ktima.polygon_geojson
+            new_poly_str = json.dumps(geo_json)
+            
+            polygon_changed = True
+            if saved_poly:
+                try:
+                    if json.loads(saved_poly) == geo_json:
+                        polygon_changed = False
+                except:
+                    pass
+            
+            if polygon_changed:
+                ktima.polygon_geojson = new_poly_str
+                vasi.session.commit()
             
             api_key = os.getenv('AGROMONITORING_API_KEY')
             if not api_key:
                  return jsonify({'message': 'Αποθηκεύτηκε (Χωρίς Δορυφόρο - Λείπει το API Key)', 'ndvi_url': ''})
 
-            # 1. Δημιουργία/Ενημέρωση Πολυγώνου στο Agromonitoring
-            poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
-            payload = {"name": ktima.onoma_ktimatos, "geo_json": geo_json}
-            headers = {'Content-Type': 'application/json'}
-            
-            # Κάνουμε POST για να πάρουμε το ID (αν υπάρχει ήδη, επιστρέφει το υπάρχον)
-            poly_res = requests.post(poly_url, json=payload, headers=headers)
-            
-            if poly_res.status_code in [200, 201]:
-                poly_data = poly_res.json()
-                ktima.agromonitoring_poly_id = poly_data.get('id')
-                vasi.session.commit()
+            if polygon_changed or not ktima.agromonitoring_poly_id:
+                # 1. Δημιουργία Πολυγώνου στο Agromonitoring
+                poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
+                payload = {"name": ktima.onoma_ktimatos, "geo_json": geo_json}
+                headers = {'Content-Type': 'application/json'}
                 
-                # 2. Αναζήτηση Εικόνας NDVI (Τελευταίες 365 μέρες - 1 Έτος)
-                end_time = int(time.time())
+                poly_res = requests.post(poly_url, json=payload, headers=headers)
+                
+                if poly_res.status_code in [200, 201]:
+                    poly_data = poly_res.json()
+                    ktima.agromonitoring_poly_id = poly_data.get('id')
+                    vasi.session.commit()
+                
+            if ktima.agromonitoring_poly_id:
+                # 2. Αναζήτηση Εικόνας (Τελευταίες 365 μέρες)
+                end_time = int(time.time()) - 60
                 start_time = end_time - (365 * 24 * 60 * 60)
                 img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
                 
-                time.sleep(1) # Μικρή αναμονή για το API
+                time.sleep(1)
                 img_res = requests.get(img_url)
                 
-                if img_res.status_code == 200 and len(img_res.json()) > 0:
-                    # Βελτιωμένη λογική: Ψάχνουμε την πιο πρόσφατη ΕΓΚΥΡΗ εικόνα
+                images = []
+                if img_res.status_code == 200 and img_res.json():
                     images = img_res.json()
-                    images.sort(key=lambda x: x['dt'], reverse=True) # Ταξινόμηση: Νεότερα πρώτα
+
+                # Αν δεν βρεθούν εικόνες, δοκιμάζουμε να ξανα-δηλώσουμε το πολύγωνο και να ξανα-ψάξουμε (μόνο αν δεν το κάναμε ήδη)
+                if not images and ktima.polygon_geojson and not polygon_changed:
+                    print(f"🔄 Επιδιόρθωση πολυγώνου για το κτήμα {ktima.id} (μέσω ndvi_analyze)...")
+                    poly_url_retry = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
+                    payload_retry = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(ktima.polygon_geojson)}
+                    headers_retry = {'Content-Type': 'application/json'}
                     
-                    ndvi_url = None
-                    ndwi_url = None
+                    repost_res = requests.post(poly_url_retry, json=payload_retry, headers=headers_retry)
+                    if repost_res.status_code in [200, 201]:
+                        poly_data_retry = repost_res.json()
+                        ktima.agromonitoring_poly_id = poly_data_retry.get('id')
+                        vasi.session.commit()
+                        
+                        img_url_retry = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+                        time.sleep(1)
+                        img_res_retry = requests.get(img_url_retry)
+                        if img_res_retry.status_code == 200 and img_res_retry.json():
+                            images = img_res_retry.json()
+
+                # --- Τελική Αναζήτηση στην τελική λίστα εικόνων ---
+                ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = None, None, None, None, None
+                if images:
+                    images.sort(key=lambda x: x['dt'], reverse=True)
+                    
+                    # 1. Ψάχνουμε εικόνα με χαμηλή νέφωση (< 20%) για να μην είναι άσπρος/διάφανος ο χάρτης
                     for img in images:
-                        if img.get('image', {}).get('ndvi'):
-                            ndvi_url = img.get('image', {}).get('ndvi')
-                            ndwi_url = img.get('image', {}).get('ndwi')
+                        if img.get('image', {}).get('ndvi') and img.get('cl', 100) < 20:
+                            img_data = img.get('image', {})
+                            ndvi_url = img_data.get('ndvi')
+                            ndwi_url = img_data.get('ndwi')
+                            evi_url = img_data.get('evi')
+                            truecolor_url = img_data.get('truecolor')
+                            falsecolor_url = img_data.get('falsecolor')
                             break
+                            
+                    # 2. Αν όλα τα περάσματα έχουν σύννεφα, αναγκαστικά παίρνουμε την πιο πρόσφατη
+                    if not ndvi_url:
+                        for img in images:
+                            if img.get('image', {}).get('ndvi'):
+                                img_data = img.get('image', {})
+                                ndvi_url = img_data.get('ndvi')
+                                ndwi_url = img_data.get('ndwi')
+                                evi_url = img_data.get('evi')
+                                truecolor_url = img_data.get('truecolor')
+                                falsecolor_url = img_data.get('falsecolor')
+                                break
+                    
+                    # 3. Διόρθωση URL (HTTPS & API Key) για όλους τους χάρτες
+                    urls_dict = {'ndvi_url': ndvi_url, 'ndwi_url': ndwi_url, 'evi_url': evi_url, 'truecolor_url': truecolor_url, 'falsecolor_url': falsecolor_url}
+                    for k, v in urls_dict.items():
+                        if v:
+                            if 'appid=' not in v: v += f"&appid={api_key}" if '?' in v else f"?appid={api_key}"
+                            urls_dict[k] = v.replace("http://", "https://")
+                    
+                    ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = urls_dict['ndvi_url'], urls_dict['ndwi_url'], urls_dict['evi_url'], urls_dict['truecolor_url'], urls_dict['falsecolor_url']
                     
                     ai_msg = "Ο χάρτης ανανεώθηκε, αλλά δεν έγινε ανάλυση AI."
                     if ndvi_url:
@@ -688,7 +675,10 @@ def ndvi_analyze(ktima_id):
                 'message': 'Το πολύγωνο αποθηκεύτηκε επιτυχώς.',
                 'ai_message': ai_msg if 'ai_msg' in locals() else 'Ο χάρτης ορίστηκε. Αναμονή για δορυφορικό πέρασμα.',
                 'ndvi_url': ndvi_url if 'ndvi_url' in locals() else '',
-                'ndwi_url': ndwi_url if 'ndwi_url' in locals() else ''
+                'ndwi_url': ndwi_url if 'ndwi_url' in locals() else '',
+                'evi_url': evi_url if 'evi_url' in locals() else '',
+                'truecolor_url': truecolor_url if 'truecolor_url' in locals() else '',
+                'falsecolor_url': falsecolor_url if 'falsecolor_url' in locals() else ''
             })
         
         return jsonify({'error': 'Δεν βρέθηκαν δεδομένα χάρτη'}), 400
@@ -697,7 +687,7 @@ def ndvi_analyze(ktima_id):
         print(f"NDVI Error: {e}")
         return jsonify({'error': 'Σφάλμα διακομιστή'}), 500
 
-@core_bp.route('/trexe_doriforo/<int:ktima_id>')
+@core_bp.route('/trexe_doriforo/<int:ktima_id>', methods=['POST'])
 @login_required
 def trexe_doriforo(ktima_id):
     import requests
@@ -708,21 +698,18 @@ def trexe_doriforo(ktima_id):
     
     ktima = vasi.session.get(Ktima, ktima_id)
     if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
-        flash('Δεν έχετε πρόσβαση.', 'danger')
-        return redirect(url_for('core_app.arxikh'))
+        return jsonify({'success': False, 'message': 'Δεν έχετε πρόσβαση.'}), 403
         
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key:
-        flash('Λείπει το κλειδί Agromonitoring.', 'danger')
-        return redirect(url_for('core_app.arxikh'))
+        return jsonify({'success': False, 'message': 'Λείπει το κλειδί Agromonitoring.'}), 500
         
     if not ktima.agromonitoring_poly_id:
-        flash('Δεν έχει οριστεί χάρτης (πολύγωνο) για αυτό το κτήμα.', 'warning')
-        return redirect(url_for('core_app.arxikh'))
+        return jsonify({'success': False, 'message': 'Δεν έχει οριστεί χάρτης (πολύγωνο) για αυτό το κτήμα.'}), 400
 
     try:
         # Αναζήτηση Εικόνας NDVI (Τελευταίες 365 μέρες)
-        end_time = int(time.time())
+        end_time = int(time.time()) - 60 # Αφαιρούμε 60 δευτερόλεπτα για να αποφύγουμε σφάλματα συγχρονισμού
         start_time = end_time - (365 * 24 * 60 * 60)
         img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
         
@@ -730,44 +717,62 @@ def trexe_doriforo(ktima_id):
         
         # Προσωρινή αποθήκευση αποτελεσμάτων για έλεγχο
         images = []
-        ndvi_url = None
-        
-        if img_res.status_code == 200 and len(img_res.json()) > 0:
+        if img_res.status_code == 200 and img_res.json():
             images = img_res.json()
-            images.sort(key=lambda x: x['dt'], reverse=True)
-            for img in images:
-                if img.get('image', {}).get('ndvi'):
-                    ndvi_url = img.get('image', {}).get('ndvi')
-                    break
         
-        # ΑΥΤΟΜΑΤΗ ΕΠΙΔΙΟΡΘΩΣΗ: Αν δεν βρει εικόνες Ή βρει αλλά χωρίς NDVI, ξανα-δημιουργούμε το πολύγωνο
-        if (len(images) == 0 or ndvi_url is None) and ktima.polygon_geojson:
+        # Αν δεν βρεθούν εικόνες, δοκιμάζουμε να ξανα-δηλώσουμε το πολύγωνο και να ξανα-ψάξουμε
+        if not images and ktima.polygon_geojson:
             print(f"🔄 Επιδιόρθωση πολυγώνου για το κτήμα {ktima.id}...")
             poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
             payload = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(ktima.polygon_geojson)}
             headers = {'Content-Type': 'application/json'}
             
-            poly_res = requests.post(poly_url, json=payload, headers=headers)
-            if poly_res.status_code in [200, 201]:
-                new_data = poly_res.json()
-                ktima.agromonitoring_poly_id = new_data.get('id')
+            repost_res = requests.post(poly_url, json=payload, headers=headers)
+            if repost_res.status_code in [200, 201]:
+                poly_data_retry = repost_res.json()
+                ktima.agromonitoring_poly_id = poly_data_retry.get('id')
                 vasi.session.commit()
-                # Ξαναδοκιμάζουμε την αναζήτηση με το νέο ID
-                img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
-                img_res = requests.get(img_url)
-                if img_res.status_code == 200:
+                
+                img_url_retry = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+                time.sleep(1)
+                img_res_retry = requests.get(img_url_retry)
+                if img_res_retry.status_code == 200 and img_res_retry.json():
                     images = img_res.json()
-                    images.sort(key=lambda x: x['dt'], reverse=True)
         
-        if len(images) > 0:
-            # Τελική αναζήτηση NDVI URL
-            ndvi_url = None
+        if images:
+            ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = None, None, None, None, None
+            images.sort(key=lambda x: x['dt'], reverse=True)
+            
             for img in images:
-                if img.get('image', {}).get('ndvi'):
-                    ndvi_url = img.get('image', {}).get('ndvi')
+                if img.get('image', {}).get('ndvi') and img.get('cl', 100) < 20:
+                    img_data = img.get('image', {})
+                    ndvi_url = img_data.get('ndvi')
+                    ndwi_url = img_data.get('ndwi')
+                    evi_url = img_data.get('evi')
+                    truecolor_url = img_data.get('truecolor')
+                    falsecolor_url = img_data.get('falsecolor')
                     break
+                    
+            if not ndvi_url:
+                for img in images:
+                    if img.get('image', {}).get('ndvi'):
+                        img_data = img.get('image', {})
+                        ndvi_url = img_data.get('ndvi')
+                        ndwi_url = img_data.get('ndwi')
+                        evi_url = img_data.get('evi')
+                        truecolor_url = img_data.get('truecolor')
+                        falsecolor_url = img_data.get('falsecolor')
+                        break
             
             if ndvi_url:
+                urls_dict = {'ndvi_url': ndvi_url, 'ndwi_url': ndwi_url, 'evi_url': evi_url, 'truecolor_url': truecolor_url, 'falsecolor_url': falsecolor_url}
+                for k, v in urls_dict.items():
+                    if v:
+                        if 'appid=' not in v: v += f"&appid={api_key}" if '?' in v else f"?appid={api_key}"
+                        urls_dict[k] = v.replace("http://", "https://")
+                
+                ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = urls_dict['ndvi_url'], urls_dict['ndwi_url'], urls_dict['evi_url'], urls_dict['truecolor_url'], urls_dict['falsecolor_url']
+                
                 # Ανάλυση με Gemini Vision
                 try:
                     img_content = requests.get(ndvi_url).content
@@ -785,8 +790,10 @@ def trexe_doriforo(ktima_id):
                             latest_stat = stats_res.json()[-1] 
                             mean_ndvi = latest_stat.get('mean')
                             max_ndvi = latest_stat.get('max')
-                            dt_stat = datetime.fromtimestamp(latest_stat.get('dt')).strftime('%d/%m/%Y')
-                            stats_msg = f"📊 Στατιστικά ({dt_stat}): Μέσος NDVI: {mean_ndvi:.2f}, Μέγιστο: {max_ndvi:.2f}. "
+                            dt_stat_ts = latest_stat.get('dt')
+                            if mean_ndvi is not None and max_ndvi is not None and dt_stat_ts is not None:
+                                dt_stat = datetime.fromtimestamp(dt_stat_ts).strftime('%d/%m/%Y')
+                                stats_msg = f"📊 Στατιστικά ({dt_stat}): Μέσος NDVI: {mean_ndvi:.2f}, Μέγιστο: {max_ndvi:.2f}. "
                     except Exception as e:
                         print(f"Stats Error: {e}")
 
@@ -799,23 +806,25 @@ def trexe_doriforo(ktima_id):
                     ktima.analysi_dedomena = f"{stats_msg}\n{response.text}"
                     vasi.session.commit()
                     
-                    flash('Η ανάλυση ολοκληρώθηκε! Δείτε το ιστορικό διαγνώσεων.', 'success')
+                    return jsonify({
+                        'success': True, 'message': 'Η ανάλυση ολοκληρώθηκε!', 
+                        'analysis_text': teliko_keimeno, 
+                        'ndvi_url': ndvi_url, 
+                        'ndwi_url': ndwi_url,
+                        'evi_url': evi_url,
+                        'truecolor_url': truecolor_url,
+                        'falsecolor_url': falsecolor_url
+                    })
                 except Exception as e:
                     print(f"Vision Error: {e}")
-                    flash('Σφάλμα κατά την ανάλυση AI.', 'danger')
+                    return jsonify({'success': False, 'message': f'Σφάλμα κατά την ανάλυση AI: {e}'})
             else:
-                flash('Βρέθηκαν περάσματα δορυφόρου αλλά κανένα δεν είχε έτοιμο δείκτη NDVI. Δοκιμάστε αργότερα.', 'warning')
+                return jsonify({'success': False, 'message': 'Βρέθηκαν περάσματα δορυφόρου αλλά κανένα δεν είχε έτοιμο δείκτη NDVI. Δοκιμάστε αργότερα.'})
         else:
-            flash(f'Δεν βρέθηκε εικόνα. API Status: {img_res.status_code}. Response: {img_res.text}', 'warning')
+            return jsonify({'success': False, 'message': f'Δεν βρέθηκε εικόνα. API Status: {img_res.status_code}. Response: {img_res.text}'})
             
     except Exception as e:
-        flash(f'Σφάλμα επικοινωνίας: {e}', 'danger')
-
-    # ΔΙΟΡΘΩΣΗ REDIRECT: Αν είναι γεωπόνος, επιστρέφουμε στην προβολή του πελάτη
-    if getattr(current_user, 'rolos', '') == 'geoponos':
-        return redirect(url_for('core_app.arxikh', pelatis_id=ktima.xrhsths_id))
-        
-    return redirect(url_for('core_app.arxikh'))
+        return jsonify({'success': False, 'message': f'Σφάλμα επικοινωνίας: {e}'}), 500
 
 @core_bp.route('/diorthosi_gdd')
 @login_required

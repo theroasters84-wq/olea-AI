@@ -1,0 +1,33 @@
+    <!-- Global Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: #4A7C59;">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="/"><i class="fas fa-tree me-2"></i> Olea AI</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Αρχική</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/arxeio"><i class="fas fa-archive"></i> Αρχείο Σοδειών</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/apothiki"><i class="fas fa-boxes"></i> Αποθήκη</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="fas fa-share-nodes"></i> Κοινοποίηση Εφαρμογής</a>
+                    </li>
+                </ul>
+                <span class="navbar-text me-3 text-white d-none d-lg-inline-block">
+                    {{ current_user.email }}
+                </span>
+                {% if current_user.rolos == 'geoponos' %}
+                <a href="/dashboard_geoponou" class="btn btn-outline-warning btn-sm me-2 text-dark fw-bold">
+                    <i class="fas fa-microscope"></i> Portal Γεωπόνου
+                </a>
+                {% endif %}
+                <button class="btn btn-outline-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalProfile"><i class="fas fa-user-cog"></i> Προφίλ</button>
+                <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
+            </div>

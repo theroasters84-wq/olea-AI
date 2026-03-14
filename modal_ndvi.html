@@ -21,9 +21,9 @@
                 <div class="text-center mt-3">
                     <div class="btn-group">
                         <button id="btnAnalyze{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
-                        <a href="{{ url_for('core_app.trexe_doriforo', ktima_id=ktima.id) }}" class="btn btn-success">
+                        <button id="btnRunAnalysisNow{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow({{ ktima.id }}, this)">
                             <i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ
-                        </a>
+                        </button>
                     </div>
                     <div id="ndviLoading{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
                     <div id="ndviError{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>

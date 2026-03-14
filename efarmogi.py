@@ -24,7 +24,7 @@ def aytomatizomenos_elegxos_ndvi(app_context):
 
         for ktima in ktimata:
             try:
-                end_time = int(datetime.now().timestamp())
+                end_time = int(datetime.now().timestamp()) - 60 # Αφαιρούμε 60 δευτερόλεπτα για να αποφύγουμε σφάλματα συγχρονισμού
                 start_time = end_time - (14 * 24 * 60 * 60) # Look back 14 days
                 img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
                 img_res = requests.get(img_url)

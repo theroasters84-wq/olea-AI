@@ -1,0 +1,43 @@
+
+<!-- Add Ktima Modal -->
+<div class="modal fade" id="addKtimaModal" tabindex="-1" aria-labelledby="addKtimaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="addKtimaModalLabel"><i class="fas fa-tree"></i> Προσθήκη Νέου Κτήματος</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fas fa-info-circle fa-lg me-2 text-info"></i>
+                        <strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong>
+                    </div>
+                    <ul class="mb-1 ps-3">
+                        <li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li>
+                        <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο (π.χ. δρόμους ή γειτονικά χωράφια) για να μπορέσει να ολοκληρωθεί η ανάλυση!</li>
+                    </ul>
+                </div>
+                <div id="map" class="mb-3"></div>
+                
+                <form action="{{ url_for('ktima_actions.prosthes_ktima') }}" method="POST">
+                    <!-- Κρυφό πεδίο για το GeoJSON -->
+                    <input type="hidden" id="polygon_geojson" name="polygon_geojson">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">Όνομα Κτήματος</label>
+                            <input type="text" name="onoma_ktimatos" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Γεωγραφικό Πλάτος</label>
+                            <input type="text" id="geografiko_platos" name="geografiko_platos" class="form-control" required readonly>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Γεωγραφικό Μήκος</label>
+                            <input type="text" id="geografiko_mikos" name="geografiko_mikos" class="form-control" required readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label">Τύπος Εδάφους</label>
+                            <select name="typos_edafous" class="form-select"><option value="Αμμώδες">Αμμώδες</option><option value="Αργιλώδες">Αργιλώδες</option><option value="Πηλώδες">Πηλώδες</option><option value

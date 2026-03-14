@@ -52,7 +52,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form action="{{ url_for('core_app.enimerosi_nerou', ktima_id=ktima.id) }}" method="POST">
+                <form action="{{ url_for('ktima_actions.enimerosi_nerou', ktima_id=ktima.id) }}" method="POST">
                     <div class="mb-3">
                         <label class="form-label">pH Νερού</label>
                         <input type="number" step="0.1" name="nero_ph" class="form-control" value="{{ ktima.nero_ph if ktima.nero_ph else '' }}" placeholder="π.χ. 7.5">
@@ -79,7 +79,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form action="{{ url_for('core_app.prosthes_ugrasia', ktima_id=ktima.id) }}" method="POST">
+                <form action="{{ url_for('ktima_actions.prosthes_ugrasia', ktima_id=ktima.id) }}" method="POST">
                     <div class="mb-3">
                         <label class="form-label">Ποσοστό Υγρασίας Εδάφους (%)</label>
                         <input type="number" step="0.1" name="pososto" class="form-control" required placeholder="π.χ. 25.0">

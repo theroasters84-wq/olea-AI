@@ -9,7 +9,7 @@
             <div class="modal-body">
                 <!-- Οικονομικά -->
                 <h5 style="color: #c0392b;"><i class="fas fa-coins"></i> Οικονομικά</h5>
-                <form action="{{ url_for('core_app.prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;">
+                <form action="{{ url_for('ktima_actions.prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;">
                     <div class="input-group input-group-sm mb-1">
                         <input type="text" name="perigrafi" class="form-control" placeholder="Περιγραφή" required>
                         <input type="number" name="poso" class="form-control" placeholder="€" step="0.01" required>
@@ -51,7 +51,7 @@
                 <hr>
                 <!-- PDF Report Button -->
                 <div class="d-grid gap-2 mb-4">
-                    <a href="{{ url_for('core_app.ektyposi_anaforas', ktima_id=ktima.id) }}" target="_blank" class="btn btn-outline-dark">
+                    <a href="{{ url_for('ktima_actions.ektyposi_anaforas', ktima_id=ktima.id) }}" target="_blank" class="btn btn-outline-dark">
                         <i class="fas fa-file-pdf text-danger"></i> Εξαγωγή Αναφοράς PDF (Πιστοποίηση)
                     </a>
                 </div>
@@ -65,7 +65,7 @@
                 </div>
                 {% endif %}
 
-                <form action="{{ url_for('core_app.lixi_xronias', ktima_id=ktima.id) }}" method="POST" class="mb-3" onsubmit="{% if ktima.meres_apo_psekasmo is defined and ktima.meres_apo_psekasmo is not none and ktima.meres_apo_psekasmo < 21 %}return confirm('🛑 ΑΠΑΓΟΡΕΥΣΗ ΣΥΓΚΟΜΙΔΗΣ: Έχουν περάσει μόνο {{ ktima.meres_apo_psekasmo }} από τις 21 ημέρες ασφαλείας του τελευταίου ψεκασμού. Αν μαζέψετε τώρα, το ελαιόλαδο θα βγει ακατάλληλο/τοξικό. Είστε ΣΙΓΟΥΡΟΙ ότι θέλετε να προχωρήσετε;');{% else %}return confirm('ΠΡΟΣΟΧΗ: Αυτή η ενέργεια θα αρχειοθετήσει όλα τα τρέχοντα έξοδα και εργασίες. Είστε σίγουροι;');{% endif %}">
+                <form action="{{ url_for('ktima_actions.lixi_xronias', ktima_id=ktima.id) }}" method="POST" class="mb-3" onsubmit="{% if ktima.meres_apo_psekasmo is defined and ktima.meres_apo_psekasmo is not none and ktima.meres_apo_psekasmo < 21 %}return confirm('🛑 ΑΠΑΓΟΡΕΥΣΗ ΣΥΓΚΟΜΙΔΗΣ: Έχουν περάσει μόνο {{ ktima.meres_apo_psekasmo }} από τις 21 ημέρες ασφαλείας του τελευταίου ψεκασμού. Αν μαζέψετε τώρα, το ελαιόλαδο θα βγει ακατάλληλο/τοξικό. Είστε ΣΙΓΟΥΡΟΙ ότι θέλετε να προχωρήσετε;');{% else %}return confirm('ΠΡΟΣΟΧΗ: Αυτή η ενέργεια θα αρχειοθετήσει όλα τα τρέχοντα έξοδα και εργασίες. Είστε σίγουροι;');{% endif %}">
                     <div class="input-group input-group-sm">
                         <input type="number" name="tonoi_paragogis" class="form-control" placeholder="Τόνοι Παραγωγής" step="0.01" required>
                         <button class="btn btn-warning" type="submit"><i class="fas fa-archive"></i> Αρχειοθέτηση</button>

@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.svg">    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Αρχική - Olea AI</title>
@@ -10,14 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
-    <!-- Favicon -->
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.svg">    
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    <style>
+
         /* Mobile Layout: Swipe/Carousel για τα κτήματα */
         @media (max-width: 768px) {
             .ktimata-wrapper {
@@ -50,19 +50,7 @@
     </style>
 </head>
 <body>
-    <!-- Global Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: #4A7C59;">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold" href="/"><i class="fas fa-tree me-2"></i> Olea AI</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/">Αρχική</a>
-                    </li>
-                    <li class="nav-item">
+    {% include '_navbar.html' %}
                         <a class="nav-link" href="/arxeio"><i class="fas fa-archive"></i> Αρχείο Σοδειών</a>
                     </li>
                     <li class="nav-item">
@@ -96,7 +84,7 @@
         </button>
     
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
+
         {% for category, message in messages %}
           {% if message == 'Παρακαλώ συνδεθείτε για να δείτε αυτή τη σελίδα.' %}
             {% if not current_user.is_authenticated %}
@@ -111,6 +99,7 @@
           {% endif %}
         {% endfor %}
       {% endif %}
+
     {% endwith %}
 
     <h3 class="mb-3"><i class="fas fa-map-marked-alt"></i> Τα Κτήματά μου</h3>
@@ -122,30 +111,47 @@
     <!-- Responsive Container: Swipe σε κινητά, Grid σε PC -->
     <div class="ktimata-wrapper" {% if is_geoponos_view %}style="display: block;"{% endif %}>
         {% for ktima in ktimata %}
-            <!-- Responsive Card -->
+            {% include '_ktima_card.html' %}
             <div class="card ktima-responsive-card shadow border-0" {% if is_geoponos_view %}style="width: 100%; margin-bottom: 30px;"{% endif %}>
                 <div class="card-body position-relative d-flex flex-column flex-grow-1 p-2" style="overflow: hidden;">
                     {% if is_geoponos_view %}
                         <!-- GEOPONOS VIEW: Αυστηρή Προβολή Αναλυτικής Καρτέλας -->
                         <h6 class="bg-dark text-white p-2 rounded text-center mb-3"><i class="fas fa-microscope"></i> Αναλυτική Καρτέλα Γεωπόνου</h6>
                         
-                        <table class="table table-bordered table-sm bg-white shadow-sm small mb-3">
-                            <tbody>
-                                <tr>
-                                    <th class="bg-light w-25">Κτήμα</th>
-                                    <td>{{ ktima.onoma_ktimatos }} {% if ktima.ypsometro %}<br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td>
-                                    <th class="bg-light w-25">Χάρτης</th>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
-                                            <i class="fas fa-map-marked-alt"></i> Χάρτης & Δεδομένα
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr><th class="bg-light">Έκταση</th><td>{{ ktima.stremmata }} στρ. ({{ ktima.arithmos_dentron }} δέντρα)</td><th class="bg-light">Ποικιλία</th><td>{{ ktima.poikilia }}</td></tr>
-                                <tr><th class="bg-light">Ηλικία / Πυκνότητα</th><td>{{ ktima.ilikia_dentron }} / {{ ktima.puknotita_dentron }}</td><th class="bg-light">Έδαφος</th><td>{{ ktima.typos_edafous }} ({{ ktima.diacheirisi_edafous }})</td></tr>
-                                <tr><th class="bg-light">Άρδευση</th><td>{{ ktima.ardefsi }}</td><th class="bg-light">Στάδιο (GDD)</th><td>{{ ktima.fainologiko_stadio }} ({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</td></tr>
-                            </tbody>
-                        </table>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered table-sm bg-white shadow-sm align-middle text-center w-100 mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th class="bg-light w-25 align-middle">Κτήμα</th>
+                                        <td class="w-25 align-middle">{{ ktima.onoma_ktimatos }} {% if ktima.ypsometro %}<br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td>
+                                        <th class="bg-light w-25 align-middle">Χάρτης</th>
+                                        <td class="w-25 align-middle">
+                                            <button type="button" class="btn btn-sm btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
+                                                <i class="fas fa-map-marked-alt"></i> Χάρτης
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light align-middle">Έκταση</th>
+                                        <td class="align-middle">{{ ktima.stremmata }} στρ.<br><small class="text-muted">({{ ktima.arithmos_dentron }} δέντρα)</small></td>
+                                        <th class="bg-light align-middle">Ποικιλία</th>
+                                        <td class="align-middle">{{ ktima.poikilia }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light align-middle">Ηλικία <br><small class="text-muted">/ Πυκνότητα</small></th>
+                                        <td class="align-middle">{{ ktima.ilikia_dentron }} <br><small class="text-muted">{{ ktima.puknotita_dentron }}</small></td>
+                                        <th class="bg-light align-middle">Έδαφος <br><small class="text-muted">/ Διαχείριση</small></th>
+                                        <td class="align-middle">{{ ktima.typos_edafous }} <br><small class="text-muted">({{ ktima.diacheirisi_edafous }})</small></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light align-middle">Άρδευση</th>
+                                        <td class="align-middle">{{ ktima.ardefsi }}</td>
+                                        <th class="bg-light align-middle">Στάδιο <br><small class="text-muted">(GDD)</small></th>
+                                        <td class="align-middle">{{ ktima.fainologiko_stadio }} <br><small class="text-muted">({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</small></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
                         <!-- Κουτί Δορυφορικών Δεδομένων (Live) -->
                         <h6 class="text-success border-bottom border-success pb-1"><i class="fas fa-satellite"></i> Δορυφορική Κατάσταση (Agromonitoring)</h6>
@@ -211,15 +217,37 @@
                         <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark"><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</h6>
                         <div class="bg-white p-2 border rounded small mb-4">
                             <strong>Συμπεράσματα Ανάλυσης:</strong><br>
-                            {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                            {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                        </div>
+
+                        <!-- Χάρτης NDVI για Γεωπόνο -->
+                        <h6 class="mt-3 text-success border-bottom border-success pb-1"><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI</h6>
+                        <div id="analytikiMapGeoponos{{ ktima.id }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" style="height: 300px; width: 100%; border-radius: 8px; background-color: #e9ecef; z-index: 1;" class="mb-2 position-relative analytiki-map-container shadow-sm d-flex align-items-center justify-content-center">
+                            {% if ktima.polygon_geojson %}
+                            <button class="btn btn-success btn-sm position-absolute load-map-btn shadow" style="z-index: 1000;" onclick="loadAnalytikiMap(this, 'analytikiMapGeoponos{{ ktima.id }}', {{ ktima.id }})">
+                                <i class="fas fa-satellite"></i> Φόρτωση Χάρτη
+                            </button>
+                            {% else %}
+                            <span class="text-muted small"><i class="fas fa-exclamation-triangle"></i> Δεν έχει οριστεί πολύγωνο.</span>
+                            {% endif %}
+                        </div>
+                        <div id="analytikiResultGeoponos{{ ktima.id }}" class="d-none alert alert-info mt-2 text-start small"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                        <div id="analytikiChatContainerGeoponos{{ ktima.id }}" class="d-none mt-2 p-2 bg-light border border-primary rounded small mb-4">
+                            <label class="form-label text-primary fw-bold mb-1"><i class="fas fa-comments"></i> Διευκρίνιση στον AI:</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="analytikiUserInputGeoponos{{ ktima.id }}" class="form-control" placeholder="π.χ. Το κίτρινο είναι στέγη...">
+                                <button class="btn btn-primary" id="btnAnalytikiChatGeoponos{{ ktima.id }}">Αποστολή</button>
+                            </div>
+                            <div id="analytikiChatLoadingGeoponos{{ ktima.id }}" class="d-none text-primary mt-1"><i class="fas fa-spinner fa-spin"></i> Αναμονή...</div>
+                            <div id="analytikiRefinedResultGeoponos{{ ktima.id }}" class="d-none alert alert-success mt-2 text-start mb-0 p-2"></div>
                         </div>
                     {% else %}
                     <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός) -->
                     <div class="flex-shrink-0">
                     <div class="d-flex justify-content-between align-items-start">
                         <h4 class="mb-1" style="word-break: break-word;">{{ ktima.onoma_ktimatos }}</h4>
-                        <!-- Κουμπί Αρχειοθέτησης -->
-                        <form action="{{ url_for('core_app.diagrafi_ktimatos', ktima_id=ktima.id) }}" method="POST" class="ms-2" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Είστε σίγουροι ότι θέλετε να διαγράψετε ΟΡΙΣΤΙΚΑ αυτό το κτήμα; Θα διαγραφεί και από τον δορυφόρο. Αυτή η ενέργεια δεν αναιρείται.');">
+                        <!-- Κουμπί Διαγραφής -->
+                        <form action="{{ url_for('ktima_actions.diagrafi_ktimatos', ktima_id=ktima.id) }}" method="POST" class="ms-2" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Είστε σίγουροι ότι θέλετε να διαγράψετε ΟΡΙΣΤΙΚΑ αυτό το κτήμα; Θα διαγραφεί και από τον δορυφόρο. Αυτή η ενέργεια δεν αναιρείται.');">
                             <button type="submit" class="btn btn-danger rounded-circle shadow-sm" title="Οριστική Διαγραφή Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -306,7 +334,7 @@
                     <div class="modal fade" id="modalAiReply{{ ktima.id }}" tabindex="-1">
                         <div class="modal-dialog">
                             <div class="modal-content">
-                                <form action="{{ url_for('apantisi_sto_ai', ktima_id=ktima.id) }}" method="POST">
+                                <form action="{{ url_for('ai.apantisi_sto_ai', ktima_id=ktima.id) }}" method="POST">
                                     <div class="modal-header bg-danger text-white">
                                         <h5 class="modal-title"><i class="fas fa-robot"></i> Απάντηση στον Γεωπόνο (AI)</h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -381,16 +409,10 @@
                     {% endif %}
                 </div>
 
-                <!-- Include Modals for each Ktima -->
-                {% include 'modal_ergasies.html' %}
-                {% include 'modal_poikilies.html' %}
-                {% include 'modal_analuseis.html' %}
-                {% include 'modal_ai_tools.html' %}
-                {% include 'modal_oikonomika.html' %}
-                {% include 'modal_ndvi.html' %}
-                {% include 'modal_gdd_info.html' %}
+                {% include '_modals_ktima.html' %}
 
                 <!-- Modal Profile Update -->
+
                 <div class="modal fade" id="modalProfile" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -446,14 +468,36 @@
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body bg-light">
-                                <table class="table table-bordered table-sm bg-white shadow-sm">
-                                    <tbody>
-                                        <tr><th class="bg-light w-25">Κτήμα</th><td>{{ ktima.onoma_ktimatos }}</td><th class="bg-light w-25">Τοποθεσία</th><td>{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} <br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td></tr>
-                                        <tr><th class="bg-light">Έκταση</th><td>{{ ktima.stremmata }} στρ. ({{ ktima.arithmos_dentron }} δέντρα)</td><th class="bg-light">Ποικιλία</th><td>{{ ktima.poikilia }}</td></tr>
-                                        <tr><th class="bg-light">Ηλικία / Πυκνότητα</th><td>{{ ktima.ilikia_dentron }} / {{ ktima.puknotita_dentron }}</td><th class="bg-light">Έδαφος</th><td>{{ ktima.typos_edafous }} ({{ ktima.diacheirisi_edafous }})</td></tr>
-                                        <tr><th class="bg-light">Άρδευση</th><td>{{ ktima.ardefsi }}</td><th class="bg-light">Στάδιο (GDD)</th><td>{{ ktima.fainologiko_stadio }} ({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</td></tr>
-                                    </tbody>
-                                </table>
+                                <div class="table-responsive mb-3">
+                                    <table class="table table-bordered table-sm bg-white shadow-sm align-middle text-center w-100 mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <th class="bg-light w-25 align-middle">Κτήμα</th>
+                                                <td class="w-25 align-middle">{{ ktima.onoma_ktimatos }}</td>
+                                                <th class="bg-light w-25 align-middle">Τοποθεσία</th>
+                                                <td class="w-25 align-middle">{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} <br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light align-middle">Έκταση</th>
+                                                <td class="align-middle">{{ ktima.stremmata }} στρ.<br><small class="text-muted">({{ ktima.arithmos_dentron }} δέντρα)</small></td>
+                                                <th class="bg-light align-middle">Ποικιλία</th>
+                                                <td class="align-middle">{{ ktima.poikilia }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light align-middle">Ηλικία <br><small class="text-muted">/ Πυκνότητα</small></th>
+                                                <td class="align-middle">{{ ktima.ilikia_dentron }} <br><small class="text-muted">{{ ktima.puknotita_dentron }}</small></td>
+                                                <th class="bg-light align-middle">Έδαφος <br><small class="text-muted">/ Διαχείριση</small></th>
+                                                <td class="align-middle">{{ ktima.typos_edafous }} <br><small class="text-muted">({{ ktima.diacheirisi_edafous }})</small></td>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-light align-middle">Άρδευση</th>
+                                                <td class="align-middle">{{ ktima.ardefsi }}</td>
+                                                <th class="bg-light align-middle">Στάδιο <br><small class="text-muted">(GDD)</small></th>
+                                                <td class="align-middle">{{ ktima.fainologiko_stadio }} <br><small class="text-muted">({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</small></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
 
                                 <!-- Ιστορικό Εφαρμογών & Εργασιών -->
                                 <h6 class="mt-3 text-primary border-bottom border-primary pb-1"><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</h6>
@@ -495,21 +539,50 @@
                                 <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark"><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</h6>
                                 <div class="bg-white p-2 border rounded small mb-4">
                                     <strong>Συμπεράσματα Ανάλυσης:</strong><br>
-                                    {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                                    {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                                </div>
+
+                                <!-- Χάρτης NDVI για Αγρότη -->
+                                <h6 class="mt-3 text-success border-bottom border-success pb-1"><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI (Live)</h6>
+                                <div id="analytikiMapModal{{ ktima.id }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" style="height: 300px; width: 100%; border-radius: 8px; background-color: #e9ecef; z-index: 1;" class="mb-2 position-relative analytiki-map-container shadow-sm d-flex align-items-center justify-content-center">
+                                    {% if ktima.polygon_geojson %}
+                                    <button class="btn btn-success btn-sm position-absolute load-map-btn shadow" style="z-index: 1000;" onclick="loadAnalytikiMap(this, 'analytikiMapModal{{ ktima.id }}', {{ ktima.id }})">
+                                        <i class="fas fa-satellite"></i> Φόρτωση Χάρτη
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted small"><i class="fas fa-exclamation-triangle"></i> Δεν έχει οριστεί πολύγωνο. Μεταβείτε στον "Χάρτη" για να το σχεδιάσετε.</span>
+                                    {% endif %}
+                                </div>
+                                <div id="analytikiResultModal{{ ktima.id }}" class="d-none alert alert-info mt-2 text-start small"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                                <div id="analytikiChatContainerModal{{ ktima.id }}" class="d-none mt-2 p-2 bg-light border border-primary rounded small mb-4">
+                            <label class="form-label text-primary fw-bold mb-1"><i class="fas fa-comments"></i> Διευκρίνιση στον AI:</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="analytikiUserInputModal{{ ktima.id }}" class="form-control" placeholder="π.χ. Το κίτρινο είναι στέγη...">
+                                        <button class="btn btn-primary" id="btnAnalytikiChatModal{{ ktima.id }}">Αποστολή</button>
+                                    </div>
+                                    <div id="analytikiChatLoadingModal{{ ktima.id }}" class="d-none text-primary mt-1"><i class="fas fa-spinner fa-spin"></i> Αναμονή...</div>
+                                    <div id="analytikiRefinedResultModal{{ ktima.id }}" class="d-none alert alert-success mt-2 text-start mb-0 p-2"></div>
                                 </div>
 
                                 <h6 class="mt-4 text-success border-bottom border-success pb-1"><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</h6>
                                 <div id="syntagesContainer{{ ktima.id }}">
-                                    {% if ktima.syntages %}
-                                        {% for syntagh in ktima.syntages|reverse %}
-                                            <div class="card border-success mb-2">
-                                                <div class="card-header bg-success text-white py-1 small d-flex justify-content-between">
-                                                    <span><i class="fas fa-robot"></i> {{ syntagh.proelevsi }}</span>
-                                                    <span>{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
-                                                </div>
-                                                <div class="card-body p-2" style="white-space: pre-wrap; font-size: 0.9em;">{{ syntagh.keimeno }}</div>
+                                    {% set last_syntagh = ktima.syntages|sort(attribute='imerominia', reverse=True)|first %}
+                                    {% if last_syntagh %}
+                                        <div class="card border-success mb-2 shadow-sm">
+                                            <div class="card-header bg-success text-white py-1 small d-flex justify-content-between">
+                                                <span><i class="fas fa-robot"></i> {{ last_syntagh.proelevsi }}</span>
+                                                <span>{{ last_syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
                                             </div>
-                                        {% endfor %}
+                                            <div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">{{ last_syntagh.keimeno }}</div>
+                                            <div class="card-footer bg-light p-1 border-top-0">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI (π.χ. Το χωράφι ποτίστηκε εχθές)..." id="replyInput{{ last_syntagh.id }}">
+                                                    <button class="btn btn-success" type="button" onclick="refineSyntagh('{{ ktima.id }}', '{{ last_syntagh.id }}', this)">
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     {% else %}
                                         <p class="text-muted small italic" id="noSyntagh{{ ktima.id }}">Δεν υπάρχουν συνταγές για αυτό το κτήμα.</p>
                                     {% endif %}
@@ -559,7 +632,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-    <script>
         document.addEventListener('DOMContentLoaded', function() {
             {% for ktima in ktimata %}
                 const chartModal_{{ ktima.id }} = document.getElementById('modalOikonomika{{ ktima.id }}');
@@ -673,7 +745,9 @@
 
             // --- NDVI Map Initialization Logic ---
             const ndviModals = document.querySelectorAll('.ndvi-modal');
-            const initializedMaps = {};
+            window.initializedMaps = window.initializedMaps || {};
+            window.ndviMapBounds = window.ndviMapBounds || {};
+            window.ndviMapOverlays = window.ndviMapOverlays || {};
 
             ndviModals.forEach(modal => {
                 modal.addEventListener('shown.bs.modal', function () {
@@ -683,7 +757,7 @@
                     const ktimaId = this.getAttribute('data-ktima-id');
                     const savedGeoJsonStr = this.getAttribute('data-geojson'); // Λήψη αποθηκευμένου πολυγώνου
 
-                    if (!initializedMaps[mapId]) {
+                    if (!window.initializedMaps[mapId]) {
                         const map = L.map(mapId).setView([lat, lng], 17);
                         
                         // High Resolution Esri Satellite layer
@@ -706,20 +780,21 @@
                         const loadingDiv = document.getElementById('ndviLoading' + ktimaId);
                         const errorDiv = document.getElementById('ndviError' + ktimaId);
                         const layerControls = document.getElementById('layerControls' + ktimaId);
-                        let ndviLayer = null;
 
                         // --- ΑΥΤΟΜΑΤΗ ΦΟΡΤΩΣΗ ΠΟΛΥΓΩΝΟΥ ---
                         if (savedGeoJsonStr && savedGeoJsonStr !== "None" && savedGeoJsonStr !== "") {
                             try {
                                 const parsedGeo = JSON.parse(savedGeoJsonStr);
+                                currentGeoJSON = parsedGeo; // Διατηρούμε το αρχικό πολύγωνο
                                 const geoLayer = L.geoJSON(parsedGeo);
                                 geoLayer.eachLayer(function(layer) {
                                     drawnItems.addLayer(layer); // Προσθήκη στο επεξεργάσιμο layer
-                                    currentGeoJSON = layer.toGeoJSON();
-                                    currentBounds = layer.getBounds();
                                 });
                                 
-                                if (currentBounds) {
+                                currentBounds = drawnItems.getBounds(); // Παίρνουμε τα συνολικά όρια
+                                window.ndviMapBounds[ktimaId] = currentBounds;
+                                
+                                if (currentBounds && currentBounds.isValid()) {
                                     map.fitBounds(currentBounds); // Ζουμ στο πολύγωνο
                                     analyzeBtn.classList.remove('d-none'); // Εμφάνιση κουμπιού ανάλυσης
                                 }
@@ -734,6 +809,7 @@
                             drawnItems.addLayer(layer);
                             currentGeoJSON = layer.toGeoJSON(); // Get full GeoJSON feature
                             currentBounds = layer.getBounds();
+                            window.ndviMapBounds[ktimaId] = currentBounds;
                             analyzeBtn.classList.remove('d-none');
                             errorDiv.classList.add('d-none');
                         });
@@ -745,7 +821,7 @@
                             errorDiv.classList.add('d-none');
                             layerControls.classList.add('d-none');
                             
-                            if(ndviLayer) map.removeLayer(ndviLayer);
+                            if(window.ndviMapOverlays[mapId]) map.removeLayer(window.ndviMapOverlays[mapId]);
 
                             fetch('/ndvi_analyze/' + ktimaId, {
                                 method: 'POST',
@@ -763,31 +839,8 @@
                                     errorDiv.classList.remove('d-none');
                                     if(resultDiv) resultDiv.classList.add('d-none');
                                 } else if(data.ndvi_url) {
-                                    ndviLayer = L.imageOverlay(data.ndvi_url, currentBounds, { opacity: 0.75 }).addTo(map);
+                                    window.setupSatelliteLayers(map, currentBounds, data, mapId);
                                     map.fitBounds(currentBounds);
-                                    
-                                    // --- ΕΝΕΡΓΟΠΟΙΗΣΗ ΚΟΥΜΠΙΩΝ NDVI / NDWI ---
-                                    if (layerControls) {
-                                        layerControls.classList.remove('d-none');
-                                        const btnNDVI = document.getElementById('btnShowNDVI' + ktimaId);
-                                        const btnNDWI = document.getElementById('btnShowNDWI' + ktimaId);
-                                        
-                                        btnNDVI.onclick = function() {
-                                            if(ndviLayer) map.removeLayer(ndviLayer);
-                                            ndviLayer = L.imageOverlay(data.ndvi_url, currentBounds, { opacity: 0.75 }).addTo(map);
-                                            btnNDVI.classList.add('active');
-                                            btnNDWI.classList.remove('active');
-                                        };
-                                        
-                                        btnNDWI.onclick = function() {
-                                            if (data.ndwi_url) {
-                                                if(ndviLayer) map.removeLayer(ndviLayer);
-                                                ndviLayer = L.imageOverlay(data.ndwi_url, currentBounds, { opacity: 0.75 }).addTo(map);
-                                                btnNDWI.classList.add('active');
-                                                btnNDVI.classList.remove('active');
-                                            } else { alert("Δεν βρέθηκε χάρτης υγρασίας για αυτή τη λήψη."); }
-                                        };
-                                    }
                                     
                                     if(data.ai_message && resultDiv) {
                                         resultDiv.querySelector('.ai-text').innerText = data.ai_message;
@@ -844,14 +897,29 @@
                             });
                         });
 
-                        initializedMaps[mapId] = map;
+                        window.initializedMaps[mapId] = map;
                     } else {
-                        initializedMaps[mapId].invalidateSize();
+                        window.initializedMaps[mapId].invalidateSize();
+                    }
+                });
+            });
+
+            // --- Analytiki Map Invalidation Logic ---
+            const analytikiModals = document.querySelectorAll('[id^="modalAnalytiki"]');
+            analytikiModals.forEach(modal => {
+                modal.addEventListener('shown.bs.modal', function () {
+                    const ktimaId = this.getAttribute('id').replace('modalAnalytiki', '');
+                    const mapIdModal = 'analytikiMapModal' + ktimaId;
+                    if (window.analytikiMaps && window.analytikiMaps[mapIdModal]) {
+                        window.analytikiMaps[mapIdModal].invalidateSize();
+                    }
+                    const mapIdGeo = 'analytikiMapGeoponos' + ktimaId;
+                    if (window.analytikiMaps && window.analytikiMaps[mapIdGeo]) {
+                        window.analytikiMaps[mapIdGeo].invalidateSize();
                     }
                 });
             });
         });
-
         function filterTasks(ktimaId, proelevsi) {
             const tasks = document.querySelectorAll('.task-item-' + ktimaId);
             tasks.forEach(task => {
@@ -894,16 +962,20 @@
                                 <span><i class="fas fa-robot"></i> Νέα Συνταγή</span>
                                 <span>${dateString}</span>
                             </div>
-                            <div class="card-body p-2" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div>
+                            <div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div>
+                            <div class="card-footer bg-light p-1 border-top-0" style="animation: pulse 1s 1;">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI..." id="replyInput${data.syntagh_id}">
+                                    <button class="btn btn-success" type="button" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     `;
                     
                     containers.forEach(container => {
-                        container.insertAdjacentHTML('afterbegin', newCard);
-                    });
-                    
-                    document.querySelectorAll('#noSyntagh' + ktimaId).forEach(el => {
-                        el.style.display = 'none';
+                        container.innerHTML = newCard; // ΑΝΤΙΚΑΤΑΣΤΑΣΗ αντί για προσθήκη
                     });
                 }
             })
@@ -913,6 +985,278 @@
                 alert('Σφάλμα επικοινωνίας. Παρακαλώ προσπαθήστε ξανά.');
             });
         };
+
+        // Λογική Αναθεώρησης Συνταγής μέσω Chat
+        window.refineSyntagh = function(ktimaId, syntaghId, btn) {
+            const inputEl = document.getElementById('replyInput' + syntaghId);
+            const userReply = inputEl.value.trim();
+            if (!userReply) return;
+
+            // Εύρεση του κειμένου της προηγούμενης συνταγής
+            const card = btn.closest('.card');
+            const prevText = card.querySelector('.syntagh-content').innerText;
+
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            inputEl.disabled = true;
+
+            fetch('/refine_syntagh/' + ktimaId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ previous_recipe: prevText, user_reply: userReply })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                inputEl.disabled = false;
+                inputEl.value = '';
+
+                if (data.error) {
+                    alert('Σφάλμα: ' + data.error);
+                } else if (data.success) {
+                    const containers = document.querySelectorAll('#syntagesContainer' + ktimaId);
+                    const now = new Date();
+                    const dateString = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                    
+                    const newCard = `
+                        <div class="card border-success mb-2 shadow-sm" style="animation: pulse 1s 1;">
+                            <div class="card-header bg-success text-white py-1 small d-flex justify-content-between">
+                                <span><i class="fas fa-robot"></i> AI Γεωπόνος (Αναθεωρημένη)</span>
+                                <span>${dateString}</span>
+                            </div>
+                            <div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div>
+                            <div class="card-footer bg-light p-1 border-top-0">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI..." id="replyInput${data.syntagh_id}">
+                                    <button class="btn btn-success" type="button" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    containers.forEach(container => {
+                        container.innerHTML = newCard; // ΑΝΤΙΚΑΤΑΣΤΑΣΗ αντί για προσθήκη
+                    });
+                }
+            })
+            .catch(err => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                inputEl.disabled = false;
+                alert('Σφάλμα επικοινωνίας. Παρακαλώ προσπαθήστε ξανά.');
+            });
+        }
+
+        // Λογική φόρτωσης χάρτη και εικόνας NDVI στην Αναλυτική Καρτέλα
+        window.loadAnalytikiMap = function(btn, mapId, ktimaId) {
+            const container = document.getElementById(mapId);
+            const lat = parseFloat(container.getAttribute('data-lat'));
+            const lng = parseFloat(container.getAttribute('data-lng'));
+            const geojsonStr = container.getAttribute('data-geojson');
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Φόρτωση...';
+            btn.disabled = true;
+
+            // Έλεγχος αν ο χάρτης έχει ήδη αρχικοποιηθεί για να αποφύγουμε σφάλματα
+            if (!window.analytikiMaps) window.analytikiMaps = {};
+            let map = window.analytikiMaps[mapId];
+            if (!map) {
+                map = L.map(mapId).setView([lat, lng], 16);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles © Esri'
+                }).addTo(map);
+                window.analytikiMaps[mapId] = map;
+            }
+
+            let geojsonObj = null;
+            let bounds = null;
+            try {
+                geojsonObj = JSON.parse(geojsonStr);
+                const geoLayer = L.geoJSON(geojsonObj, {
+                    style: { color: '#28a745', weight: 2, fillOpacity: 0.1 }
+                }).addTo(map);
+                bounds = geoLayer.getBounds();
+                map.fitBounds(bounds);
+                window.ndviMapBounds = window.ndviMapBounds || {};
+                window.ndviMapBounds[ktimaId] = bounds;
+            } catch (e) {
+                console.error("Σφάλμα φόρτωσης GeoJSON", e);
+                btn.innerHTML = 'Σφάλμα Πολυγώνου';
+                return;
+            }
+
+            fetch('/ndvi_analyze/' + ktimaId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ geo_json: geojsonObj })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ndvi_url) {
+                    btn.style.display = 'none';
+                    container.classList.remove('d-flex', 'align-items-center', 'justify-content-center'); // Απελευθέρωση του CSS που έκοβε τα κουμπιά
+                    window.setupSatelliteLayers(map, bounds, data, mapId);
+
+                    // --- ΝΕΟ: AI Chat για την Ανάλυση ---
+                    if (data.ai_message && !data.ai_message.includes("Σφάλμα")) {
+                        const resultDiv = document.getElementById(mapId.replace('Map', 'Result'));
+                        const chatContainer = document.getElementById(mapId.replace('Map', 'ChatContainer'));
+                        
+                        if (resultDiv) {
+                            const aiSpan = resultDiv.querySelector('.ai-text');
+                            if (aiSpan) { aiSpan.innerText = data.ai_message; }
+                            resultDiv.classList.remove('d-none');
+                        }
+                        
+                        if (chatContainer) {
+                            chatContainer.classList.remove('d-none');
+                            const chatBtnId = 'btn' + mapId.replace('Map', 'Chat').charAt(0).toUpperCase() + mapId.replace('Map', 'Chat').slice(1);
+                            const chatBtn = document.getElementById(chatBtnId);
+                            const chatInput = document.getElementById(mapId.replace('Map', 'UserInput'));
+                            const chatLoading = document.getElementById(mapId.replace('Map', 'ChatLoading'));
+                            const refinedResultDiv = document.getElementById(mapId.replace('Map', 'RefinedResult'));
+                            
+                            if (chatBtn && chatInput) {
+                                const newChatBtn = chatBtn.cloneNode(true);
+                                chatBtn.parentNode.replaceChild(newChatBtn, chatBtn);
+
+                                newChatBtn.addEventListener('click', function() {
+                                    const userText = chatInput.value.trim();
+                                    if(!userText) return;
+                                    
+                                    newChatBtn.disabled = true;
+                                    chatLoading.classList.remove('d-none');
+                                    refinedResultDiv.classList.add('d-none');
+                                    
+                                    fetch('/ndvi_chat/' + ktimaId, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ user_reply: userText, previous_ai_message: data.ai_message })
+                                    })
+                                    .then(res => res.json())
+                                    .then(chatData => {
+                                        chatLoading.classList.add('d-none');
+                                        newChatBtn.disabled = false;
+                                        if(chatData.error) {
+                                            alert("Σφάλμα: " + chatData.error);
+                                        } else if(chatData.refined_message) {
+                                            refinedResultDiv.innerHTML = '<strong><i class="fas fa-robot"></i> Τελική Συμβουλή:</strong> <br>' + chatData.refined_message;
+                                            refinedResultDiv.classList.remove('d-none');
+                                            chatInput.value = '';
+                                        }
+                                    })
+                                    .catch(err => {
+                                        chatLoading.classList.add('d-none');
+                                        newChatBtn.disabled = false;
+                                        alert("Σφάλμα επικοινωνίας.");
+                                    });
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    btn.innerHTML = 'Δεν βρέθηκε εικόνα NDVI';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                btn.innerHTML = 'Σφάλμα Σύνδεσης';
+                btn.disabled = false;
+            });
+        };
+
+        // --- ΝΕΑ ΛΕΙΤΟΥΡΓΙΑ: AJAX για το "Ανάλυση ΤΩΡΑ" ---
+        function runAnalysisNow(ktimaId, btn) {
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ανάλυση...';
+
+            const errorDiv = document.getElementById('ndviError' + ktimaId);
+            const resultDiv = document.getElementById('ndviResult' + ktimaId);
+            
+            // Απόκρυψη παλιών μηνυμάτων
+            if (errorDiv) errorDiv.classList.add('d-none');
+            if (resultDiv) resultDiv.classList.add('d-none');
+
+            fetch('/trexe_doriforo/' + ktimaId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`Αποτυχία δικτύου: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+
+                try {
+                    if (data.success) {
+                        if (resultDiv && data.analysis_text) {
+                            const aiSpan = resultDiv.querySelector('.ai-text');
+                            if (aiSpan) { aiSpan.innerText = data.analysis_text; } 
+                            else { resultDiv.innerHTML = '<i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text">' + data.analysis_text + '</span>'; }
+                            resultDiv.classList.remove('d-none');
+                        }
+                        if (errorDiv) {
+                            errorDiv.innerText = data.message;
+                            errorDiv.className = 'd-none text-success mt-2 fw-bold';
+                            errorDiv.classList.remove('d-none');
+                        }
+                        
+                        // Εμφάνιση του νέου χάρτη αν επιστράφηκε url
+                        const mapId = 'ndviMap' + ktimaId;
+                        let map = window.initializedMaps ? window.initializedMaps[mapId] : null;
+                        let bounds = window.ndviMapBounds ? window.ndviMapBounds[ktimaId] : null;
+                        
+                        // Δικλείδα Ασφαλείας: Αν χαθούν τα όρια από τη μνήμη, τα ξαναφτιάχνουμε από το HTML
+                        if (!bounds && map) {
+                            const modalEl = document.getElementById('modalNdvi' + ktimaId);
+                            const geoStr = modalEl ? modalEl.getAttribute('data-geojson') : null;
+                            if (geoStr && geoStr !== "None" && geoStr !== "") {
+                                try { bounds = L.geoJSON(JSON.parse(geoStr)).getBounds(); } catch(e) {}
+                            }
+                        }
+
+                        if (data.ndvi_url && map && bounds) {
+                            if (typeof window.setupSatelliteLayers === 'function') {
+                                window.setupSatelliteLayers(map, bounds, data, mapId);
+                                map.fitBounds(bounds);
+                            }
+                        } else {
+                            console.warn("Αδυναμία φόρτωσης χάρτη: Λείπουν τα όρια ή το URL.", {map: !!map, bounds: !!bounds, url: !!data.ndvi_url});
+                        }
+                    } else {
+                        if (errorDiv) {
+                            errorDiv.innerText = data.message;
+                            errorDiv.className = 'd-none text-danger mt-2 fw-bold';
+                            errorDiv.classList.remove('d-none');
+                        }
+                    }
+                } catch(e) {
+                    console.error("Σφάλμα εμφάνισης δεδομένων:", e);
+                    if (errorDiv) {
+                        errorDiv.innerText = 'Η ανάλυση πέτυχε, αλλά υπήρξε πρόβλημα στην εμφάνιση του χάρτη.';
+                        errorDiv.className = 'd-none text-warning mt-2 fw-bold';
+                        errorDiv.classList.remove('d-none');
+                    }
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                if (errorDiv) {
+                    errorDiv.innerText = 'Σφάλμα δικτύου. Παρακαλώ προσπαθήστε ξανά.';
+                    errorDiv.classList.remove('d-none');
+                }
+                console.error('Network Error:', err);
+            });
+        }
     </script>
+
 </body>
 </html>
