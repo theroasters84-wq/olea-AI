@@ -10,7 +10,7 @@ Follow these steps to deploy the application on Render's Free Tier.
 Use the following settings during creation:
  
 - **Build Command:** `pip install -r requirements.txt`
-- **Start Command:** `python update_db.py && gunicorn -w 1 -b 0.0.0.0:$PORT efarmogi:efarmogi`
+- **Start Command:** `python update_db.py && gunicorn -b 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 efarmogi:efarmogi`
  
 > **Note:** We use `python update_db.py` to safely update the database schema (add columns) before the server starts. The `gunicorn` command uses the `$PORT` environment variable provided by Render to make the service accessible online.
 
