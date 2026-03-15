@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, flash, redirect, url_for, jsonify, render_template
 from flask_login import login_required, current_user
 from core import vasi
-from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, Apothiki
+from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, Apothiki, AnalysiEdafous
 from geoponika import pare_ypsometro, steile_email
 
 ktima_actions_bp = Blueprint('ktima_actions', __name__)
@@ -25,6 +25,7 @@ def prosthes_ktima():
     ilikia_dentron = request.form.get('ilikia_dentron', 'Άγνωστη')
     puknotita_dentron = request.form.get('puknotita_dentron', 'Κανονική')
     diacheirisi_edafous = request.form.get('diacheirisi_edafous', 'Άγνωστη')
+    kalliergeia_typos = request.form.get('kalliergeia_typos', 'Συμβατική')
     
     poikilia_onomata = request.form.getlist('poikilia_onoma')
     poikilia_dentra_str = request.form.getlist('poikilia_dentra')
@@ -89,7 +90,7 @@ def prosthes_ktima():
                 except Exception as e:
                     print(f"AI GDD Target Error for {display_poikilia}: {e}")
 
-            neo = Ktima(onoma_ktimatos=onoma, geografiko_mikos=float(mikos), geografiko_platos=float(platos), idioktitis=current_user, typos_edafous=typos, klisi=klisi, ardefsi=ardefsi, stremmata=float(stremmata) if stremmata else 0.0, poikilia=display_poikilia, arithmos_dentron=total_trees, ilikia_dentron=ilikia_dentron, puknotita_dentron=puknotita_dentron, diacheirisi_edafous=diacheirisi_edafous, gdd_accumulated=initial_gdd, gdd_target_anthisi=target_a, gdd_target_sygkomidi=target_s)
+            neo = Ktima(onoma_ktimatos=onoma, geografiko_mikos=float(mikos), geografiko_platos=float(platos), idioktitis=current_user, typos_edafous=typos, klisi=klisi, ardefsi=ardefsi, stremmata=float(stremmata) if stremmata else 0.0, poikilia=display_poikilia, arithmos_dentron=total_trees, ilikia_dentron=ilikia_dentron, puknotita_dentron=puknotita_dentron, diacheirisi_edafous=diacheirisi_edafous, gdd_accumulated=initial_gdd, gdd_target_anthisi=target_a, gdd_target_sygkomidi=target_s, kalliergeia_typos=kalliergeia_typos)
             
             yps_val = pare_ypsometro(float(platos), float(mikos))
             if yps_val is not None: neo.ypsometro = yps_val
@@ -151,6 +152,17 @@ def prosthes_ktima():
             vasi.session.rollback()
             flash(f'Σφάλμα: {e}', 'danger')
     return redirect(url_for('core_app.arxikh'))
+
+@ktima_actions_bp.route('/toggle_kalliergeia/<int:ktima_id>', methods=['POST'])
+@login_required
+def toggle_kalliergeia(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if ktima and (ktima.idioktitis == current_user or getattr(current_user, 'rolos', '') == 'geoponos'):
+        current_type = ktima.kalliergeia_typos or 'Συμβατική'
+        ktima.kalliergeia_typos = 'Βιολογική' if current_type == 'Συμβατική' else 'Συμβατική'
+        vasi.session.commit()
+        flash(f'Ο τύπος καλλιέργειας άλλαξε σε: {ktima.kalliergeia_typos}', 'success')
+    return redirect(request.referrer or url_for('core_app.arxikh'))
 
 @ktima_actions_bp.route('/prosthes_ergasia/<int:ktima_id>', methods=['POST'])
 @login_required
@@ -311,3 +323,45 @@ def arxeiothetisi_ktimatos(id):
 def ektyposi_anaforas(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     return render_template('anafora.html', ktima=ktima)
+
+@ktima_actions_bp.route('/xeirokiniti_analysi/<int:ktima_id>', methods=['POST'])
+@login_required
+def xeirokiniti_analysi(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
+        return "Μη εξουσιοδοτημένη πρόσβαση", 403
+        
+    try:
+        ph = request.form.get('ph')
+        org = request.form.get('organiki_ousia')
+        n = request.form.get('azwto')
+        p = request.form.get('fwsforos')
+        k = request.form.get('kalio')
+        typos = request.form.get('typos_edafous')
+        
+        nea_analysi = AnalysiEdafous(
+            ktima_id=ktima_id,
+            ph=float(ph) if ph else None,
+            organiki_ousia=float(org) if org else None,
+            azwto=float(n) if n else None,
+            fwsforos=float(p) if p else None,
+            kalio=float(k) if k else None,
+            imerominia=datetime.now()
+        )
+        vasi.session.add(nea_analysi)
+        
+        if typos:
+            ktima.typos_edafous = typos
+            
+        vasi.session.add(Diagnosi(
+            ktima_id=ktima_id, 
+            apotelesma=f"📄 Χειροκίνητη Ανάλυση Εδάφους: Ολοκληρώθηκε", 
+            imerominia=datetime.now()
+        ))
+        
+        vasi.session.commit()
+        flash('Η χειροκίνητη ανάλυση καταχωρήθηκε επιτυχώς!', 'success')
+    except ValueError:
+        flash('Παρακαλώ εισάγετε έγκυρους αριθμητικούς χαρακτήρες.', 'danger')
+        
+    return redirect(url_for('core_app.arxikh'))

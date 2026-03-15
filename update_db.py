@@ -100,6 +100,15 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'ypsometro' υπάρχει ήδη ({e})")
                 conn.rollback()
             
+            # Προσθήκη στήλης kalliergeia_typos
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN kalliergeia_typos VARCHAR(50) DEFAULT 'Συμβατική'"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'kalliergeia_typos'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'kalliergeia_typos' υπάρχει ήδη ({e})")
+                conn.rollback()
+
             # Προσθήκη νέων GDD στόχων
             try:
                 conn.execute(text("ALTER TABLE ktimata ADD COLUMN gdd_target_anthisi INTEGER DEFAULT 600"))

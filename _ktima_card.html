@@ -21,7 +21,13 @@
                             <th class="bg-light align-middle">Έκταση</th>
                             <td class="align-middle">{{ ktima.stremmata }} στρ.<br><small class="text-muted">({{ ktima.arithmos_dentron }} δέντρα)</small></td>
                             <th class="bg-light align-middle">Ποικιλία</th>
-                            <td class="align-middle">{{ ktima.poikilia }}</td>
+                            <td class="align-middle">
+                                {{ ktima.poikilia }}<br>
+                                <span class="badge {% if ktima.kalliergeia_typos == 'Βιολογική' %}bg-success{% else %}bg-primary{% endif %} mt-1">
+                                    <i class="fas {% if ktima.kalliergeia_typos == 'Βιολογική' %}fa-leaf{% else %}fa-tractor{% endif %}"></i> 
+                                    {{ ktima.kalliergeia_typos|default('Συμβατική') }}
+                                </span>
+                            </td>
                         </tr>
                         <tr>
                             <th class="bg-light align-middle">Ηλικία <br><small class="text-muted">/ Πυκνότητα</small></th>
@@ -60,6 +66,9 @@
                     <div class="col-md-3 text-end">
                         <button type="button" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapGeo{{ ktima.id }}')" class="btn btn-success btn-sm w-100 mb-1">
                             <i class="fas fa-sync-alt"></i> Ανανέωση ΤΩΡΑ
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalNdviChart{{ ktima.id }}">
+                            <i class="fas fa-chart-line"></i> Γράφημα
                         </button>
                     </div>
                 </div>
@@ -119,6 +128,7 @@
                     <div class="btn-group">
                         <button id="btnAnalyzendviMapGeo{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
                         <button id="btnRunAnalysisNowndviMapGeo{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapGeo{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
+                        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalNdviChart{{ ktima.id }}"><i class="fas fa-chart-line"></i> Εξέλιξη</button>
                     </div>
                     <div id="ndviLoadingndviMapGeo{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
                     <div id="ndviErrorndviMapGeo{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
@@ -179,7 +189,7 @@
                 </div>
                 <div class="d-flex justify-content-between small text-muted mb-1">
                     <span><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} | ⛰️ {{ ktima.ypsometro }}m{% endif %}</span>
-                    <span>🌳 {{ ktima.stremmata }} στρ. | {{ ktima.arithmos_dentron }} δέντρα</span>
+                    <span><i class="fas fa-ruler-combined"></i> {{ ktima.stremmata }} στρ. | 🌳 {{ ktima.arithmos_dentron }} δέντρα</span>
                 </div>
                 <p class="text-muted mb-1 small">
                     🌱 Στάδιο: <strong>{{ ktima.fainologiko_stadio }}</strong>
@@ -200,17 +210,35 @@
                         <i class="fas fa-pencil-alt small text-muted ms-1"></i>
                     </button>
 
+                    <!-- Toggle Καλλιέργειας (Συμβατική / Βιολογική) -->
+                    <form action="{{ url_for('ktima_actions.toggle_kalliergeia', ktima_id=ktima.id) }}" method="POST" class="d-inline m-0 p-0">
+                        <button type="submit" class="badge border-0 {% if ktima.kalliergeia_typos == 'Βιολογική' %}bg-success{% else %}bg-primary{% endif %} shadow-sm" style="cursor: pointer;" title="Αλλαγή σε {% if ktima.kalliergeia_typos == 'Βιολογική' %}Συμβατική{% else %}Βιολογική{% endif %}">
+                            <i class="fas {% if ktima.kalliergeia_typos == 'Βιολογική' %}fa-leaf{% else %}fa-tractor{% endif %}"></i> {{ ktima.kalliergeia_typos|default('Συμβατική') }}
+                        </button>
+                    </form>
+
                     {% if ktima.ardefsi %}<span class="badge bg-info text-dark"><i class="fas fa-tint"></i> {{ ktima.ardefsi }}</span>{% endif %}
                     {% if ktima.klisi %}<span class="badge bg-warning text-dark"><i class="fas fa-mountain"></i> {{ ktima.klisi }}</span>{% endif %}
                     {% if ktima.typos_edafous %}<span class="badge bg-secondary"><i class="fas fa-gem"></i> {{ ktima.typos_edafous }}</span>{% endif %}
+                    
+                    <!-- Εμφάνιση NPK Τελευταίας Ανάλυσης -->
+                    {% set last_analysi = ktima.analuseis_edafous|sort(attribute='imerominia', reverse=True)|first if ktima.analuseis_edafous else None %}
+                    {% if last_analysi and (last_analysi.azwto or last_analysi.fwsforos or last_analysi.kalio) %}
+                        <span class="badge bg-dark border border-secondary shadow-sm" style="cursor: pointer;" title="Πατήστε για να δείτε το Δυναμικό Ισοζύγιο NPK" data-bs-toggle="modal" data-bs-target="#modalNpkChart{{ ktima.id }}">
+                            <i class="fas fa-chart-area text-warning"></i> NPK: {{ last_analysi.azwto or '-' }}-{{ last_analysi.fwsforos or '-' }}-{{ last_analysi.kalio or '-' }}
+                        </span>
+                    {% endif %}
                 </div>
 
                 <!-- Weather Info -->
                 {% if ktima.kairos %}
-                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded mb-2">
+                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded mb-2 flex-wrap gap-2">
                         <span><i class="fas fa-thermometer-half text-danger"></i> {{ ktima.kairos.thermokrasia }}°C</span>
                         <span><i class="fas fa-tint text-primary"></i> {{ ktima.kairos.ygrasia }}%</span>
                         <span><i class="fas fa-cloud text-secondary"></i> {{ ktima.kairos.perigrafi }}</span>
+                        {% if ktima.kairos.anemos_taxytita is defined %}
+                            <span title="Ταχύτητα: {{ ktima.kairos.anemos_taxytita }} m/s | Κατεύθυνση: {{ ktima.kairos.anemos_dieythinsi }}°" class="text-info"><i class="fas fa-wind"></i> {{ ktima.kairos.anemos_mpofor }} Μποφόρ</span>
+                        {% endif %}
                     </div>
                     {% if ktima.symvouli %}
                         <div style="margin-top: 5px; padding: 5px 10px; background-color: {{ ktima.symvouli.xroma }}; color: white; border-radius: 5px; font-size: 0.9em;">
@@ -223,7 +251,7 @@
                     <div class="d-flex justify-content-between align-items-center bg-white border p-2 rounded mb-2 shadow-sm" style="font-size: 0.85em;">
                         {% if ktima.agro_data.soil %}
                             <span style="cursor: pointer;" onclick="alert('Η μέτρηση εδάφους πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-secondary"><i class="fas fa-temperature-low"></i> Έδαφος: {{ "%.1f"|format(ktima.agro_data.soil.t10 - 273.15) if ktima.agro_data.soil.t10 else '-' }}°C</span>
-                            <span style="cursor: pointer;" onclick="alert('Η μέτρηση υγρασίας πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-info"><i class="fas fa-water"></i> Υγρασία: {{ "%.1f"|format(ktima.agro_data.soil.moisture * 100) if ktima.agro_data.soil.moisture else '-' }}%</span>
+                            <span style="cursor: pointer;" onclick="alert('Η μέτρηση υγρασίας εδάφους πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-info"><i class="fas fa-water"></i> Υγρασία Εδάφους (10cm): {{ "%.1f"|format(ktima.agro_data.soil.moisture * 100) if ktima.agro_data.soil.moisture else '-' }}%</span>
                         {% endif %}
                         {% if ktima.agro_data.uvi %}
                             <span style="cursor: pointer;" onclick="alert('Ο δείκτης UVI μετρήθηκε στις:\n{{ ktima.agro_data.uvi.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.uvi.dt_formatted }}">
@@ -236,21 +264,35 @@
                     </div>
                     {% endif %}
 
-                    <!-- Κουμπί AI & Email -->
+                    <!-- Γρήγορη Συμβουλή AI (Collapsible) -->
                     {% if not is_geoponos_view %}
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="rwtaAI('{{ ktima.id }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.kairos.perigrafi }}', this)"><i class="fas fa-robot"></i> Ρώτα το AI</button>
-                        <i class="fas fa-info-circle text-primary ms-1 me-2" style="cursor: help;" title="Παράγει μια άμεση, εξατομικευμένη συμβουλή προσαρμοσμένη στα δεδομένα της στιγμής."></i>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="steileAnafora('{{ ktima.onoma_ktimatos }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.id }}')"><i class="fas fa-envelope"></i> Email</button>
-                    </div>
-                    
-                    <!-- Εμφάνιση Έτοιμης AI Συμβουλής -->
-                    <div id="ai-apantisi-{{ ktima.id }}" style="margin-top: 8px; font-size: 0.85em; padding: 8px; background-color: #e8f5e9; border-left: 4px solid #28a745; border-radius: 4px;">
-                        {% if ktima.ai_sumvouli_cache %}
-                            <strong><i class="fas fa-robot text-success"></i> AI Γεωπόνος:</strong> <span class="fst-italic text-dark">{{ ktima.ai_sumvouli_cache }}</span>
-                        {% else %}
-                            <span class="text-muted"><i class="fas fa-robot"></i> Πατήστε "Ρώτα το AI" για προσωποποιημένη συμβουλή.</span>
-                        {% endif %}
+                    <div class="mb-2 mt-2">
+                        <button class="btn btn-outline-primary w-100 text-start shadow-sm d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAI{{ ktima.id }}" aria-expanded="false" aria-controls="collapseAI{{ ktima.id }}" style="font-weight: 600;">
+                            <span>
+                                <i class="fas fa-robot"></i> Άμεση Συμβουλή AI
+                                <i class="fas fa-info-circle ms-1" style="cursor: help; color: #0d6efd;" title="Παράγει μια άμεση, εξατομικευμένη συμβουλή προσαρμοσμένη στα δεδομένα της στιγμής."></i>
+                            </span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="collapse" id="collapseAI{{ ktima.id }}">
+                            <div class="card card-body mt-1 bg-light border-primary small">
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <button class="btn btn-sm btn-primary" onclick="rwtaAI('{{ ktima.id }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.kairos.perigrafi }}', this)">
+                                        <i class="fas fa-sync-alt"></i> Επικαιροποίηση
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="steileAnafora('{{ ktima.onoma_ktimatos }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.id }}')">
+                                        <i class="fas fa-envelope"></i> Αποστολή Email
+                                    </button>
+                                </div>
+                                <div id="ai-apantisi-{{ ktima.id }}" style="font-size: 0.95em; padding: 8px; background-color: #e8f5e9; border-left: 4px solid #28a745; border-radius: 4px;">
+                                    {% if ktima.ai_sumvouli_cache %}
+                                        <strong><i class="fas fa-robot text-success"></i> AI Γεωπόνος:</strong> <span class="fst-italic text-dark">{{ ktima.ai_sumvouli_cache }}</span>
+                                    {% else %}
+                                        <span class="text-muted"><i class="fas fa-robot"></i> Πατήστε "Επικαιροποίηση" για προσωποποιημένη συμβουλή.</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                 {% endif %}

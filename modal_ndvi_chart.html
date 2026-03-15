@@ -1,0 +1,51 @@
+<!-- Modal Ιστορικού NDVI -->
+<div class="modal fade" id="modalNdviChart{{ ktima.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-chart-line"></i> Εξέλιξη Υγείας Βλάστησης (NDVI)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light border-success shadow-sm small mb-3">
+                    <i class="fas fa-info-circle text-success me-1"></i>
+                    <strong>Τι βλέπω;</strong> Το γράφημα δείχνει τον μέσο όρο του δείκτη NDVI (Υγεία Βλάστησης) του κτήματος τους τελευταίους 6 μήνες. Τιμές κοντά στο 0.6 - 0.8 υποδηλώνουν εξαιρετική υγεία ή πυκνή κάλυψη (π.χ. χόρτα την άνοιξη), ενώ τιμές κάτω από 0.3 δείχνουν στρες ή γυμνό έδαφος.
+                </div>
+                
+                <div style="position: relative; height: 350px;">
+                    <canvas id="ndviChartCanvas{{ ktima.id }}"></canvas>
+                </div>
+                <div id="ndviChartLoading{{ ktima.id }}" class="text-center mt-4 mb-4" style="display: none;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-success mb-2"></i> <br>Λήψη δορυφορικών δεδομένων...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('modalNdviChart{{ ktima.id }}').addEventListener('shown.bs.modal', function () {
+        const ctx = document.getElementById('ndviChartCanvas{{ ktima.id }}');
+        const loading = document.getElementById('ndviChartLoading{{ ktima.id }}');
+        if (window['ndviChartInstance' + {{ ktima.id }}]) return;
+        
+        loading.style.display = 'block';
+        fetch('/api/ndvi_history/{{ ktima.id }}').then(res => res.json()).then(data => {
+            loading.style.display = 'none';
+            if (data.error) { alert(data.error); return; }
+            
+            window['ndviChartInstance' + {{ ktima.id }}] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Μέσος Όρος NDVI', data: data.means,
+                        borderColor: 'rgba(40, 167, 69, 1)', backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                        fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: 'rgba(40, 167, 69, 1)'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 1 } } }
+            });
+        }).catch(err => { loading.style.display = 'none'; });
+    });
+</script>

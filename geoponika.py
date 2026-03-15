@@ -18,10 +18,31 @@ def pare_kairo(lat, lng):
         response = requests.get(url, timeout=5)
         data = response.json()
         if response.status_code == 200:
+            wind_speed = data.get('wind', {}).get('speed', 0)
+            wind_deg = data.get('wind', {}).get('deg', 0)
+            
+            # Μετατροπή m/s σε Μποφόρ (Beaufort scale)
+            bf = 0
+            if wind_speed >= 32.7: bf = 12
+            elif wind_speed >= 28.5: bf = 11
+            elif wind_speed >= 24.5: bf = 10
+            elif wind_speed >= 20.8: bf = 9
+            elif wind_speed >= 17.2: bf = 8
+            elif wind_speed >= 13.9: bf = 7
+            elif wind_speed >= 10.8: bf = 6
+            elif wind_speed >= 8.0: bf = 5
+            elif wind_speed >= 5.5: bf = 4
+            elif wind_speed >= 3.4: bf = 3
+            elif wind_speed >= 1.6: bf = 2
+            elif wind_speed >= 0.3: bf = 1
+            
             return {
                 'thermokrasia': data['main']['temp'],
                 'perigrafi': data['weather'][0]['description'],
-                'ygrasia': data['main']['humidity']
+                'ygrasia': data['main']['humidity'],
+                'anemos_taxytita': wind_speed,
+                'anemos_dieythinsi': wind_deg,
+                'anemos_mpofor': bf
             }
         else:
             print(f"⚠️ Σφάλμα από το OpenWeatherMap: {response.status_code} - {data.get('message')}")

@@ -71,6 +71,7 @@ class Ktima(vasi.Model):
     gdd_target_anthisi = vasi.Column(vasi.Integer, default=600)
     gdd_target_sygkomidi = vasi.Column(vasi.Integer, default=2500)
     ypsometro = vasi.Column(vasi.Float, nullable=True)
+    kalliergeia_typos = vasi.Column(vasi.String(50), default='Συμβατική')
 
     def __repr__(self):
         return f"Ktima('{self.onoma_ktimatos}')"

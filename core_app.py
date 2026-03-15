@@ -230,6 +230,7 @@ def prosthes_ktima():
     ilikia_dentron = request.form.get('ilikia_dentron', 'Άγνωστη')
     puknotita_dentron = request.form.get('puknotita_dentron', 'Κανονική')
     diacheirisi_edafous = request.form.get('diacheirisi_edafous', 'Άγνωστη')
+    kalliergeia_typos = request.form.get('kalliergeia_typos', 'Συμβατική')
     
     poikilia_onomata = request.form.getlist('poikilia_onoma')
     poikilia_dentra_str = request.form.getlist('poikilia_dentra')
@@ -321,7 +322,8 @@ def prosthes_ktima():
                 ilikia_dentron=ilikia_dentron, puknotita_dentron=puknotita_dentron, diacheirisi_edafous=diacheirisi_edafous,
                 gdd_accumulated=initial_gdd,
                 gdd_target_anthisi=target_a,
-                gdd_target_sygkomidi=target_s
+                gdd_target_sygkomidi=target_s,
+                kalliergeia_typos=kalliergeia_typos
             )
             
             # --- Υπολογισμός Υψομέτρου ---
@@ -671,10 +673,26 @@ def ndvi_analyze(ktima_id):
                         try:
                             img_content = requests.get(ndvi_url).content
                             image_file = PIL.Image.open(io.BytesIO(img_content))
-                            prompt = "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον χάρτη NDVI (Δείκτης Βλάστησης). Το πράσινο είναι υγιής/πυκνή βλάστηση, το κόκκινο/κίτρινο είναι στρες/έδαφος. Εντόπισε αν υπάρχουν προβληματικές ζώνες."
+                            prompt = (
+                                "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον χάρτη NDVI. "
+                                "ΟΔΗΓΙΕΣ: 1. Αν η βλάστηση είναι φυσιολογική, δώσε μια σύντομη αναφορά. "
+                                "2. Αν δεις ομοιόμορφα σκούρο πράσινο (πιθανά ψηλά χόρτα) Ή απότομη πτώση βλάστησης, κάνε μια ερώτηση στον αγρότη ξεκινώντας ΑΥΣΤΗΡΑ με τη λέξη 'ΕΡΩΤΗΣΗ:' (π.χ. 'ΕΡΩΤΗΣΗ: Ο χάρτης είναι καταπράσινος. Μήπως έχουν ψηλώσει τα χόρτα;'). "
+                                "3. Αν έχεις σιγουριά για ψηλά ζιζάνια, πρόσθεσε ΟΠΩΣΔΗΠΟΤΕ στο τέλος τη λέξη '[ΧΟΡΤΑ_ΥΨΗΛΑ]'.")
                             response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                             ai_msg = response.text
                             
+                            # Έλεγχος AI Tagging για Χόρτα
+                            if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_msg:
+                                ai_msg = ai_msg.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
+                                yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%Χόρτων%')).first()
+                                if not yparxei_kophi:
+                                    vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Κοπή Χόρτων / Καταστροφέας', katastasi='Εκκρεμεί', proelevsi='AI Δορυφόρος', imerominia=datetime.now()))
+                            
+                            if 'ΕΡΩΤΗΣΗ:' in ai_msg:
+                                match = re.search(r'ΕΡΩΤΗΣΗ:(.*?)(?:\n|$)', ai_msg)
+                                if match:
+                                    ktima.ekkremis_erotisi_ai = match.group(1).strip()
+
                             # Αποθήκευση στη βάση για τον Σύμβουλο
                             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🛰️ Δορυφόρος (Live): {ai_msg}", imerominia=datetime.now())
                             vasi.session.add(nea_diagnosi)
@@ -798,51 +816,77 @@ def trexe_doriforo(ktima_id):
                 
                 ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = urls_dict['ndvi_url'], urls_dict['ndwi_url'], urls_dict['evi_url'], urls_dict['truecolor_url'], urls_dict['falsecolor_url']
                 
-                # Ανάλυση με Gemini Vision
-                try:
-                    img_content = requests.get(ndvi_url).content
-                    image_file = PIL.Image.open(io.BytesIO(img_content))
-                    prompt = "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. Δώσε μια σύντομη αναφορά (2-3 γραμμές) για την υγεία της βλάστησης."
-                    response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
-                    
-                    # Λήψη Στατιστικών (Hard Data) από Agromonitoring
-                    stats_msg = ""
-                    try:
-                        stats_url = f"http://api.agromonitoring.com/agro/1.0/ndvi/history?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
-                        stats_res = requests.get(stats_url)
-                        if stats_res.status_code == 200 and len(stats_res.json()) > 0:
-                            # Παίρνουμε το πιο πρόσφατο στατιστικό
-                            latest_stat = stats_res.json()[-1] 
-                            mean_ndvi = latest_stat.get('mean')
-                            max_ndvi = latest_stat.get('max')
-                            dt_stat_ts = latest_stat.get('dt')
-                            if mean_ndvi is not None and max_ndvi is not None and dt_stat_ts is not None:
-                                dt_stat = datetime.fromtimestamp(dt_stat_ts).strftime('%d/%m/%Y')
-                                stats_msg = f"📊 Στατιστικά ({dt_stat}): Μέσος NDVI: {mean_ndvi:.2f}, Μέγιστο: {max_ndvi:.2f}. "
-                    except Exception as e:
-                        print(f"Stats Error: {e}")
+                # ΕΛΕΓΧΟΣ CACHE ΓΙΑ ΑΠΟΦΥΓΗ ΠΕΡΙΤΤΩΝ ΚΛΗΣΕΩΝ AI
+                now_dt = datetime.now()
+                skip_ai = False
+                cached_text = ""
+                
+                if ktima.analysi_dedomena:
+                    last_diag = Diagnosi.query.filter_by(ktima_id=ktima.id).filter(Diagnosi.apotelesma.like('%🛰️ Δορυφόρος%')).order_by(Diagnosi.imerominia.desc()).first()
+                    if last_diag and (now_dt - last_diag.imerominia).total_seconds() < 86400: # 24 Ώρες Cache
+                        skip_ai = True
+                        cached_text = ktima.analysi_dedomena
 
-                    # Αποθήκευση στη διάγνωση
-                    teliko_keimeno = f"🛰️ Δορυφόρος: {stats_msg}{response.text}"
-                    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=teliko_keimeno, imerominia=datetime.now())
-                    vasi.session.add(nea_diagnosi)
-                    
-                    # Ενημέρωση και του πεδίου 'analysi_dedomena' για να φαίνεται στο κουτάκι
-                    ktima.analysi_dedomena = f"{stats_msg}\n{response.text}"
-                    vasi.session.commit()
-                    
-                    return jsonify({
-                        'success': True, 'message': 'Η ανάλυση ολοκληρώθηκε!', 
-                        'analysis_text': teliko_keimeno, 
-                        'ndvi_url': ndvi_url, 
-                        'ndwi_url': ndwi_url,
-                        'evi_url': evi_url,
-                        'truecolor_url': truecolor_url,
-                        'falsecolor_url': falsecolor_url
-                    })
-                except Exception as e:
-                    print(f"Vision Error: {e}")
-                    return jsonify({'success': False, 'message': f'Σφάλμα κατά την ανάλυση AI: {e}'})
+                if skip_ai and cached_text:
+                    teliko_keimeno = cached_text
+                else:
+                    # ΝΕΑ Ανάλυση με Gemini Vision
+                    try:
+                        img_content = requests.get(ndvi_url).content
+                        image_file = PIL.Image.open(io.BytesIO(img_content))
+                        prompt = (
+                            "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. "
+                            "ΟΔΗΓΙΕΣ: 1. Δώσε σύντομη αναφορά υγείας (2-3 γραμμές). "
+                            "2. Αν δεις ομοιόμορφα σκούρο πράσινο (πιθανά ψηλά χόρτα) Ή απότομη πτώση βλάστησης, κάνε μια ερώτηση στον αγρότη. Ξεκίνα ΑΥΣΤΗΡΑ την ερώτηση με 'ΕΡΩΤΗΣΗ:'. "
+                            "3. Αν έχεις σιγουριά για ψηλά ζιζάνια, πρόσθεσε ΟΠΩΣΔΗΠΟΤΕ στο τέλος το tag '[ΧΟΡΤΑ_ΥΨΗΛΑ]'."
+                        )
+                        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
+                        
+                        ai_text = response.text
+                        
+                        if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_text:
+                            ai_text = ai_text.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
+                            yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%Χόρτων%')).first()
+                            if not yparxei_kophi:
+                                vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Κοπή Χόρτων / Καταστροφέας', katastasi='Εκκρεμεί', proelevsi='AI Δορυφόρος', imerominia=datetime.now()))
+
+                        if 'ΕΡΩΤΗΣΗ:' in ai_text:
+                            match = re.search(r'ΕΡΩΤΗΣΗ:(.*?)(?:\n|$)', ai_text)
+                            if match:
+                                ktima.ekkremis_erotisi_ai = match.group(1).strip()
+
+                        stats_msg = ""
+                        try:
+                            stats_url = f"http://api.agromonitoring.com/agro/1.0/ndvi/history?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+                            stats_res = requests.get(stats_url)
+                            if stats_res.status_code == 200 and len(stats_res.json()) > 0:
+                                latest_stat = stats_res.json()[-1] 
+                                mean_ndvi = latest_stat.get('mean')
+                                max_ndvi = latest_stat.get('max')
+                                dt_stat_ts = latest_stat.get('dt')
+                                if mean_ndvi is not None and max_ndvi is not None and dt_stat_ts is not None:
+                                    dt_stat = datetime.fromtimestamp(dt_stat_ts).strftime('%d/%m/%Y')
+                                    stats_msg = f"📊 Στατιστικά ({dt_stat}): Μέσος NDVI: {mean_ndvi:.2f}, Μέγιστο: {max_ndvi:.2f}. "
+                        except Exception as e:
+                            pass
+
+                        teliko_keimeno = f"🛰️ Δορυφόρος: {stats_msg}{ai_text}"
+                        vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=teliko_keimeno, imerominia=datetime.now()))
+                        ktima.analysi_dedomena = f"{stats_msg}\n{ai_text}"
+                        vasi.session.commit()
+                        
+                    except Exception as e:
+                        return jsonify({'success': False, 'message': f'Σφάλμα κατά την ανάλυση AI: {e}'})
+                
+                return jsonify({
+                    'success': True, 'message': 'Τα δεδομένα ανακτήθηκαν επιτυχώς!', 
+                    'analysis_text': teliko_keimeno, 
+                    'ndvi_url': ndvi_url, 
+                    'ndwi_url': ndwi_url,
+                    'evi_url': evi_url,
+                    'truecolor_url': truecolor_url,
+                    'falsecolor_url': falsecolor_url
+                })
             else:
                 return jsonify({'success': False, 'message': 'Βρέθηκαν περάσματα δορυφόρου αλλά κανένα δεν είχε έτοιμο δείκτη NDVI. Δοκιμάστε αργότερα.'})
         else:
@@ -943,6 +987,53 @@ def enimerosi_profil():
     vasi.session.commit()
     flash('Το προφίλ ενημερώθηκε.', 'success')
     return redirect(url_for('core_app.arxikh'))
+
+# --- API ΓΙΑ ΤΟ ΔΥΝΑΜΙΚΟ ΙΣΟΖΥΓΙΟ NPK ---
+@core_bp.route('/api/npk_isozugio/<int:ktima_id>')
+@login_required
+def api_npk_isozugio(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+    
+    from logic import ypologismos_isozugiou_npk
+    data = ypologismos_isozugiou_npk(ktima)
+    if not data:
+        return jsonify({'error': 'Δεν υπάρχουν επαρκή δεδομένα (απαιτείται τουλάχιστον μία ανάλυση εδάφους με καταγεγραμμένα στοιχεία N, P, ή K).'})
+    return jsonify(data)
+
+# --- API ΓΙΑ ΤΟ ΙΣΤΟΡΙΚΟ NDVI ---
+@core_bp.route('/api/ndvi_history/<int:ktima_id>')
+@login_required
+def api_ndvi_history(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+    
+    if not ktima.agromonitoring_poly_id:
+        return jsonify({'error': 'Δεν υπάρχει ενεργό δορυφορικό πολύγωνο για αυτό το κτήμα.'})
+        
+    api_key = os.getenv('AGROMONITORING_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'Λείπει το API Key του δορυφόρου.'})
+        
+    import time
+    import requests
+    end_time = int(time.time())
+    start_time = end_time - (180 * 24 * 60 * 60) # Τελευταίοι 6 μήνες
+    
+    url = f"http://api.agromonitoring.com/agro/1.0/ndvi/history?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+    
+    try:
+        res = requests.get(url, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            data.sort(key=lambda x: x['dt'])
+            labels = [datetime.fromtimestamp(i['dt']).strftime('%d/%m') for i in data if 'mean' in i]
+            means = [round(i['mean'], 2) for i in data if 'mean' in i]
+            return jsonify({'labels': labels, 'means': means})
+    except Exception as e: pass
+    return jsonify({'error': 'Αποτυχία λήψης ιστορικού'})
 
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes

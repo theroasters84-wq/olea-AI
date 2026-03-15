@@ -38,6 +38,47 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     if ktima.klisi == 'Ρέμα/Κοιλότητα' and thermokrasia < 5 and mhnas in [12, 1, 2, 3]:
         protaseis.append("❄️ Ρέμα/Κοιλότητα: Αυξημένος κίνδυνος παγετού (frost pocket).")
 
+    # Αντιμετώπιση Ψύχους / Παγετού με Αμινοξέα
+    if thermokrasia <= 4:
+        days_since_amino, _ = get_last_task_info('Αμινοξ')
+        days_since_copper, _ = get_last_task_info('Χαλκ')
+        
+        can_apply_amino = True
+        if days_since_copper is not None and days_since_copper <= 7:
+            can_apply_amino = False
+            
+        if days_since_amino is not None and days_since_amino <= 15:
+            protaseis.append(f"🛡️ Αντιπαγετική Προστασία: Τα δέντρα προστατεύονται από τα αμινοξέα/φύκια που εφαρμόσατε πριν {days_since_amino} ημέρες. Δεν απαιτείται άμεσα νέα εφαρμογή.")
+        elif can_apply_amino:
+            protaseis.append("❄️ Στρες Ψύχους: Λόγω χαμηλών θερμοκρασιών (<= 4°C), προτείνεται άμεσα διαφυλλικός ψεκασμός με Αμινοξέα και Εκχυλίσματα Φυκιών για την ανάρρωση των δέντρων.")
+        else:
+            protaseis.append(f"❄️ Στρες Ψύχους: Τα δέντρα χρειάζονται αμινοξέα για ανάρρωση, ΑΛΛΑ ρίξατε χαλκό πριν {days_since_copper} μέρες. Περιμένετε να περάσουν 7 μέρες συνολικά για να αποφύγετε τοξικότητα!")
+
+    # Αντιμετώπιση Καύσωνα με Καολίνη / Ζεόλιθο (Τωρινός ή Επερχόμενος)
+    prognosi_kauswna = False
+    prognosi_all = pare_prognosi_kairou(ktima.geografiko_platos, ktima.geografiko_mikos)
+    if prognosi_all:
+        for p in prognosi_all:
+            if p['main']['temp'] >= 35:
+                prognosi_kauswna = True
+                break
+
+    if thermokrasia >= 35 or prognosi_kauswna:
+        days_since_kaolin, _ = get_last_task_info('Καολίν')
+        days_since_zeolite, _ = get_last_task_info('Ζεόλιθ')
+        
+        # Βρίσκουμε ποιο από τα δύο εφαρμόστηκε πιο πρόσφατα
+        days_list = [d for d in [days_since_kaolin, days_since_zeolite] if d is not None]
+        days_since_protection = min(days_list) if days_list else None
+        
+        if days_since_protection is not None and days_since_protection <= 20:
+            protaseis.append(f"🛡️ Αντιθερμική Προστασία: Τα δέντρα προστατεύονται από το θερμικό στρες χάρη στην εφαρμογή καολίνη/ζεόλιθου πριν {days_since_protection} ημέρες.")
+        else:
+            if thermokrasia >= 35:
+                protaseis.append("☀️ Κίνδυνος Καύσωνα: Η θερμοκρασία είναι >= 35°C! Προτείνεται άμεσα ψεκασμός με Καολίνη ή Ζεόλιθο για την αποφυγή ηλιακών εγκαυμάτων.")
+            else:
+                protaseis.append("⚠️ Επερχόμενος Καύσωνας: Η πρόγνωση (5 ημερών) δείχνει θερμοκρασίες >= 35°C! Προετοιμαστείτε και ψεκάστε με Καολίνη ή Ζεόλιθο προληπτικά.")
+
     # Water Quality Rules
     if ktima.nero_agwgimotita and ktima.nero_agwgimotita > 3.0:
          protaseis.append("⚠️ Τοξικότητα Αλάτων: Η αγωγιμότητα του νερού είναι πολύ υψηλή (>3.0 mS/cm). Κίνδυνος ξηράνσεων στα φύλλα. Συνιστάται έκπλυση εδάφους ή χρήση βελτιωτικών.")
@@ -67,7 +108,10 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
              days_since_fert, _ = get_last_task_info('Άζωτο')
 
         if days_since_fert is None or days_since_fert > 60:
-            protaseis.append("🌱 Άνοιξη: Ιδανική περίοδος για βασική λίπανση (Άζωτο & Βόριο).")
+            if not ktima.analuseis_edafous:
+                protaseis.append("🌱 Άνοιξη (Λίπανση): ⚠️ Χωρίς ανάλυση εδάφους, προτείνεται τυπική ισορροπημένη λίπανση. Για μέγιστη απόδοση και οικονομία συνιστάται εδαφοανάλυση!")
+            else:
+                protaseis.append("🌱 Άνοιξη (Λίπανση): Ιδανική περίοδος για βασική λίπανση (Άζωτο & Βόριο) προσαρμοσμένη στην ανάλυσή σας.")
 
         # Pruning check
         has_pruned = any('Κλάδεμα' in task for task in completed_tasks_names)
@@ -144,8 +188,12 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
 
     # Adaptive Memory from Diagnosis
     if ktima.diagnoseis:
-        teleytaia_diagnosi = ktima.diagnoseis[-1]
-        protaseis.append(f"👁️ Μνήμη Διάγνωσης: Το AI είχε εντοπίσει πρόσφατα: {teleytaia_diagnosi.apotelesma}. Προσαρμόστε τις ενέργειές σας.")
+        for diag in reversed(ktima.diagnoseis):
+            res = diag.apotelesma or ""
+            # Αγνοούμε δορυφόρο, chat και αναλύσεις για να πάρουμε μόνο πραγματικές διαγνώσεις (φωτογραφίες/ασθένειες)
+            if not any(k in res for k in ["Δορυφόρος", "🛰️", "Συμπέρασμα AI", "Chat", "📄", "💧", "🌿"]):
+                protaseis.append(f"👁️ Μνήμη Διάγνωσης: Το AI είχε εντοπίσει πρόσφατα: {res}. Προσαρμόστε τις ενέργειές σας.")
+                break
 
     # Smart Fertilization Logic
     if ktima.analuseis_edafous:
@@ -162,7 +210,10 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
                 days_ago = (now - diag.imerominia).days
                 if days_ago < 10:
                     clean_msg = result.replace('🛰️ Δορυφόρος (Live):', '').replace('🛰️ Δορυφόρος:', '').strip()
-                    protaseis.append(f"🛰️ Δορυφόρος ({days_ago} ημ. πριν): {clean_msg[:150]}...")
+                    if len(clean_msg) > 200:
+                        protaseis.append(f"🛰️ Δορυφόρος ({days_ago} ημ. πριν): {clean_msg[:200]}...")
+                    else:
+                        protaseis.append(f"🛰️ Δορυφόρος ({days_ago} ημ. πριν): {clean_msg}")
                 break
 
     # GDD Model Logic (Precision Agriculture)
@@ -227,19 +278,59 @@ def xtise_plires_context(ktima):
     
     poikilies_analytika = ", ".join([f"{p.poikilia_onoma} ({p.arithmos_dentron} δέντρα)" for p in ktima.poikilies_details]) if ktima.poikilies_details else ktima.poikilia
     
+    klisi_str = ktima.klisi or 'Άγνωστη'
+    if klisi_str == 'Ρέμα/Κοιλότητα':
+        klisi_str += " (ΟΔΗΓΙΑ: Βρίσκεται σε ρέμα/κοιλότητα. Λόγω αναστροφής θερμοκρασίας, αν η θερμοκρασία είναι < 5°C, προειδοποίησε έντονα για υψηλό κίνδυνο παγετού!)"
+
+    analysi_str = "ΔΕΝ ΥΠΑΡΧΕΙ (ΟΔΗΓΙΑ: Πρότεινε τυπική λίπανση/θρέψη βάζοντας την επισήμανση ⚠️ [Τυπική Πρόταση - Συνιστάται Ανάλυση])"
+    if ktima.analuseis_edafous:
+        last_an = sorted(ktima.analuseis_edafous, key=lambda x: x.imerominia)[-1]
+        analysi_str = f"Υπάρχει (Τελευταία: {last_an.imerominia.strftime('%d/%m/%Y')} - N:{last_an.azwto}, P:{last_an.fwsforos}, K:{last_an.kalio}, pH:{last_an.ph})"
+
+    kalliergeia_str = getattr(ktima, 'kalliergeia_typos', 'Συμβατική')
+    if kalliergeia_str == 'Βιολογική':
+        kalliergeia_str += " (ΟΔΗΓΙΑ ΑΥΣΤΗΡΗ: Το κτήμα είναι ΒΙΟΛΟΓΙΚΟ. Απαγορεύονται αυστηρά τα χημικά ζιζανιοκτόνα (π.χ. Glyphosate), τα χημικά λιπάσματα και τα χημικά εντομοκτόνα. Πρότεινε ΜΟΝΟ εγκεκριμένα βιολογικά σκευάσματα π.χ. Χαλκό, Βάκιλλο, Φυσικό Πύρεθρο, Ζεόλιθο, Κοπριά κλπ.)"
+
     ctx = (f"--- ΠΡΟΦΙΛ ΚΤΗΜΑΤΟΣ ---\n"
-           f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
+           f"Κτήμα: {ktima.onoma_ktimatos}, Τύπος: {kalliergeia_str}\n"
+           f"Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
+           f"Τοποθεσία (Lat, Lng): {ktima.geografiko_platos}, {ktima.geografiko_mikos} (ΟΔΗΓΙΑ: Αξιολόγησε τον χάρτη. Αν είναι παραθαλάσσιο με χαμηλό υψόμετρο, προειδοποίησε για κίνδυνο αλατονέφωσης/εγκαυμάτων από νοτιάδες αν ο καιρός είναι κακός.)\n"
            f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
            f"Ηλικία: {ktima.ilikia_dentron}, Πυκνότητα: {ktima.puknotita_dentron}\n"
-           f"Έδαφος: {ktima.typos_edafous}, Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ktima.ardefsi}\n"
+           f"Έδαφος: {ktima.typos_edafous}, Κλίση: {klisi_str}\n"
+           f"Ανάλυση Εδάφους: {analysi_str}\n"
+           f"Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ktima.ardefsi}\n"
            f"Στάδιο: {ktima.fainologiko_stadio}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated else 0:.0f}\n\n")
            
     kairos = getattr(ktima, 'kairos', None) or pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
     if kairos:
         ctx += f"--- ΚΑΙΡΟΣ & ΔΟΡΥΦΟΡΟΣ (LIVE) ---\nΚαιρός: Θερμοκρασία {kairos['thermokrasia']}°C, Υγρασία {kairos['ygrasia']}%, {kairos['perigrafi']}\n"
         
+        # Προσθήκη ανέμου και μετατροπή μοιρών σε κείμενο
+        if 'anemos_taxytita' in kairos and 'anemos_dieythinsi' in kairos:
+            speed = kairos['anemos_taxytita']
+            deg = kairos['anemos_dieythinsi']
+            bf = kairos.get('anemos_mpofor', 0)
+            directions = ["Βόρειος (Βοριάς)", "Βορειοανατολικός", "Ανατολικός", "Νοτιοανατολικός", "Νότιος (Νοτιάς)", "Νοτιοδυτικός", "Δυτικός", "Βορειοδυτικός"]
+            idx = round(deg / 45) % 8
+            dir_text = directions[idx]
+            ctx += f"Άνεμος: {bf} Μποφόρ ({speed} m/s), Κατεύθυνση: {dir_text} ({deg}°)\n"
+            
+        # Προσθήκη Οδηγίας Αντιμετώπισης Παγετού
+        if kairos['thermokrasia'] <= 4:
+            ctx += "ΟΔΗΓΙΑ ΠΑΓΕΤΟΥ: Θερμοκρασία <= 4°C (Στρες Ψύχους). Πρότεινε 'Διαφυλλική εφαρμογή με Αμινοξέα/Φύκια' για ανάρρωση, ΕΚΤΟΣ αν στο Ιστορικό Εργασιών φαίνεται εφαρμογή Χαλκού τις τελευταίες 7 ημέρες (κίνδυνος τοξικότητας) ή Αμινοξέων τις τελευταίες 15 ημέρες.\n"
+        
         # --- ΠΡΟΣΘΗΚΗ ΠΡΟΓΝΩΣΗΣ ΚΑΙΡΟΥ ΣΤΟ AI ---
         prognosi = pare_prognosi_kairou(ktima.geografiko_platos, ktima.geografiko_mikos)
+        
+        # Προσθήκη Οδηγίας Αντιμετώπισης Καύσωνα (Τωρινού ή Επερχόμενου)
+        max_forecast_temp = kairos['thermokrasia']
+        if prognosi:
+            max_forecast_temp = max([p['main']['temp'] for p in prognosi] + [kairos['thermokrasia']])
+            
+        if max_forecast_temp >= 35:
+            ctx += "ΟΔΗΓΙΑ ΚΑΥΣΩΝΑ: Ανιχνεύθηκε θερμοκρασία >= 35°C (Τώρα ή στην Πρόγνωση). Πρότεινε 'Ψεκασμός με Καολίνη ή Ζεόλιθο' για ηλιοπροστασία, ΕΚΤΟΣ αν στο Ιστορικό Εργασιών φαίνεται εφαρμογή Καολίνη/Ζεόλιθου τις τελευταίες 20 ημέρες.\n"
+
         if prognosi:
             daily_forecast = {}
             for p in prognosi:
@@ -498,3 +589,94 @@ def aytomatizomenos_elegxos():
                     print(f"✅ AI Ενημερώθηκε για το: {ktima.onoma_ktimatos}")
                 except Exception as e:
                     print(f"⚠️ Σφάλμα ημερήσιου AI συγχρονισμού: {e}")
+
+def ypologismos_isozugiou_npk(ktima):
+    """
+    ΝΕΟ: Δυναμικός Υπολογισμός Ισοζυγίου Θρεπτικών Στοιχείων NPK.
+    """
+    if not ktima.analuseis_edafous:
+        return None
+    
+    sorted_analyses = sorted(ktima.analuseis_edafous, key=lambda x: x.imerominia)
+    last_analysi = sorted_analyses[-1]
+    
+    current_n = float(last_analysi.azwto or 0)
+    current_p = float(last_analysi.fwsforos or 0)
+    current_k = float(last_analysi.kalio or 0)
+    
+    if current_n == 0 and current_p == 0 and current_k == 0:
+        return None
+        
+    start_date = last_analysi.imerominia
+    end_date = datetime.now() + timedelta(days=30) # Προβολή 1 μήνα στο μέλλον
+    
+    if start_date.year == end_date.year and start_date.month == end_date.month:
+        start_date = start_date - timedelta(days=90) # Τουλάχιστον ένα τρίμηνο ιστορικό
+        
+    labels = []
+    data_n = []
+    data_p = []
+    data_k = []
+    
+    current_date = datetime(start_date.year, start_date.month, 1)
+    
+    while current_date <= end_date:
+        month_str = current_date.strftime('%m/%Y')
+        m = current_date.month
+        
+        # --- 1. Φυσική Απόσβεση (Καιρός & Έδαφος) ---
+        dep_n = 2.0 if m in [3, 4, 5, 11, 12] else 0.8
+        if ktima.typos_edafous == 'Αμμώδες': dep_n *= 1.5
+        elif ktima.typos_edafous == 'Αργιλώδες': dep_n *= 0.7
+        
+        dep_p = 0.3
+        
+        dep_k = 2.5 if m in [7, 8, 9, 10] else 0.5
+        if ktima.ardefsi == 'Αρδευόμενο': dep_k *= 1.2
+        
+        current_n = max(0, current_n - dep_n)
+        current_p = max(0, current_p - dep_p)
+        current_k = max(0, current_k - dep_k)
+        
+        # --- 2. Ενισχύσεις από Εργασίες ---
+        for t in ktima.ergasies:
+            if t.katastasi == 'Ολοκληρώθηκε' and t.imerominia.year == current_date.year and t.imerominia.month == current_date.month:
+                eidos = t.eidos_ergasias.lower()
+                farmaka = (t.farmaka_lipasmata or '').lower()
+                
+                if 'λίπανση' in eidos:
+                    current_n += 15.0
+                    current_p += 5.0
+                    current_k += 10.0
+                if 'καταστροφέας' in eidos or 'χόρτα' in eidos:
+                    current_n += 3.0
+                if 'κλάδεμα' in eidos and 'θρυμματισμός' in farmaka:
+                    current_k += 5.0
+                    
+        # --- 3. AI Εντοπισμός Τροφοπενιών (Από φωτογραφίες) ---
+        for d in ktima.diagnoseis:
+            if d.imerominia.year == current_date.year and d.imerominia.month == current_date.month:
+                res = (d.apotelesma or '').lower()
+                if 'έλλειψη αζώτου' in res or 'τροφοπενία αζώτου' in res:
+                    current_n *= 0.5 # 50% πτώση της καμπύλης αν εντοπιστεί τροφοπενία
+                if 'έλλειψη καλίου' in res or 'τροφοπενία καλίου' in res:
+                    current_k *= 0.5
+        
+        labels.append(month_str)
+        data_n.append(round(current_n, 1))
+        data_p.append(round(current_p, 1))
+        data_k.append(round(current_k, 1))
+        
+        if current_date.month == 12:
+            current_date = datetime(current_date.year + 1, 1, 1)
+        else:
+            current_date = datetime(current_date.year, current_date.month + 1, 1)
+            
+    return {
+        'labels': labels,
+        'datasets': {
+            'N': data_n,
+            'P': data_p,
+            'K': data_k
+        }
+    }

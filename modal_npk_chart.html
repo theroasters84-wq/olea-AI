@@ -1,0 +1,101 @@
+<!-- Modal Δυναμικού Ισοζυγίου NPK -->
+<div class="modal fade" id="modalNpkChart{{ ktima.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-chart-area text-warning"></i> Δυναμικό Ισοζύγιο Εδάφους (NPK)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light border-warning shadow-sm small mb-3">
+                    <i class="fas fa-info-circle text-warning me-1"></i>
+                    <strong>Πώς λειτουργεί:</strong> Ο αλγόριθμος του Olea AI ξεκινάει από την τελευταία σας εδαφολογική ανάλυση και προσομοιώνει τις αλλαγές μήνα με τον μήνα. 
+                    Αφαιρεί θρεπτικά στοιχεία λόγω ανάπτυξης και βροχών (έκπλυση), ενώ προσθέτει στοιχεία όποτε καταχωρείτε εργασίες όπως <strong>Λίπανση</strong> ή <strong>Καταστροφέας</strong>.
+                </div>
+                
+                <div style="position: relative; height: 350px;">
+                    <canvas id="npkChart{{ ktima.id }}"></canvas>
+                </div>
+                <div id="npkLoading{{ ktima.id }}" class="text-center mt-4 mb-4" style="display: none;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i> <br>Υπολογισμός Ισοζυγίου...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('modalNpkChart{{ ktima.id }}').addEventListener('shown.bs.modal', function () {
+        const ctx = document.getElementById('npkChart{{ ktima.id }}');
+        const loading = document.getElementById('npkLoading{{ ktima.id }}');
+        
+        if (window['npkChartInstance' + {{ ktima.id }}]) {
+            return; // Ήδη φορτωμένο για να μην ανανεώνεται άσκοπα
+        }
+        
+        loading.style.display = 'block';
+        
+        fetch('/api/npk_isozugio/{{ ktima.id }}')
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                const limitN = new Array(data.labels.length).fill(5.0); // Σταθερό όριο στο 5
+                
+                window['npkChartInstance' + {{ ktima.id }}] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'Άζωτο (N)',
+                                data: data.datasets.N,
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Φώσφορος (P)',
+                                data: data.datasets.P,
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'transparent',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Κάλιο (K)',
+                                data: data.datasets.K,
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                backgroundColor: 'transparent',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Όριο Συναγερμού (N)',
+                                data: limitN,
+                                borderColor: 'rgba(255, 0, 0, 0.6)',
+                                borderDash: [10, 5],
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { tooltip: { mode: 'index', intersect: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                console.error("Σφάλμα Γραφήματος NPK:", err);
+            });
+    });
+</script>

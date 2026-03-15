@@ -827,6 +827,40 @@
                             if (aiSpan) { aiSpan.innerText = data.analysis_text; } 
                             else { resultDiv.innerHTML = '<i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text">' + data.analysis_text + '</span>'; }
                             resultDiv.classList.remove('d-none');
+                        
+                        // SHOW CHAT BOX IF THERE IS A QUESTION
+                        const chatContainer = document.getElementById('ndviChatContainer' + mapId);
+                        const chatBtn = document.getElementById('btnNdviChat' + mapId);
+                        const chatInput = document.getElementById('ndviUserInput' + mapId);
+                        const chatLoading = document.getElementById('ndviChatLoading' + mapId);
+                        const refinedResultDiv = document.getElementById('ndviRefinedResult' + mapId);
+                        
+                        if (chatContainer && data.analysis_text.includes("ΕΡΩΤΗΣΗ:")) {
+                            chatContainer.classList.remove('d-none');
+                            const newChatBtn = chatBtn.cloneNode(true);
+                            chatBtn.parentNode.replaceChild(newChatBtn, chatBtn);
+                            newChatBtn.addEventListener('click', function() {
+                                const userText = chatInput.value.trim();
+                                if(!userText) return;
+                                newChatBtn.disabled = true;
+                                chatLoading.classList.remove('d-none');
+                                refinedResultDiv.classList.add('d-none');
+                                fetch('/ndvi_chat/' + ktimaId, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ user_reply: userText, previous_ai_message: data.analysis_text })
+                                }).then(res => res.json()).then(chatData => {
+                                    chatLoading.classList.add('d-none');
+                                    newChatBtn.disabled = false;
+                                    if(chatData.error) alert("Σφάλμα: " + chatData.error);
+                                    else if(chatData.refined_message) {
+                                        refinedResultDiv.innerHTML = '<strong><i class="fas fa-robot"></i> Τελική Συμβουλή:</strong> <br>' + chatData.refined_message;
+                                        refinedResultDiv.classList.remove('d-none');
+                                        chatInput.value = '';
+                                    }
+                                }).catch(err => { chatLoading.classList.add('d-none'); newChatBtn.disabled = false; });
+                            });
+                        }
                         }
                         if (errorDiv) {
                             errorDiv.innerHTML = '<div class="alert alert-success py-2 mb-0"><i class="fas fa-check-circle"></i> ' + data.message + '</div>';

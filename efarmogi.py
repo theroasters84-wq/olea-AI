@@ -3,7 +3,7 @@ from core import efarmogi, vasi
 import core_app # Loads routes and blueprints
 from apscheduler.schedulers.background import BackgroundScheduler
 from logic import aytomatizomenos_elegxos
-from models import Ktima, Diagnosi
+from models import Ktima, Diagnosi, Ergasia
 
 def aytomatizomenos_elegxos_ndvi(app_context):
     """Background task that runs weekly to check all registered polygons."""
@@ -37,10 +37,20 @@ def aytomatizomenos_elegxos_ndvi(app_context):
                         img_response = requests.get(ndvi_url)
                         if img_response.status_code == 200:
                             image_file = PIL.Image.open(io.BytesIO(img_response.content))
-                            prompt = f"Είσαι γεωπόνος. Αυτός είναι ο εβδομαδιαίος δορυφορικός χάρτης NDVI. Κτήμα: Ηλικία={ktima.ilikia_dentron}, Πυκνότητα={ktima.puknotita_dentron}, Έδαφος={ktima.diacheirisi_edafous}. Αν δεις ύποπτη αλλαγή (π.χ. πτώση βλάστησης) που ΜΠΟΡΕΙ να οφείλεται σε ανθρώπινη εργασία (π.χ. κλάδεμα, καθαρισμός χόρτων) ή θέλεις διευκρίνιση από τον αγρότη, ΞΕΚΙΝΑ την απάντησή σου με τη λέξη 'ΕΡΩΤΗΣΗ:' και γράψε την απορία σου. Αν όλα είναι φυσιολογικά ή το πρόβλημα είναι ξεκάθαρο, ΞΕΚΙΝΑ με 'ΕΝΗΜΕΡΩΣΗ:' και δώσε αναφορά."
+                            prompt = (f"Είσαι γεωπόνος. Αυτός είναι ο εβδομαδιαίος δορυφορικός χάρτης NDVI. Κτήμα: Ηλικία={ktima.ilikia_dentron}, Πυκνότητα={ktima.puknotita_dentron}, Έδαφος={ktima.diacheirisi_edafous}. "
+                                      f"ΟΔΗΓΙΕΣ: 1) Αν δεις έντονη πτώση βλάστησης ρώτα αν έγινε κλάδεμα ή καθαρισμός χόρτων. "
+                                      f"2) Αν ο χάρτης είναι ομοιόμορφα σκούρος πράσινος, ρώτα τον αγρότη αν έχουν ψηλώσει τα χόρτα, ΚΑΙ πρόσθεσε ΟΠΩΣΔΗΠΟΤΕ στο τέλος τη λέξη '[ΧΟΡΤΑ_ΥΨΗΛΑ]'. "
+                                      f"3) Σε κάθε απορία ΞΕΚΙΝΑ την απάντησή σου με 'ΕΡΩΤΗΣΗ:'. 4) Αν όλα είναι φυσιολογικά ΞΕΚΙΝΑ με 'ΕΝΗΜΕΡΩΣΗ:' και δώσε αναφορά.")
                             
                             response = client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                             ai_text = response.text.strip()
+
+                            # Έλεγχος AI Tagging
+                            if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_text:
+                                ai_text = ai_text.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
+                                yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%Χόρτων%')).first()
+                                if not yparxei_kophi:
+                                    vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Κοπή Χόρτων / Καταστροφέας', katastasi='Εκκρεμεί', proelevsi='AI Δορυφόρος', imerominia=datetime.now()))
 
                             if ai_text.startswith("ΕΡΩΤΗΣΗ:"):
                                 ktima.ekkremis_erotisi_ai = ai_text.replace("ΕΡΩΤΗΣΗ:", "").strip()
