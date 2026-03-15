@@ -254,9 +254,16 @@
             {% set current_ai_question = ktima.ekkremis_erotisi_ai if ktima.ekkremis_erotisi_ai else (default_onb if completed_tasks_count == 0 else None) %}
 
             {% if current_ai_question and not is_geoponos_view %}
-            <div class="alert alert-warning p-2 mt-2 mb-2 d-flex align-items-center justify-content-between border-warning shadow-sm" style="animation: pulse 2s infinite;">
-                <span><i class="fas fa-robot text-danger fa-bounce fa-lg me-2"></i> <strong>Το AI ρωτάει:</strong> {{ current_ai_question }}</span>
-                <button type="button" class="btn btn-sm btn-danger ms-2 text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση</button>
+            <div class="alert alert-warning p-3 mt-2 mb-2 border-warning shadow-sm" style="animation: pulse 2s infinite; display: block;">
+                <div class="d-flex align-items-center mb-2 text-dark">
+                    <i class="fas fa-robot text-danger fa-bounce fa-lg me-2"></i> <strong>Το AI ρωτάει:</strong>
+                </div>
+                <div class="text-dark mb-3 text-break" style="font-size: 0.95em; line-height: 1.5;">
+                    {{ current_ai_question }}
+                </div>
+                <div class="text-end border-top border-warning pt-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-danger px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση <i class="fas fa-arrow-right ms-1"></i></button>
+                </div>
             </div>
             
             <div class="modal fade" id="modalAiReply{{ ktima.id }}" tabindex="-1" data-bs-backdrop="static">

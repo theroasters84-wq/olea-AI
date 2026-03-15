@@ -310,20 +310,6 @@
                 }
             {% endfor %}
 
-            // Auto-open Onboarding Chat για νέα κτήματα
-            {% for ktima in ktimata %}
-                {% set completed_tasks_script = ktima.ergasies|selectattr("katastasi", "equalto", "Ολοκληρώθηκε")|list|length %}
-                {% if completed_tasks_script == 0 %}
-                    setTimeout(function() {
-                        const modalEl = document.getElementById('modalAiReply{{ ktima.id }}');
-                        if (modalEl && !document.querySelector('.modal.show')) {
-                            const myModal = new bootstrap.Modal(modalEl);
-                            myModal.show();
-                        }
-                    }, 800); // 0.8 δευτερόλεπτα καθυστέρηση για ομαλό popup
-                {% endif %}
-            {% endfor %}
-
             // --- Add Ktima Modal Map & Form Logic ---
             let addKtimaMap; // store map instance
             const addKtimaModal = document.getElementById('addKtimaModal');
