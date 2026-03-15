@@ -14,6 +14,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <style>
+        /* Αποτροπή σφαλμάτων touchmove του Leaflet σε οθόνες αφής */
+        .leaflet-container {
+            touch-action: none;
+        }
 
         /* Mobile Layout: Swipe/Carousel για τα κτήματα */
         @media (max-width: 768px) {
@@ -93,8 +97,8 @@
             {% include '_modals_ktima.html' %}
             
                 <!-- Modal Αναλυτικής Καρτέλας & Συνταγής -->
-                <div class="modal fade" id="modalAnalytiki{{ ktima.id }}" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
+                <div class="modal fade ndvi-modal" id="modalAnalytiki{{ ktima.id }}" tabindex="-1" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="ndviMapFarmer{{ ktima.id }}" data-ktima-id="{{ ktima.id }}">
+                    <div class="modal-dialog modal-xl">
                         <div class="modal-content">
                             <div class="modal-header bg-dark text-white">
                                 <h5 class="modal-title"><i class="fas fa-microscope"></i> Αναλυτική Καρτέλα Γεωπόνου</h5>
@@ -177,24 +181,30 @@
 
                                 <!-- Χάρτης NDVI για Αγρότη -->
                                 <h6 class="mt-3 text-success border-bottom border-success pb-1"><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI (Live)</h6>
-                                <div id="analytikiMapModal{{ ktima.id }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" style="height: 300px; width: 100%; border-radius: 8px; background-color: #e9ecef; z-index: 1;" class="mb-2 position-relative analytiki-map-container shadow-sm d-flex align-items-center justify-content-center">
-                                    {% if ktima.polygon_geojson %}
-                                    <button class="btn btn-success btn-sm position-absolute load-map-btn shadow" style="z-index: 1000;" onclick="loadAnalytikiMap(this, 'analytikiMapModal{{ ktima.id }}', {{ ktima.id }})">
-                                        <i class="fas fa-satellite"></i> Φόρτωση Χάρτη
-                                    </button>
-                                    {% else %}
-                                    <span class="text-muted small"><i class="fas fa-exclamation-triangle"></i> Δεν έχει οριστεί πολύγωνο. Μεταβείτε στον "Χάρτη" για να το σχεδιάσετε.</span>
-                                    {% endif %}
+                                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                                    <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
+                                    <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
                                 </div>
-                                <div id="analytikiResultModal{{ ktima.id }}" class="d-none alert alert-info mt-2 text-start small"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
-                                <div id="analytikiChatContainerModal{{ ktima.id }}" class="d-none mt-2 p-2 bg-light border border-primary rounded small mb-4">
-                            <label class="form-label text-primary fw-bold mb-1"><i class="fas fa-comments"></i> Διευκρίνιση στον AI:</label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" id="analytikiUserInputModal{{ ktima.id }}" class="form-control" placeholder="π.χ. Το κίτρινο είναι στέγη...">
-                                        <button class="btn btn-primary" id="btnAnalytikiChatModal{{ ktima.id }}">Αποστολή</button>
+                                <div id="ndviMapFarmer{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                                <div id="layerControlsndviMapFarmer{{ ktima.id }}" class="d-none mt-2 mb-2 text-center"></div>
+                                <div class="text-center mt-3 mb-3">
+                                    <div class="btn-group">
+                                        <button id="btnAnalyzendviMapFarmer{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
+                                        <button id="btnRunAnalysisNowndviMapFarmer{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapFarmer{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
                                     </div>
-                                    <div id="analytikiChatLoadingModal{{ ktima.id }}" class="d-none text-primary mt-1"><i class="fas fa-spinner fa-spin"></i> Αναμονή...</div>
-                                    <div id="analytikiRefinedResultModal{{ ktima.id }}" class="d-none alert alert-success mt-2 text-start mb-0 p-2"></div>
+                                    <div id="ndviLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
+                                    <div id="ndviErrorndviMapFarmer{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
+                                </div>
+                                <div id="ndviResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                                <div id="ndviChatContainerndviMapFarmer{{ ktima.id }}" class="d-none mt-3 p-3 bg-light border border-primary rounded mb-4">
+                                    <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
+                                    <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
+                                    <div class="input-group">
+                                        <input type="text" id="ndviUserInputndviMapFarmer{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
+                                        <button class="btn btn-primary" id="btnNdviChatndviMapFarmer{{ ktima.id }}">Αποστολή</button>
+                                    </div>
+                                    <div id="ndviChatLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
+                                    <div id="ndviRefinedResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
                                 </div>
 
                                 <h6 class="mt-4 text-success border-bottom border-success pb-1"><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</h6>
@@ -382,183 +392,269 @@
 
 
             // --- NDVI Map Initialization Logic ---
-            const ndviModals = document.querySelectorAll('.ndvi-modal');
             window.initializedMaps = window.initializedMaps || {};
             window.ndviMapBounds = window.ndviMapBounds || {};
             window.ndviMapOverlays = window.ndviMapOverlays || {};
 
-            ndviModals.forEach(modal => {
-                modal.addEventListener('shown.bs.modal', function () {
-                    const lat = parseFloat(this.getAttribute('data-lat'));
-                    const lng = parseFloat(this.getAttribute('data-lng'));
-                    const mapId = this.getAttribute('data-mapid');
-                    const ktimaId = this.getAttribute('data-ktima-id');
-                    const savedGeoJsonStr = this.getAttribute('data-geojson'); // Λήψη αποθηκευμένου πολυγώνου
+    window.initAdvancedNdviMap = function(lat, lng, mapId, ktimaId, savedGeoJsonStr) {
+        if (!window.initializedMaps[mapId]) {
+            const map = L.map(mapId, { rotate: true, touchRotate: true }).setView([lat, lng], 17);
+            
+            // High Resolution Esri Satellite layer
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri'
+            }).addTo(map);
 
-                    if (!window.initializedMaps[mapId]) {
-                        const map = L.map(mapId).setView([lat, lng], 17);
+            // Leaflet Draw Initialization
+            const drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+            const drawControl = new L.Control.Draw({
+                edit: { featureGroup: drawnItems },
+                draw: { polygon: true, polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false }
+            });
+            map.addControl(drawControl);
+
+            let currentGeoJSON = null;
+            let currentBounds = null;
+            const analyzeBtn = document.getElementById('btnAnalyze' + mapId);
+            const loadingDiv = document.getElementById('ndviLoading' + mapId);
+            const errorDiv = document.getElementById('ndviError' + mapId);
+            const layerControls = document.getElementById('layerControls' + mapId);
+            const resultDiv = document.getElementById('ndviResult' + mapId);
+            const chatContainer = document.getElementById('ndviChatContainer' + mapId);
+            const chatInput = document.getElementById('ndviUserInput' + mapId);
+            const chatBtn = document.getElementById('btnNdviChat' + mapId);
+            const chatLoading = document.getElementById('ndviChatLoading' + mapId);
+            const refinedResultDiv = document.getElementById('ndviRefinedResult' + mapId);
+            
+            let redrawBtn = document.getElementById('btnRedraw' + mapId);
+            if (!redrawBtn && analyzeBtn) {
+                redrawBtn = document.createElement('button');
+                redrawBtn.id = 'btnRedraw' + mapId;
+                redrawBtn.type = 'button';
+                redrawBtn.className = 'btn btn-outline-danger ms-2 shadow-sm';
+                redrawBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Επανασχεδιασμός';
+                analyzeBtn.insertAdjacentElement('afterend', redrawBtn);
+
+                redrawBtn.addEventListener('click', function() {
+                    if (confirm('Θέλετε να διαγράψετε τον τρέχοντα χάρτη και να σχεδιάσετε νέο πολύγωνο;')) {
+                        drawnItems.clearLayers();
+                        currentGeoJSON = null;
+                        currentBounds = null;
+                        analyzeBtn.classList.add('d-none');
+                        redrawBtn.classList.add('d-none');
+                        if (layerControls) layerControls.classList.add('d-none');
+                        if (errorDiv) errorDiv.classList.add('d-none');
+                        if (window.ndviMapOverlays && window.ndviMapOverlays[mapId]) { map.removeLayer(window.ndviMapOverlays[mapId]); }
+                        new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
+                    }
+                });
+            }
+
+            if (savedGeoJsonStr && savedGeoJsonStr !== "None" && savedGeoJsonStr !== "") {
+                try {
+                    const parsedGeo = JSON.parse(savedGeoJsonStr);
+                    currentGeoJSON = parsedGeo;
+                    const geoLayer = L.geoJSON(parsedGeo);
+                    geoLayer.eachLayer(function(layer) {
+                        drawnItems.addLayer(layer);
+                    });
+                    
+                    currentBounds = drawnItems.getBounds();
+                    window.ndviMapBounds[mapId] = currentBounds;
+                    
+                    if (currentBounds && currentBounds.isValid()) {
+                        map.fitBounds(currentBounds);
+                        if (analyzeBtn) analyzeBtn.classList.remove('d-none');
+                        if (redrawBtn) redrawBtn.classList.remove('d-none');
+                    }
+                } catch (e) {
+                    console.log("Σφάλμα φόρτωσης GeoJSON:", e);
+                }
+            } else {
+                if (redrawBtn) redrawBtn.classList.add('d-none');
+            }
+
+            map.on(L.Draw.Event.CREATED, function (event) {
+                drawnItems.clearLayers();
+                const layer = event.layer;
+                drawnItems.addLayer(layer);
+                currentGeoJSON = layer.toGeoJSON();
+                currentBounds = layer.getBounds();
+                window.ndviMapBounds[mapId] = currentBounds;
+                if (analyzeBtn) analyzeBtn.classList.remove('d-none');
+                if (redrawBtn) redrawBtn.classList.remove('d-none');
+                if (errorDiv) errorDiv.classList.add('d-none');
+            });
+
+            if (analyzeBtn) {
+                analyzeBtn.addEventListener('click', function() {
+                    if (!currentGeoJSON) return;
+                    analyzeBtn.classList.add('d-none');
+                    if (redrawBtn) redrawBtn.classList.add('d-none');
+                    if (loadingDiv) loadingDiv.classList.remove('d-none');
+                    if (errorDiv) errorDiv.classList.add('d-none');
+                    if (layerControls) layerControls.classList.add('d-none');
+                    
+                    if(window.ndviMapOverlays[mapId]) map.removeLayer(window.ndviMapOverlays[mapId]);
+
+                    fetch('/ndvi_analyze/' + ktimaId, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ geo_json: currentGeoJSON })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (loadingDiv) loadingDiv.classList.add('d-none');
+                        analyzeBtn.classList.remove('d-none');
+                        if (redrawBtn) redrawBtn.classList.remove('d-none');
                         
-                        // High Resolution Esri Satellite layer
-                        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                            attribution: 'Tiles © Esri'
-                        }).addTo(map);
-
-                        // Leaflet Draw Initialization
-                        const drawnItems = new L.FeatureGroup();
-                        map.addLayer(drawnItems);
-                        const drawControl = new L.Control.Draw({
-                            edit: { featureGroup: drawnItems },
-                            draw: { polygon: true, polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false }
-                        });
-                        map.addControl(drawControl);
-
-                        let currentGeoJSON = null;
-                        let currentBounds = null;
-                        const analyzeBtn = document.getElementById('btnAnalyze' + ktimaId);
-                        const loadingDiv = document.getElementById('ndviLoading' + ktimaId);
-                        const errorDiv = document.getElementById('ndviError' + ktimaId);
-                        const layerControls = document.getElementById('layerControls' + ktimaId);
-
-                        // --- ΑΥΤΟΜΑΤΗ ΦΟΡΤΩΣΗ ΠΟΛΥΓΩΝΟΥ ---
-                        if (savedGeoJsonStr && savedGeoJsonStr !== "None" && savedGeoJsonStr !== "") {
-                            try {
-                                const parsedGeo = JSON.parse(savedGeoJsonStr);
-                                currentGeoJSON = parsedGeo; // Διατηρούμε το αρχικό πολύγωνο
-                                const geoLayer = L.geoJSON(parsedGeo);
-                                geoLayer.eachLayer(function(layer) {
-                                    drawnItems.addLayer(layer); // Προσθήκη στο επεξεργάσιμο layer
-                                });
-                                
-                                currentBounds = drawnItems.getBounds(); // Παίρνουμε τα συνολικά όρια
-                                window.ndviMapBounds[ktimaId] = currentBounds;
-                                
-                                if (currentBounds && currentBounds.isValid()) {
-                                    map.fitBounds(currentBounds); // Ζουμ στο πολύγωνο
-                                    analyzeBtn.classList.remove('d-none'); // Εμφάνιση κουμπιού ανάλυσης
-                                }
-                            } catch (e) {
-                                console.log("Σφάλμα φόρτωσης GeoJSON:", e);
+                        if(data.error) {
+                            if (errorDiv) {
+                                errorDiv.innerHTML = '<div class="alert alert-danger py-2 mb-0"><i class="fas fa-exclamation-triangle"></i> ' + data.error + '</div>';
+                                errorDiv.className = 'mt-2';
                             }
-                        }
-
-                        map.on(L.Draw.Event.CREATED, function (event) {
-                            drawnItems.clearLayers();
-                            const layer = event.layer;
-                            drawnItems.addLayer(layer);
-                            currentGeoJSON = layer.toGeoJSON(); // Get full GeoJSON feature
-                            currentBounds = layer.getBounds();
-                            window.ndviMapBounds[ktimaId] = currentBounds;
-                            analyzeBtn.classList.remove('d-none');
-                            errorDiv.classList.add('d-none');
-                        });
-
-                        analyzeBtn.addEventListener('click', function() {
-                            if (!currentGeoJSON) return;
-                            analyzeBtn.classList.add('d-none');
-                            loadingDiv.classList.remove('d-none');
-                            errorDiv.classList.add('d-none');
-                            if (layerControls) { layerControls.classList.add('d-none'); }
+                            alert(data.error);
+                            if(resultDiv) resultDiv.classList.add('d-none');
+                        } else if(data.ndvi_url) {
+                            window.setupSatelliteLayers(map, currentBounds, data, mapId);
+                            map.fitBounds(currentBounds);
+                            if (layerControls) layerControls.classList.remove('d-none');
+                            if (errorDiv) errorDiv.classList.add('d-none');
                             
-                            if(window.ndviMapOverlays[mapId]) map.removeLayer(window.ndviMapOverlays[mapId]);
-
-                            fetch('/ndvi_analyze/' + ktimaId, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ geo_json: currentGeoJSON })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                loadingDiv.classList.add('d-none');
-                                analyzeBtn.classList.remove('d-none');
-                                const resultDiv = document.getElementById('ndviResult' + ktimaId);
-                                
-                                if(data.error) {
-                                    errorDiv.innerText = data.error;
-                                    errorDiv.classList.remove('d-none');
-                                    if(resultDiv) resultDiv.classList.add('d-none');
-                                } else if(data.ndvi_url) {
-                                    window.setupSatelliteLayers(map, currentBounds, data, mapId);
-                                    map.fitBounds(currentBounds);
-                                    if (layerControls) { layerControls.classList.remove('d-none'); }
+                            if(data.ai_message && resultDiv) {
+                                const aiTextSpan = resultDiv.querySelector('.ai-text');
+                                if (aiTextSpan) aiTextSpan.innerText = data.ai_message;
+                                resultDiv.classList.remove('d-none');
+                                if(chatContainer && chatBtn && chatInput && chatLoading && refinedResultDiv) {
+                                    chatContainer.classList.remove('d-none');
                                     
-                                    if(data.ai_message && resultDiv) {
-                                        resultDiv.querySelector('.ai-text').innerText = data.ai_message;
-                                        resultDiv.classList.remove('d-none');
-                                        const chatContainer = document.getElementById('ndviChatContainer' + ktimaId);
-                                        if(chatContainer) {
-                                            chatContainer.classList.remove('d-none');
-                                            const chatBtn = document.getElementById('btnNdviChat' + ktimaId);
-                                            const chatInput = document.getElementById('ndviUserInput' + ktimaId);
-                                            const chatLoading = document.getElementById('ndviChatLoading' + ktimaId);
-                                            const refinedResultDiv = document.getElementById('ndviRefinedResult' + ktimaId);
-                                            
-                                            // Remove old event listeners if modal is reopened
-                                            const newChatBtn = chatBtn.cloneNode(true);
-                                            chatBtn.parentNode.replaceChild(newChatBtn, chatBtn);
-                                            
-                                            newChatBtn.addEventListener('click', function() {
-                                                const userText = chatInput.value.trim();
-                                                if(!userText) return;
-                                                
-                                                newChatBtn.disabled = true;
-                                                chatLoading.classList.remove('d-none');
-                                                refinedResultDiv.classList.add('d-none');
-                                                
-                                                fetch('/ndvi_chat/' + ktimaId, {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ 
-                                                        user_reply: userText,
-                                                        previous_ai_message: data.ai_message
-                                                    })
-                                                })
-                                                .then(res => res.json())
-                                                .then(chatData => {
-                                                    chatLoading.classList.add('d-none');
-                                                    newChatBtn.disabled = false;
-                                                    if(chatData.error) {
-                                                        alert("Σφάλμα: " + chatData.error);
-                                                    } else if(chatData.refined_message) {
-                                                        refinedResultDiv.innerHTML = '<strong><i class="fas fa-robot"></i> Τελική Συμβουλή:</strong> <br>' + chatData.refined_message;
-                                                        refinedResultDiv.classList.remove('d-none');
-                                                        chatInput.value = '';
-                                                    }
-                                                })
-                                                .catch(err => {
-                                                    chatLoading.classList.add('d-none');
-                                                    newChatBtn.disabled = false;
-                                                    alert("Σφάλμα επικοινωνίας.");
-                                                });
-                                            });
-                                        }
-                                    }
+                                    const newChatBtn = chatBtn.cloneNode(true);
+                                    chatBtn.parentNode.replaceChild(newChatBtn, chatBtn);
+                                    
+                                    newChatBtn.addEventListener('click', function() {
+                                        const userText = chatInput.value.trim();
+                                        if(!userText) return;
+                                        
+                                        newChatBtn.disabled = true;
+                                        chatLoading.classList.remove('d-none');
+                                        refinedResultDiv.classList.add('d-none');
+                                        
+                                        fetch('/ndvi_chat/' + ktimaId, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ 
+                                                user_reply: userText,
+                                                previous_ai_message: data.ai_message
+                                            })
+                                        })
+                                        .then(res => res.json())
+                                        .then(chatData => {
+                                            chatLoading.classList.add('d-none');
+                                            newChatBtn.disabled = false;
+                                            if(chatData.error) {
+                                                alert("Σφάλμα: " + chatData.error);
+                                            } else if(chatData.refined_message) {
+                                                refinedResultDiv.innerHTML = '<strong><i class="fas fa-robot"></i> Τελική Συμβουλή:</strong> <br>' + chatData.refined_message;
+                                                refinedResultDiv.classList.remove('d-none');
+                                                chatInput.value = '';
+                                            }
+                                        })
+                                        .catch(err => {
+                                            chatLoading.classList.add('d-none');
+                                            newChatBtn.disabled = false;
+                                            alert("Σφάλμα επικοινωνίας.");
+                                        });
+                                    });
                                 }
-                            });
-                        });
-
-                        window.initializedMaps[mapId] = map;
-                    } else {
-                        window.initializedMaps[mapId].invalidateSize();
-                    }
+                            }
+                        } else {
+                            if (errorDiv) {
+                                errorDiv.innerHTML = '<div class="alert alert-warning py-2 mb-0"><i class="fas fa-info-circle"></i> ' + (data.message || 'Αποθηκεύτηκε, αλλά δεν βρέθηκε καθαρή δορυφορική λήψη.') + '</div>';
+                                errorDiv.className = 'mt-2';
+                            }
+                            alert(data.message || 'Το πολύγωνο αποθηκεύτηκε, αλλά δεν βρέθηκαν πρόσφατες εικόνες χωρίς σύννεφα.');
+                        }
+                    });
                 });
-            });
+            }
 
-            // --- Analytiki Map Invalidation Logic ---
-            const analytikiModals = document.querySelectorAll('[id^="modalAnalytiki"]');
-            analytikiModals.forEach(modal => {
-                modal.addEventListener('shown.bs.modal', function () {
-                    const ktimaId = this.getAttribute('id').replace('modalAnalytiki', '');
-                    const mapIdModal = 'analytikiMapModal' + ktimaId;
-                    if (window.analytikiMaps && window.analytikiMaps[mapIdModal]) {
-                        window.analytikiMaps[mapIdModal].invalidateSize();
-                    }
-                    const mapIdGeo = 'analytikiMapGeoponos' + ktimaId;
-                    if (window.analytikiMaps && window.analytikiMaps[mapIdGeo]) {
-                        window.analytikiMaps[mapIdGeo].invalidateSize();
-                    }
-                });
-            });
+            window.initializedMaps[mapId] = map;
+        } else {
+            window.initializedMaps[mapId].invalidateSize();
+        }
+    };
+
+    window.setupSatelliteLayers = function(map, bounds, data, mapId) {
+        let layerControls = document.getElementById('layerControls' + mapId);
+        
+        if(window.ndviMapOverlays && window.ndviMapOverlays[mapId]) {
+            map.removeLayer(window.ndviMapOverlays[mapId]);
+        }
+        
+        if (!window.ndviMapOverlays) window.ndviMapOverlays = {};
+        
+        if (data.ndvi_url) {
+            let overlay = L.imageOverlay(data.ndvi_url, bounds).addTo(map);
+            window.ndviMapOverlays[mapId] = overlay;
+        }
+
+        if (layerControls) {
+            layerControls.innerHTML = '';
+            const createBtn = (text, url, colorClass) => {
+                if (!url) return '';
+                return `<button type="button" class="btn btn-sm ${colorClass} me-1 mb-1 shadow-sm" onclick="changeMapLayer('${mapId}', '${url}')">${text}</button>`;
+            };
+
+            let buttonsHtml = '';
+            buttonsHtml += createBtn('NDVI (Βλάστηση)', data.ndvi_url, 'btn-success');
+            buttonsHtml += createBtn('NDWI (Υγρασία)', data.ndwi_url, 'btn-info text-white');
+            buttonsHtml += createBtn('EVI (Βλάστηση+)', data.evi_url, 'btn-primary');
+            buttonsHtml += createBtn('Φυσικό Χρώμα', data.truecolor_url, 'btn-secondary');
+            buttonsHtml += createBtn('Ψευδές Χρώμα', data.falsecolor_url, 'btn-warning text-dark');
+            buttonsHtml += `<button type="button" class="btn btn-sm btn-outline-dark mb-1 shadow-sm ms-1" data-bs-toggle="modal" data-bs-target="#modalMapLegend"><i class="fas fa-question-circle"></i> Τι σημαίνουν τα χρώματα;</button>`;
+
+            layerControls.innerHTML = buttonsHtml;
+            layerControls.classList.remove('d-none');
+        }
+    };
+
+    window.changeMapLayer = function(mapId, url) {
+        let map = window.initializedMaps[mapId];
+        let bounds = window.ndviMapBounds[mapId];
+        
+        if (map && bounds && url) {
+            if(window.ndviMapOverlays && window.ndviMapOverlays[mapId]) {
+                map.removeLayer(window.ndviMapOverlays[mapId]);
+            }
+            let overlay = L.imageOverlay(url, bounds).addTo(map);
+            window.ndviMapOverlays[mapId] = overlay;
+        }
+    };
+
+    // Initialize Modals and Inline maps
+    const ndviModals = document.querySelectorAll('.ndvi-modal');
+    ndviModals.forEach(modal => {
+        modal.addEventListener('shown.bs.modal', function () {
+            const lat = parseFloat(this.getAttribute('data-lat'));
+            const lng = parseFloat(this.getAttribute('data-lng'));
+            const mapId = this.getAttribute('data-mapid');
+            const ktimaId = this.getAttribute('data-ktima-id');
+            const savedGeoJsonStr = this.getAttribute('data-geojson');
+            window.initAdvancedNdviMap(lat, lng, mapId, ktimaId, savedGeoJsonStr);
         });
+    });
+
+    document.querySelectorAll('.ndvi-inline-container').forEach(container => {
+        const lat = parseFloat(container.getAttribute('data-lat'));
+        const lng = parseFloat(container.getAttribute('data-lng'));
+        const mapId = container.getAttribute('data-mapid');
+        const ktimaId = container.getAttribute('data-ktima-id');
+        const savedGeoJsonStr = container.getAttribute('data-geojson');
+        window.initAdvancedNdviMap(lat, lng, mapId, ktimaId, savedGeoJsonStr);
+    });
+});
+
         function filterTasks(ktimaId, proelevsi) {
             const tasks = document.querySelectorAll('.task-item-' + ktimaId);
             tasks.forEach(task => {
@@ -701,131 +797,13 @@
         }
 
         // Λογική φόρτωσης χάρτη και εικόνας NDVI στην Αναλυτική Καρτέλα
-        window.loadAnalytikiMap = function(btn, mapId, ktimaId) {
-            const container = document.getElementById(mapId);
-            const lat = parseFloat(container.getAttribute('data-lat'));
-            const lng = parseFloat(container.getAttribute('data-lng'));
-            const geojsonStr = container.getAttribute('data-geojson');
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Φόρτωση...';
-            btn.disabled = true;
-
-            // Έλεγχος αν ο χάρτης έχει ήδη αρχικοποιηθεί για να αποφύγουμε σφάλματα
-            if (!window.analytikiMaps) window.analytikiMaps = {};
-            let map = window.analytikiMaps[mapId];
-            if (!map) {
-                map = L.map(mapId, { rotate: true, touchRotate: true }).setView([lat, lng], 16);
-                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    attribution: 'Tiles © Esri'
-                }).addTo(map);
-                window.analytikiMaps[mapId] = map;
-            }
-
-            let geojsonObj = null;
-            let bounds = null;
-            try {
-                geojsonObj = JSON.parse(geojsonStr);
-                const geoLayer = L.geoJSON(geojsonObj, {
-                    style: { color: '#28a745', weight: 2, fillOpacity: 0.1 }
-                }).addTo(map);
-                bounds = geoLayer.getBounds();
-                map.fitBounds(bounds);
-                window.ndviMapBounds = window.ndviMapBounds || {};
-                window.ndviMapBounds[ktimaId] = bounds;
-            } catch (e) {
-                console.error("Σφάλμα φόρτωσης GeoJSON", e);
-                btn.innerHTML = 'Σφάλμα Πολυγώνου';
-                return;
-            }
-
-            fetch('/trexe_doriforo/' + ktimaId, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.ndvi_url) {
-                    btn.style.display = 'none';
-                    container.classList.remove('d-flex', 'align-items-center', 'justify-content-center'); // Απελευθέρωση του CSS που έκοβε τα κουμπιά
-                    window.setupSatelliteLayers(map, bounds, data, mapId);
-
-                    // --- ΝΕΟ: AI Chat για την Ανάλυση ---
-                    if (data.analysis_text && !data.analysis_text.includes("Σφάλμα")) {
-                        const resultDiv = document.getElementById(mapId.replace('Map', 'Result'));
-                        const chatContainer = document.getElementById(mapId.replace('Map', 'ChatContainer'));
-                        
-                        if (resultDiv) {
-                            const aiSpan = resultDiv.querySelector('.ai-text');
-                            if (aiSpan) { aiSpan.innerText = data.analysis_text; }
-                            resultDiv.classList.remove('d-none');
-                        }
-                        
-                        if (chatContainer) {
-                            chatContainer.classList.remove('d-none');
-                            const chatBtnId = 'btn' + mapId.replace('Map', 'Chat').charAt(0).toUpperCase() + mapId.replace('Map', 'Chat').slice(1);
-                            const chatBtn = document.getElementById(chatBtnId);
-                            const chatInput = document.getElementById(mapId.replace('Map', 'UserInput'));
-                            const chatLoading = document.getElementById(mapId.replace('Map', 'ChatLoading'));
-                            const refinedResultDiv = document.getElementById(mapId.replace('Map', 'RefinedResult'));
-                            
-                            if (chatBtn && chatInput) {
-                                const newChatBtn = chatBtn.cloneNode(true);
-                                chatBtn.parentNode.replaceChild(newChatBtn, chatBtn);
-
-                                newChatBtn.addEventListener('click', function() {
-                                    const userText = chatInput.value.trim();
-                                    if(!userText) return;
-                                    
-                                    newChatBtn.disabled = true;
-                                    chatLoading.classList.remove('d-none');
-                                    refinedResultDiv.classList.add('d-none');
-                                    
-                                    fetch('/ndvi_chat/' + ktimaId, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ user_reply: userText, previous_ai_message: data.analysis_text })
-                                    })
-                                    .then(res => res.json())
-                                    .then(chatData => {
-                                        chatLoading.classList.add('d-none');
-                                        newChatBtn.disabled = false;
-                                        if(chatData.error) {
-                                            alert("Σφάλμα: " + chatData.error);
-                                        } else if(chatData.refined_message) {
-                                            refinedResultDiv.innerHTML = '<strong><i class="fas fa-robot"></i> Τελική Συμβουλή:</strong> <br>' + chatData.refined_message;
-                                            refinedResultDiv.classList.remove('d-none');
-                                            chatInput.value = '';
-                                        }
-                                    })
-                                    .catch(err => {
-                                        chatLoading.classList.add('d-none');
-                                        newChatBtn.disabled = false;
-                                        alert("Σφάλμα επικοινωνίας.");
-                                    });
-                                });
-                            }
-                        }
-                    }
-                } else {
-                    btn.innerHTML = data.message || 'Δεν βρέθηκε εικόνα NDVI';
-                    btn.disabled = false;
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                btn.innerHTML = 'Σφάλμα Σύνδεσης';
-                btn.disabled = false;
-            });
-        };
-
-        // --- ΝΕΑ ΛΕΙΤΟΥΡΓΙΑ: AJAX για το "Ανάλυση ΤΩΡΑ" ---
-        function runAnalysisNow(ktimaId, btn) {
+        window.runAnalysisNow = function(ktimaId, btn, mapId) {
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ανάλυση...';
 
-            const errorDiv = document.getElementById('ndviError' + ktimaId);
-            const resultDiv = document.getElementById('ndviResult' + ktimaId);
+            const errorDiv = document.getElementById('ndviError' + mapId);
+            const resultDiv = document.getElementById('ndviResult' + mapId);
             
             // Απόκρυψη παλιών μηνυμάτων
             if (errorDiv) errorDiv.classList.add('d-none');
@@ -836,8 +814,7 @@
                 headers: { 'Content-Type': 'application/json' }
             })
             .then(res => {
-                if (!res.ok) throw new Error(`Αποτυχία δικτύου: ${res.status}`);
-                return res.json();
+                return res.json().catch(() => { throw new Error(`Αποτυχία δικτύου: ${res.status}`); });
             })
             .then(data => {
                 btn.disabled = false;
@@ -852,20 +829,16 @@
                             resultDiv.classList.remove('d-none');
                         }
                         if (errorDiv) {
-                            errorDiv.innerText = data.message;
-                            errorDiv.className = 'd-none text-success mt-2 fw-bold';
-                            errorDiv.classList.remove('d-none');
+                            errorDiv.innerHTML = '<div class="alert alert-success py-2 mb-0"><i class="fas fa-check-circle"></i> ' + data.message + '</div>';
+                            errorDiv.className = 'mt-2';
                         }
                         
-                        // Εμφάνιση του νέου χάρτη αν επιστράφηκε url
-                        const mapId = 'ndviMap' + ktimaId;
                         let map = window.initializedMaps ? window.initializedMaps[mapId] : null;
-                        let bounds = window.ndviMapBounds ? window.ndviMapBounds[ktimaId] : null;
+                        let bounds = window.ndviMapBounds ? window.ndviMapBounds[mapId] : null;
                         
-                        // Δικλείδα Ασφαλείας: Αν χαθούν τα όρια από τη μνήμη, τα ξαναφτιάχνουμε από το HTML
                         if (!bounds && map) {
-                            const modalEl = document.getElementById('modalNdvi' + ktimaId);
-                            const geoStr = modalEl ? modalEl.getAttribute('data-geojson') : null;
+                            const containerEl = document.querySelector(`[data-mapid="${mapId}"]`);
+                            const geoStr = containerEl ? containerEl.getAttribute('data-geojson') : null;
                             if (geoStr && geoStr !== "None" && geoStr !== "") {
                                 try { bounds = L.geoJSON(JSON.parse(geoStr)).getBounds(); } catch(e) {}
                             }
@@ -881,17 +854,16 @@
                         }
                     } else {
                         if (errorDiv) {
-                            errorDiv.innerText = data.message;
-                            errorDiv.className = 'd-none text-danger mt-2 fw-bold';
-                            errorDiv.classList.remove('d-none');
+                            errorDiv.innerHTML = '<div class="alert alert-danger py-2 mb-0"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</div>';
+                            errorDiv.className = 'mt-2';
                         }
+                        alert(data.message);
                     }
                 } catch(e) {
                     console.error("Σφάλμα εμφάνισης δεδομένων:", e);
                     if (errorDiv) {
-                        errorDiv.innerText = 'Η ανάλυση πέτυχε, αλλά υπήρξε πρόβλημα στην εμφάνιση του χάρτη.';
-                        errorDiv.className = 'd-none text-warning mt-2 fw-bold';
-                        errorDiv.classList.remove('d-none');
+                        errorDiv.innerHTML = '<div class="alert alert-warning py-2 mb-0">Η ανάλυση πέτυχε, αλλά υπήρξε πρόβλημα στην εμφάνιση του χάρτη.</div>';
+                        errorDiv.className = 'mt-2';
                     }
                 }
             })
@@ -899,9 +871,10 @@
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
                 if (errorDiv) {
-                    errorDiv.innerText = 'Σφάλμα δικτύου. Παρακαλώ προσπαθήστε ξανά.';
-                    errorDiv.classList.remove('d-none');
+                    errorDiv.innerHTML = '<div class="alert alert-danger py-2 mb-0">Σφάλμα δικτύου. Παρακαλώ ελέγξτε τη σύνδεσή σας.</div>';
+                    errorDiv.className = 'mt-2';
                 }
+                alert('Σφάλμα δικτύου. Παρακαλώ ελέγξτε τη σύνδεσή σας.');
                 console.error('Network Error:', err);
             });
         }

@@ -58,9 +58,9 @@
                         </span>
                     </div>
                     <div class="col-md-3 text-end">
-                        <a href="{{ url_for('core_app.trexe_doriforo', ktima_id=ktima.id) }}" class="btn btn-success btn-sm w-100 mb-1">
+                        <button type="button" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapGeo{{ ktima.id }}')" class="btn btn-success btn-sm w-100 mb-1">
                             <i class="fas fa-sync-alt"></i> Ανανέωση ΤΩΡΑ
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -108,25 +108,32 @@
 
             <!-- Χάρτης NDVI για Γεωπόνο -->
             <h6 class="mt-3 text-success border-bottom border-success pb-1"><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI</h6>
-            <div id="analytikiMapGeoponos{{ ktima.id }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" style="height: 300px; width: 100%; border-radius: 8px; background-color: #e9ecef; z-index: 1;" class="mb-2 position-relative analytiki-map-container shadow-sm d-flex align-items-center justify-content-center">
-                {% if ktima.polygon_geojson %}
-                <button class="btn btn-success btn-sm position-absolute load-map-btn shadow" style="z-index: 1000;" onclick="loadAnalytikiMap(this, 'analytikiMapGeoponos{{ ktima.id }}', {{ ktima.id }})">
-                    <i class="fas fa-satellite"></i> Φόρτωση Χάρτη
-                </button>
-                {% else %}
-                <span class="text-muted small"><i class="fas fa-exclamation-triangle"></i> Δεν έχει οριστεί πολύγωνο.</span>
-                {% endif %}
-            </div>
-            <div id="layerControlsanalytikiMapGeoponos{{ ktima.id }}" class="d-none mt-2 mb-2 text-center"></div>
-            <div id="analytikiResultGeoponos{{ ktima.id }}" class="d-none alert alert-info mt-2 text-start small"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
-            <div id="analytikiChatContainerGeoponos{{ ktima.id }}" class="d-none mt-2 p-2 bg-light border border-primary rounded small mb-4">
-                <label class="form-label text-primary fw-bold mb-1"><i class="fas fa-comments"></i> Διευκρίνιση στον AI:</label>
-                <div class="input-group input-group-sm">
-                    <input type="text" id="analytikiUserInputGeoponos{{ ktima.id }}" class="form-control" placeholder="π.χ. Το κίτρινο είναι στέγη...">
-                    <button class="btn btn-primary" id="btnAnalytikiChatGeoponos{{ ktima.id }}">Αποστολή</button>
+            <div class="ndvi-inline-container" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="ndviMapGeo{{ ktima.id }}" data-ktima-id="{{ ktima.id }}">
+                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                    <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
+                    <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
                 </div>
-                <div id="analytikiChatLoadingGeoponos{{ ktima.id }}" class="d-none text-primary mt-1"><i class="fas fa-spinner fa-spin"></i> Αναμονή...</div>
-                <div id="analytikiRefinedResultGeoponos{{ ktima.id }}" class="d-none alert alert-success mt-2 text-start mb-0 p-2"></div>
+                <div id="ndviMapGeo{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                <div id="layerControlsndviMapGeo{{ ktima.id }}" class="d-none mt-2 mb-2 text-center"></div>
+                <div class="text-center mt-3 mb-3">
+                    <div class="btn-group">
+                        <button id="btnAnalyzendviMapGeo{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
+                        <button id="btnRunAnalysisNowndviMapGeo{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapGeo{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
+                    </div>
+                    <div id="ndviLoadingndviMapGeo{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
+                    <div id="ndviErrorndviMapGeo{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
+                </div>
+                <div id="ndviResultndviMapGeo{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                <div id="ndviChatContainerndviMapGeo{{ ktima.id }}" class="d-none mt-3 p-3 bg-light border border-primary rounded mb-4">
+                    <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
+                    <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
+                    <div class="input-group">
+                        <input type="text" id="ndviUserInputndviMapGeo{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
+                        <button class="btn btn-primary" id="btnNdviChatndviMapGeo{{ ktima.id }}">Αποστολή</button>
+                    </div>
+                    <div id="ndviChatLoadingndviMapGeo{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
+                    <div id="ndviRefinedResultndviMapGeo{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
+                </div>
             </div>
             
             <!-- ΠΑΝΕΛ ΓΕΩΠΟΝΟΥ ΓΙΑ ΧΕΙΡΟΚΙΝΗΤΗ ΣΥΝΤΑΓΗ -->
@@ -348,9 +355,6 @@
                     <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalAI{{ ktima.id }}">📸 AI Εργαλεία</button>
                     {% endif %}
                     <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalOikonomika{{ ktima.id }}">💶 Οικονομικά</button>
-                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalNdvi{{ ktima.id }}">
-                        <i class="fas fa-satellite"></i> Δορυφόρος
-                    </button>
                     <button type="button" class="btn btn-outline-dark btn-sm w-100 mt-1" data-bs-toggle="modal" data-bs-target="#modalAnalytiki{{ ktima.id }}"><i class="fas fa-file-invoice"></i> Αναλυτική Καρτέλα & Συνταγή</button>
                 </div>
             </div>

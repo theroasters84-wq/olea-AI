@@ -593,6 +593,8 @@ def ndvi_analyze(ktima_id):
                     poly_data = poly_res.json()
                     ktima.agromonitoring_poly_id = poly_data.get('id')
                     vasi.session.commit()
+                else:
+                    return jsonify({'error': f'Ο δορυφόρος απέρριψε τον χάρτη. Δοκιμάστε να σχεδιάσετε ένα ελαφρώς μεγαλύτερο πολύγωνο χωρίς να τέμνονται οι γραμμές του. (Σφάλμα API: {poly_res.status_code})'}), 400
                 
             if ktima.agromonitoring_poly_id:
                 # 2. Αναζήτηση Εικόνας (Τελευταίες 365 μέρες)
@@ -714,8 +716,21 @@ def trexe_doriforo(ktima_id):
     if not api_key:
         return jsonify({'success': False, 'message': 'Λείπει το κλειδί Agromonitoring.'}), 500
         
-    if not ktima.agromonitoring_poly_id:
+    if not ktima.agromonitoring_poly_id and not ktima.polygon_geojson:
         return jsonify({'success': False, 'message': 'Δεν έχει οριστεί χάρτης (πολύγωνο) για αυτό το κτήμα.'}), 400
+        
+    # Αν έχουμε χάρτη αλλά δεν είχε δημιουργηθεί το ID στον δορυφόρο, το δημιουργούμε τώρα
+    if not ktima.agromonitoring_poly_id and ktima.polygon_geojson:
+        print(f"🔄 Αρχική δημιουργία πολυγώνου στο Agromonitoring για το κτήμα {ktima.id}...")
+        poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
+        payload = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(ktima.polygon_geojson)}
+        headers = {'Content-Type': 'application/json'}
+        repost_res = requests.post(poly_url, json=payload, headers=headers)
+        if repost_res.status_code in [200, 201]:
+            ktima.agromonitoring_poly_id = repost_res.json().get('id')
+            vasi.session.commit()
+        else:
+            return jsonify({'success': False, 'message': f'Ο δορυφόρος απέρριψε τον χάρτη. Βεβαιωθείτε ότι το πολύγωνο δεν τέμνεται και είναι επαρκούς μεγέθους. (Σφάλμα: {repost_res.status_code})'}), 400
 
     try:
         # Αναζήτηση Εικόνας NDVI (Τελευταίες 365 μέρες)
