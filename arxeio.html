@@ -19,32 +19,7 @@
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold" href="/"><i class="fas fa-tree me-2"></i> Olea AI</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Αρχική</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/arxeio"><i class="fas fa-archive"></i> Αρχείο Σοδειών</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/apothiki"><i class="fas fa-boxes"></i> Αποθήκη</a>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3 text-white d-none d-lg-inline-block">
-                    {{ current_user.email }}
-                </span>
-                <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
-            </div>
-        </div>
-    </nav>
+    {% include '_navbar.html' %}
 
     <div class="container mt-4">
         <h2 class="mb-4 text-center" style="color: #4A7C59;"><i class="fas fa-chart-line"></i> Ιστορικό & Ανάλυση Απόδοσης</h2>
@@ -54,6 +29,18 @@
         {% for ktima in ktimata %}
             {% if ktima.arxeia_sygkomidis %}
                 {% set ns.found = true %}
+                
+                <!-- Γράφημα Παραγωγής -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <i class="fas fa-chart-line"></i> Εξέλιξη Παραγωγής: <strong>{{ ktima.onoma_ktimatos }}</strong>
+                    </div>
+                    <div class="card-body" style="position: relative; height: 300px;">
+                        <canvas id="chartParagogi{{ ktima.id }}"></canvas>
+                    </div>
+                </div>
+                
+                <h5 class="text-secondary mb-3"><i class="fas fa-list"></i> Αναλυτικές Εγγραφές</h5>
                 {% for arxeio in ktima.arxeia_sygkomidis|reverse %}
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -116,6 +103,64 @@
         </div>
         {% endif %}
     </div>
+
+{% include 'modal_guide.html' %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for ktima in ktimata %}
+                {% if ktima.arxeia_sygkomidis %}
+                    const ctx{{ ktima.id }} = document.getElementById('chartParagogi{{ ktima.id }}');
+                    if (ctx{{ ktima.id }}) {
+                        const labels{{ ktima.id }} = [];
+                        const dataTonoi{{ ktima.id }} = [];
+                        const dataKila{{ ktima.id }} = [];
+
+                        // Φόρτωση δεδομένων με χρονολογική σειρά
+                        {% for arxeio in ktima.arxeia_sygkomidis|sort(attribute='imerominia') %}
+                            labels{{ ktima.id }}.push("{{ arxeio.imerominia.strftime('%Y') }}");
+                            dataTonoi{{ ktima.id }}.push({{ arxeio.tonoi }});
+                            dataKila{{ ktima.id }}.push({{ arxeio.kila_ana_dentro }});
+                        {% endfor %}
+
+                        new Chart(ctx{{ ktima.id }}, {
+                            type: 'bar',
+                            data: {
+                                labels: labels{{ ktima.id }},
+                                datasets: [
+                                    {
+                                        label: 'Συνολική Παραγωγή (Τόνοι)',
+                                        data: dataTonoi{{ ktima.id }},
+                                        backgroundColor: 'rgba(74, 124, 89, 0.7)', // Πράσινο Olea
+                                        borderColor: 'rgba(74, 124, 89, 1)',
+                                        borderWidth: 1,
+                                        yAxisID: 'y'
+                                    },
+                                    {
+                                        label: 'Απόδοση (kg / Δέντρο)',
+                                        data: dataKila{{ ktima.id }},
+                                        type: 'line',
+                                        backgroundColor: 'rgba(54, 162, 235, 0.7)', // Μπλε
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 2,
+                                        yAxisID: 'y1'
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Τόνοι' } },
+                                    y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'kg/Δέντρο' }, grid: { drawOnChartArea: false } }
+                                }
+                            }
+                        });
+                    }
+                {% endif %}
+            {% endfor %}
+        });
+    </script>
 </body>
 </html>

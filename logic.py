@@ -225,8 +225,10 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
 def xtise_plires_context(ktima):
     now = datetime.now()
     
+    poikilies_analytika = ", ".join([f"{p.poikilia_onoma} ({p.arithmos_dentron} δέντρα)" for p in ktima.poikilies_details]) if ktima.poikilies_details else ktima.poikilia
+    
     ctx = (f"--- ΠΡΟΦΙΛ ΚΤΗΜΑΤΟΣ ---\n"
-           f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλία: {ktima.poikilia}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
+           f"Κτήμα: {ktima.onoma_ktimatos}, Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
            f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
            f"Ηλικία: {ktima.ilikia_dentron}, Πυκνότητα: {ktima.puknotita_dentron}\n"
            f"Έδαφος: {ktima.typos_edafous}, Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ktima.ardefsi}\n"
@@ -235,6 +237,20 @@ def xtise_plires_context(ktima):
     kairos = getattr(ktima, 'kairos', None) or pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
     if kairos:
         ctx += f"--- ΚΑΙΡΟΣ & ΔΟΡΥΦΟΡΟΣ (LIVE) ---\nΚαιρός: Θερμοκρασία {kairos['thermokrasia']}°C, Υγρασία {kairos['ygrasia']}%, {kairos['perigrafi']}\n"
+        
+        # --- ΠΡΟΣΘΗΚΗ ΠΡΟΓΝΩΣΗΣ ΚΑΙΡΟΥ ΣΤΟ AI ---
+        prognosi = pare_prognosi_kairou(ktima.geografiko_platos, ktima.geografiko_mikos)
+        if prognosi:
+            daily_forecast = {}
+            for p in prognosi:
+                d = p['dt_txt'].split(' ')[0]
+                if d not in daily_forecast: daily_forecast[d] = []
+                daily_forecast[d].append(p['weather'][0]['description'])
+            forecast_summaries = []
+            for d, descs in list(daily_forecast.items())[:4]:
+                unique_descs = list(set(descs))
+                forecast_summaries.append(f"{d[-5:]} ({', '.join(unique_descs)})")
+            ctx += "Πρόγνωση (επόμενες 4 ημέρες): " + " | ".join(forecast_summaries) + "\n\n"
         
     agro_data = getattr(ktima, 'agro_data', None)
     if not agro_data and ktima.agromonitoring_poly_id:
@@ -250,12 +266,16 @@ def xtise_plires_context(ktima):
         ctx += f"Δορυφόρος (Agromonitoring): Υγρασία Εδάφους (10cm): {sm}, UVI: {uv}\n\n"
         
     if ktima.diagnoseis:
-        recent = [d.apotelesma for d in sorted(ktima.diagnoseis, key=lambda x: x.imerominia, reverse=True)[:3] if (now - d.imerominia).days < 45]
-        if recent: ctx += f"--- ΠΡΟΣΦΑΤΑ ΕΥΡΗΜΑΤΑ/ΑΝΑΛΥΣΕΙΣ ---\n{' | '.join(recent)}\n\n"
+        # Κρατάμε τις πρόσφατες διαγνώσεις, ΑΛΛΑ και τα συμπεράσματα του Onboarding για πάντα!
+        recent = [d.apotelesma for d in sorted(ktima.diagnoseis, key=lambda x: x.imerominia, reverse=True) if (now - d.imerominia).days < 45 or "Συμπέρασμα" in d.apotelesma][:5]
+        if recent: ctx += f"--- ΙΣΤΟΡΙΚΟ ΠΡΟΒΛΗΜΑΤΩΝ & ΕΥΡΗΜΑΤΑ ---\n{' | '.join(recent)}\n\n"
             
     if ktima.ergasies:
         completed = [f"{e.eidos_ergasias}{' - ' + e.farmaka_lipasmata if e.farmaka_lipasmata else ''} ({e.imerominia.strftime('%d/%m')})" for e in sorted(ktima.ergasies, key=lambda x: x.imerominia, reverse=True) if not e.archived and e.katastasi == 'Ολοκληρώθηκε'][:4]
         if completed: ctx += f"--- ΙΣΤΟΡΙΚΟ ΕΡΓΑΣΙΩΝ ---\nΤελευταίες Ολοκληρωμένες: {', '.join(completed)}\n\n"
+        
+        pending = [f"{e.eidos_ergasias} ({e.proelevsi})" for e in ktima.ergasies if not e.archived and e.katastasi == 'Εκκρεμεί']
+        if pending: ctx += f"Εκκρεμείς Εργασίες στο σύστημα: {', '.join(pending)}\n\n"
             
     if ktima.idioktitis and ktima.idioktitis.apothiki_items:
         stock = [f"{i.onoma_proiontos}" for i in ktima.idioktitis.apothiki_items]
@@ -273,7 +293,7 @@ def generate_smart_tasks(ktima):
     if ktima.teleftaia_enimerosi_ergasion and \
        ktima.teleftaia_enimerosi_ergasion.date() == now.date() and \
        ktima.topikes_ergasies:
-        return ktima.topikes_ergasies.split(',')
+        return ktima.topikes_ergasies.split('|')
 
     # 2. Ανάκτηση πλήρους Context
     plires_context = xtise_plires_context(ktima)
@@ -284,24 +304,28 @@ def generate_smart_tasks(ktima):
 
     # 3. Κατασκευή του Smart Prompt (Ενοποιημένο)
     prompt = (
-        f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε 3-5 κρίσιμες εργασίες για ΣΗΜΕΡΑ ({now.strftime('%d/%m')}).\n"
+        f"Είσαι έμπειρος γεωπόνος. Ανάλυσε τα δεδομένα του ελαιώνα και πρότεινε ΟΛΕΣ τις απαραίτητες εργασίες για την τρέχουσα περίοδο.\n"
         f"{plires_context}\n"
         f"--- ΟΔΗΓΙΑ ---\n"
+        f"FULL STACK ΠΡΟΣΕΓΓΙΣΗ: Πρότεινε ΟΛΕΣ τις αναγκαίες εργασίες χωρίς περιορισμό στον αριθμό. Αν το ιστορικό είναι κενό, δώσε ένα πλήρες, ολοκληρωμένο πρόγραμμα βέλτιστης υποστήριξης της καλλιέργειας (π.χ. λίπανση, κλάδεμα, ψεκασμοί). Αν ο αγρότης έχει ήδη καταχωρήσει εργασίες (π.χ. έκανε λίπανση), αφαίρεσέ τες θεωρώντας ότι οι ανάγκες του φυτού (π.χ. σε άζωτο/κάλιο) έχουν καλυφθεί επαρκώς.\n"
         f"Λάβε υπόψη τον καιρό, το ιστορικό εργασιών (μην επαναλαμβάνεις πρόσφατες ενέργειες), και τα αποθέματα. Αν το UVI είναι >= 8, ΜΗΝ προτείνεις ψεκασμό. Αν η υγρασία εδάφους είναι πολύ χαμηλή (< 20%), πρότεινε οπωσδήποτε άρδευση (αν είναι εφικτό).\n"
+        f"ΒΑΣΙΚΗ ΠΡΟΛΗΨΗ & ΔΟΣΟΛΟΓΙΕΣ: Αν από το 'Ιστορικό Προβλημάτων' προκύπτει ότι πέρυσι υπήρξε έξαρση (π.χ. Δάκος, Κυκλοκόνιο), ΠΡΟΣΑΡΜΟΣΕ το πρόγραμμα κάνοντάς το πιο επιθετικό (π.χ. νωρίτερα ψεκασμοί, ανώτατη επιτρεπτή δόση). Την Άνοιξη (Μάρτιο-Απρίλιο) και το Φθινόπωρο, ο προληπτικός ψεκασμός με Χαλκό/Μυκητοκτόνο για ασθένειες (π.χ. Κυκλοκόνιο) είναι ΥΠΟΧΡΕΩΤΙΚΟΣ. Αν δεν έχει γίνει πρόσφατα, βάλτον στις κορυφαίες προτεραιότητες, εκτός αν το δέντρο ανθίζει.\n"
         f"Αν προτείνεις 'Άρδευση' (επειδή είναι αρδευόμενο και η υγρασία είναι χαμηλή), γράψε δίπλα στην παρένθεση ακριβώς: '({litra_ana_dentro * 4} Λίτρα/δέντρο)' ώστε ο αγρότης να ξέρει τη δοσολογία.\n"
-        f"Δώσε ΜΟΝΟ μια λίστα εργασιών χωρισμένη με κόμμα (,). Χωρίς αρίθμηση ή εισαγωγή.\n"
-        f"Παράδειγμα: Ψεκασμός με Χαλκό (υπάρχει απόθεμα),Λίπανση Βορίου,Καθαρισμός Χόρτων"
+        f"ΣΗΜΑΝΤΙΚΟ: Δίπλα σε ΚΑΘΕ εργασία, γράψε ΥΠΟΧΡΕΩΤΙΚΑ το χρονικό περιθώριο ή τη φαινολογική προϋπόθεση (π.χ. 'έως 15/04' ή 'πριν ανοίξει ο ανθός').\n"
+        f"Αν ο χρόνος ή το κατάλληλο στάδιο για μια εργασία έχει ΠΕΡΑΣΕΙ (π.χ. προανθικά ιχνοστοιχεία ενώ το δέντρο ήδη ανθίζει), ΑΦΑΙΡΕΣΕ ΤΗΝ εντελώς από τις προτάσεις σου.\n"
+        f"Δώσε ΜΟΝΟ μια λίστα εργασιών χωρισμένη ΑΥΣΤΗΡΑ με το σύμβολο | (κάθετη γραμμή). Μην χρησιμοποιήσεις κόμμα για διαχωρισμό των εργασιών. Χωρίς αρίθμηση ή εισαγωγή.\n"
+        f"Παράδειγμα: Ψεκασμός με Χαλκό (έως 20/04) | Λίπανση Βορίου (πριν την άνθιση) | Καθαρισμός Χόρτων (άμεσα)"
     )
 
     try:
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-        tasks_str = response.text.strip().replace('\n', '').replace('.', '')
+        tasks_str = response.text.strip().replace('\n', '')
         
         # Αποθήκευση στη βάση (Caching)
         ktima.topikes_ergasies = tasks_str
         ktima.teleftaia_enimerosi_ergasion = now
         
-        return tasks_str.split(',')
+        return [t.strip() for t in tasks_str.split('|') if t.strip()]
     except Exception as e:
         print(f"Smart Task AI Error: {e}")
         return get_epoxikes_ergasies(now.month) # Fallback σε στατικές εργασίες
@@ -314,16 +338,17 @@ def generate_local_tasks_via_ai(ktima):
        ktima.teleftaia_enimerosi_ergasion.month == now.month and \
        ktima.teleftaia_enimerosi_ergasion.year == now.year and \
        ktima.topikes_ergasies:
-        return ktima.topikes_ergasies.split(',')
+        return ktima.topikes_ergasies.split('|')
 
     # Call AI
     try:
         plires_context = xtise_plires_context(ktima)
         prompt = (
             f"Είσαι ειδικός γεωπόνος. Ο τρέχων μήνας είναι ο {now.month}. Εδώ είναι η πλήρης εικόνα του ελαιώνα:\n{plires_context}\n"
-            f"Δώσε μου ΜΟΝΟ μια λίστα με τις 3-5 απολύτως απαραίτητες εργασίες για αυτή την περιοχή αυτόν τον μήνα, "
-            f"βάσει των συνθηκών, των εργασιών που ΗΔΗ έγιναν και της αποθήκης. Χωρισμένες με κόμμα (,). Μην γράψεις καμία άλλη λέξη ή εισαγωγή. "
-            f"Παράδειγμα: Διαχείριση Ζιζανίων,Ψεκασμός με Χαλκό,Βασική Λίπανση"
+            f"FULL STACK ΠΡΟΣΕΓΓΙΣΗ: Δώσε μου ΜΟΝΟ μια λίστα με ΟΛΕΣ τις απαραίτητες εργασίες για αυτή την περιοχή αυτόν τον μήνα, χωρίς περιορισμό στον αριθμό. "
+            f"Αν δεν υπάρχει ιστορικό, δώσε ένα πλήρες πρόγραμμα. Αν έχουν γίνει εργασίες (π.χ. λίπανση), αφαίρεσέ τες θεωρώντας ότι το δέντρο έχει καλυφθεί. "
+            f"Χωρισμένες ΑΥΣΤΗΡΑ με το σύμβολο | (κάθετη γραμμή). Μην γράψεις καμία άλλη λέξη ή εισαγωγή. "
+            f"Παράδειγμα: Διαχείριση Ζιζανίων | Ψεκασμός με Χαλκό | Βασική Λίπανση"
         )
         
         # Retry Logic
@@ -339,16 +364,76 @@ def generate_local_tasks_via_ai(ktima):
             # Fallback αν αποτύχει το AI
             return get_epoxikes_ergasies(now.month)
 
-        tasks_str = response.text.strip().replace('\n', '').replace('.', '')
+        tasks_str = response.text.strip().replace('\n', '')
         
         ktima.topikes_ergasies = tasks_str
         ktima.teleftaia_enimerosi_ergasion = now
         
-        return tasks_str.split(',')
+        return [t.strip() for t in tasks_str.split('|') if t.strip()]
     except Exception as e:
         print(f"AI Task Error: {e}")
         # Fallback to static logic if AI fails
         return get_epoxikes_ergasies(now.month)
+
+# --- ΝΕΑ ΛΕΙΤΟΥΡΓΙΑ: Συγχρονισμός AI (Εκτελείται στη δημιουργία, σε νέες εργασίες και κάθε πρωί) ---
+def syghronismos_ai_ktimatos(ktima):
+    """
+    Διαβάζει όλο το ιστορικό και το context, και ανανεώνει άμεσα 
+    τόσο τη 'Συμβουλή' όσο και τις 'Προτεινόμενες Εργασίες' του AI.
+    """
+    now = datetime.now()
+    plires_context = xtise_plires_context(ktima)
+    
+    prompt = (
+        f"Είσαι ο AI Γεωπόνος του Olea. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{plires_context}\n\n"
+        f"ΟΔΗΓΙΕΣ:\n"
+        f"1. Γράψε μια σύντομη ημερήσια συμβουλή-αξιολόγηση (max 2-3 προτάσεις). Ξεκίνα με τη λέξη 'ΣΥΜΒΟΥΛΗ:'. Αν προτείνεις κάποια εργασία με αυστηρή προθεσμία, ΠΡΟΕΙΔΟΠΟΙΗΣΕ τον αγρότη ξεκάθαρα εδώ (π.χ. 'Μην αμελήσετε τον ψεκασμό βορίου, ο οποίος πρέπει να γίνει αυστηρά πριν ανοίξει ο ανθός!').\n"
+        f"2. FULL STACK ΠΡΟΣΕΓΓΙΣΗ: Πρότεινε ΟΛΕΣ τις απαραίτητες επόμενες εργασίες χωρίς περιορισμό. Αν δεν υπάρχει ιστορικό, δώσε ένα ολοκληρωμένο πρόγραμμα βέλτιστης υποστήριξης. Αν υπάρχουν ολοκληρωμένες εργασίες στο ιστορικό (π.χ. βασική λίπανση), ΜΗΝ τις προτείνεις ξανά, θεωρώντας ότι το έδαφος έχει πλέον αποθέματα.\n"
+        f"ΒΑΣΙΚΗ ΠΡΟΛΗΨΗ & ΔΟΣΟΛΟΓΙΕΣ: Αν από το ιστορικό προκύπτει ότι πέρυσι υπήρξε σοβαρό πρόβλημα (π.χ. Δάκος, ασθένειες), ΠΡΟΣΑΡΜΟΣΕ το πρόγραμμα προληπτικά (πιο συχνοί ψεκασμοί, ανώτατη δόση). Την Άνοιξη (Μάρτιο-Απρίλιο) ο ψεκασμός με Χαλκό/Μυκητοκτόνο είναι κρίσιμος. Αν δεν υπάρχει στο ιστορικό, πρόσθεσέ τον οπωσδήποτε στις εργασίες.\n"
+        f"ΓΙΑ ΚΑΘΕ ΕΡΓΑΣΙΑ πρέπει να γράφεις σε παρένθεση ΠΟΤΕ πρέπει να γίνει (π.χ. 'έως 10/05' ή 'οπωσδήποτε πριν την άνθιση'). "
+        f"Αν μια εργασία έχει χάσει το ιδανικό της παράθυρο βάσει καιρού ή σταδίου (π.χ. ιχνοστοιχεία που έπρεπε να μπουν πριν ανθίσει, αλλά τώρα ανθίζει), ΑΦΑΙΡΕΣΕ ΤΗΝ ΟΡΙΣΤΙΚΑ. "
+        f"Γράψε τες σε μια λίστα χωρισμένη ΑΥΣΤΗΡΑ ΜΟΝΟ με το σύμβολο | (κάθετη γραμμή), ξεκινώντας με τη λέξη 'ΕΡΓΑΣΙΕΣ:'.\n"
+        f"3. ΕΡΩΤΗΣΗ ΠΡΟΣ ΑΓΡΟΤΗ: ΕΛΕΓΞΕ ΠΡΩΤΑ το 'ΙΣΤΟΡΙΚΟ ΠΡΟΒΛΗΜΑΤΩΝ & ΕΥΡΗΜΑΤΑ'. Αν υπάρχουν ήδη 'Συμπεράσματα AI' από προηγούμενες απαντήσεις (π.χ. για περσινό δάκο, ασθένειες, τρέχον στάδιο), ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να τον ξαναρωτήσεις τα ίδια! Αν ΔΕΝ του έχεις ξαναμιλήσει (άδειο ιστορικό συζητήσεων) και δεν έχει καταχωρημένες εργασίες, κάνε το αρχικό onboarding (Ξεκίνα με: 'ΕΡΩΤΗΣΗ: Καλώς ήρθατε!...'). Διαφορετικά, αν έχει ήδη απαντήσει σε βασικά ερωτήματα, ΜΗΝ κάνεις άλλη ερώτηση (άφησε το κενό), ΠΑΡΑ ΜΟΝΟ αν προέκυψε μια ΝΕΑ, πολύ συγκεκριμένη απορία (π.χ. μέσο ψεκασμού). ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να ρωτάς για τον καιρό, προβλέψεις βροχής ή πράγματα που μόλις σου απάντησε.\n"
+        f"Παράδειγμα απάντησης:\n"
+        f"ΣΥΜΒΟΥΛΗ: Οι συνθήκες είναι ιδανικές. Η υγρασία είναι καλή αλλά προσοχή στον δάκο.\n"
+        f"ΕΡΓΑΣΙΕΣ: Ψεκασμός για Δάκο (έως 15/06) | Καθαρισμός Χόρτων (άμεσα) | Διαφυλλική Λίπανση (πριν ανοίξει ο ανθός)\n"
+        f"ΕΡΩΤΗΣΗ: Για την καλύτερη προσέγγιση, απάντησέ μου: Το κόκκινο χρώμα στον χάρτη στο βόρειο τμήμα, αφορά γυμνό έδαφος ή είναι ξερά δέντρα;"
+    )
+    
+    try:
+        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        if not response or not response.text:
+            return
+            
+        text = response.text.strip()
+        symvouli = ""
+        ergasies = ""
+        erotisi = ""
+        
+        import re
+        symvouli_match = re.search(r'ΣΥΜΒΟΥΛΗ:(.*?)(?=ΕΡΓΑΣΙΕΣ:|ΕΡΩΤΗΣΗ:|$)', text, re.DOTALL)
+        ergasies_match = re.search(r'ΕΡΓΑΣΙΕΣ:(.*?)(?=ΕΡΩΤΗΣΗ:|$)', text, re.DOTALL)
+        erotisi_match = re.search(r'ΕΡΩΤΗΣΗ:(.*?)$', text, re.DOTALL)
+        
+        if symvouli_match: symvouli = symvouli_match.group(1).strip().replace('\n', ' ')
+        if ergasies_match: ergasies = ergasies_match.group(1).strip().replace('\n', '')
+        if erotisi_match: erotisi = erotisi_match.group(1).strip()
+                
+        if symvouli:
+            ktima.ai_sumvouli_cache = symvouli
+            ktima.ai_sumvouli_date = now
+            
+        if ergasies:
+            ktima.topikes_ergasies = ergasies
+            ktima.teleftaia_enimerosi_ergasion = now
+            
+        if erotisi:
+            ktima.ekkremis_erotisi_ai = erotisi
+            
+        vasi.session.commit()
+    except Exception as e:
+        print(f"Σφάλμα AI Συγχρονισμού Κτήματος ({ktima.id}): {e}")
+        vasi.session.rollback()
 
 # Αυτοματοποιημένος Έλεγχος (Background Job)
 def aytomatizomenos_elegxos():
@@ -406,3 +491,10 @@ def aytomatizomenos_elegxos():
                         
                         if steile_email(xrhsths.email, thema, keimeno):
                             print(f"✅ Στάλθηκε email πρόγνωσης στον {xrhsths.email} για το {ktima.onoma_ktimatos}")
+
+                # --- ΗΜΕΡΗΣΙΟΣ ΣΥΓΧΡΟΝΙΣΜΟΣ AI ---
+                try:
+                    syghronismos_ai_ktimatos(ktima)
+                    print(f"✅ AI Ενημερώθηκε για το: {ktima.onoma_ktimatos}")
+                except Exception as e:
+                    print(f"⚠️ Σφάλμα ημερήσιου AI συγχρονισμού: {e}")

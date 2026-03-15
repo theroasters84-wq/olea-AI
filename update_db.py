@@ -134,7 +134,9 @@ def update_db():
                 ("afm", "VARCHAR(9)"),
                 ("ar_tautotitas", "VARCHAR(20)"),
                 ("onoma", "VARCHAR(100)"),
-                ("is_verified", "BOOLEAN DEFAULT TRUE")
+                ("is_verified", "BOOLEAN DEFAULT TRUE"),
+                ("ai_auto_ergasies", "BOOLEAN DEFAULT TRUE"),
+                ("geoponos_auto_ergasies", "BOOLEAN DEFAULT TRUE")
             ]
             
             for col_name, col_type in xrhstes_cols:

@@ -198,8 +198,16 @@ def ananeosi_ergasion(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     if not ktima or ktima.idioktitis != current_user: return "403", 403
     ktima.teleftaia_enimerosi_ergasion = None
+    ktima.ekkremis_erotisi_ai = None # Καθαρισμός για να βγάλει νέα ερώτηση το AI
     vasi.session.commit()
-    generate_smart_tasks(ktima)
+    
+    try:
+        from logic import syghronismos_ai_ktimatos
+        syghronismos_ai_ktimatos(ktima)
+        generate_smart_tasks(ktima)
+    except Exception as e:
+        print(f"Error syncing AI: {e}")
+        
     flash('Επικαιροποιήθηκε!', 'success')
     return redirect(url_for('core_app.arxikh'))
 
@@ -893,6 +901,8 @@ def enimerosi_profil():
     current_user.onoma = request.form.get('onoma')
     current_user.afm = request.form.get('afm')
     current_user.ar_tautotitas = request.form.get('ar_tautotitas')
+    current_user.ai_auto_ergasies = True if request.form.get('ai_auto_ergasies') == 'on' else False
+    current_user.geoponos_auto_ergasies = True if request.form.get('geoponos_auto_ergasies') == 'on' else False
     
     # Λογική Αλλαγής Κωδικού
     neos_kwdikos = request.form.get('neos_kwdikos')

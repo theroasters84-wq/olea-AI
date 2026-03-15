@@ -23,6 +23,8 @@ class Xrhsths(vasi.Model, UserMixin):
     is_verified = vasi.Column(vasi.Boolean, default=False)
     ktimata = vasi.relationship('Ktima', backref='idioktitis', lazy=True)
     apothiki_items = vasi.relationship('Apothiki', backref='idioktitis_apothikis', lazy=True, cascade="all, delete-orphan")
+    ai_auto_ergasies = vasi.Column(vasi.Boolean, default=True)
+    geoponos_auto_ergasies = vasi.Column(vasi.Boolean, default=True)
 
     def __repr__(self):
         return f"Xrhsths('{self.email}', Ρόλος: '{self.rolos}')"

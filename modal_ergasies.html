@@ -31,50 +31,6 @@
                             </form>
                         </div>
                     </li>
-
-                    <!-- ΝΕΟ MODAL ΟΛΟΚΛΗΡΩΣΗΣ ΕΡΓΑΣΙΑΣ (Μπαίνει αμέσως κάτω από το <li>) -->
-                    <div class="modal fade" id="completeTaskModal{{ ktima.id }}_{{ loop.index }}" tabindex="-1" aria-labelledby="completeTaskModalLabel{{ ktima.id }}_{{ loop.index }}" aria-hidden="true">
-                      <div class="modal-dialog">
-                        <div class="modal-content">
-                          <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title" id="completeTaskModalLabel{{ ktima.id }}_{{ loop.index }}"><i class="fas fa-check-circle"></i> Ολοκλήρωση: {{ task }}</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                          </div>
-                          <div class="modal-body">
-                            <form action="{{ url_for('ktima_actions.oloklirosi_ergasias', ktima_id=ktima.id) }}" method="POST">
-                                <input type="hidden" name="eidos_ergasias" id="taskNameInput{{ ktima.id }}_{{ loop.index }}" value="{{ task }}">
-                                
-                                <div class="mb-3">
-                                    <label class="form-label text-primary"><i class="fas fa-warehouse"></i> Χρησιμοποιήσατε υλικό από την αποθήκη;</label>
-                                    <select name="yliko_id" class="form-select form-select-sm">
-                                        <option value="">-- Όχι / Άλλο υλικό --</option>
-                                        {% if current_user.apothiki_items %}
-                                            {% for item in current_user.apothiki_items %}
-                                                <option value="{{ item.id }}">{{ item.onoma_proiontos }} (Διαθέσιμα: {{ item.posotita }} {{ item.monada_metrisis }})</option>
-                                            {% endfor %}
-                                        {% endif %}
-                                    </select>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Ποσότητα που χρησιμοποιήσατε:</label>
-                                    <input type="number" step="0.01" name="posotita_xrisis" class="form-control form-control-sm" placeholder="π.χ. 2.5">
-                                    <small class="text-muted">Η ποσότητα θα αφαιρεθεί αυτόματα από το απόθεμα.</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label text-danger"><i class="fas fa-euro-sign"></i> Επιπλέον Κόστος Εργασίας (€) (Προαιρετικό)</label>
-                                    <input type="number" step="0.01" name="kostos" class="form-control form-control-sm" placeholder="0.00">
-                                </div>
-                                
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Αποθήκευση & Ολοκλήρωση</button>
-                                </div>
-                            </form>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                     {% else %}
                     <li class="list-group-item text-center text-success">
                         <i class="fas fa-check-circle"></i> 🎉 Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!
@@ -147,3 +103,47 @@
         </div>
     </div>
 </div>
+
+<!-- ΝΕΟ MODAL ΟΛΟΚΛΗΡΩΣΗΣ ΕΡΓΑΣΙΑΣ (Εκτός του κύριου Modal για να μην μπλοκάρει η οθόνη) -->
+{% for task in ktima.pending_tasks %}
+<div class="modal fade" id="completeTaskModal{{ ktima.id }}_{{ loop.index }}" tabindex="-1" aria-labelledby="completeTaskModalLabel{{ ktima.id }}_{{ loop.index }}" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="completeTaskModalLabel{{ ktima.id }}_{{ loop.index }}"><i class="fas fa-check-circle"></i> Ολοκλήρωση</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6 class="text-center mb-3">{{ task }}</h6>
+        <form action="{{ url_for('ktima_actions.oloklirosi_ergasias', ktima_id=ktima.id) }}" method="POST">
+            <input type="hidden" name="eidos_ergasias" id="taskNameInput{{ ktima.id }}_{{ loop.index }}" value="{{ task }}">
+            
+            <div class="mb-3">
+                <label class="form-label text-primary"><i class="fas fa-warehouse"></i> Χρησιμοποιήσατε υλικό από την αποθήκη;</label>
+                <select name="yliko_id" class="form-select form-select-sm">
+                    <option value="">-- Όχι / Άλλο υλικό --</option>
+                    {% if current_user.apothiki_items %}
+                        {% for item in current_user.apothiki_items %}
+                            <option value="{{ item.id }}">{{ item.onoma_proiontos }} (Διαθέσιμα: {{ item.posotita }} {{ item.monada_metrisis }})</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Ποσότητα που χρησιμοποιήσατε:</label>
+                <input type="number" step="0.01" name="posotita_xrisis" class="form-control form-control-sm" placeholder="π.χ. 2.5">
+                <small class="text-muted">Η ποσότητα θα αφαιρεθεί αυτόματα από το απόθεμα.</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-danger"><i class="fas fa-euro-sign"></i> Επιπλέον Κόστος Εργασίας (€) (Προαιρετικό)</label>
+                <input type="number" step="0.01" name="kostos" class="form-control form-control-sm" placeholder="0.00">
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Αποθήκευση & Ολοκλήρωση</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}

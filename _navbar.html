@@ -1,35 +1,124 @@
     <!-- Global Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm mb-4" style="background-color: #4A7C59;">
+    <nav class="navbar navbar-dark shadow-sm mb-4" style="background-color: #4A7C59;">
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold" href="/"><i class="fas fa-tree me-2"></i> Olea AI</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/">Αρχική</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/arxeio"><i class="fas fa-archive"></i> Αρχείο Σοδειών</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/apothiki"><i class="fas fa-boxes"></i> Αποθήκη</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="fas fa-share-nodes"></i> Κοινοποίηση Εφαρμογής</a>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3 text-white d-none d-lg-inline-block">
-                    {{ current_user.email }}
-                </span>
-                {% if current_user.rolos == 'geoponos' %}
-                <a href="/dashboard_geoponou" class="btn btn-outline-warning btn-sm me-2 text-dark fw-bold">
-                    <i class="fas fa-microscope"></i> Portal Γεωπόνου
-                </a>
-                {% endif %}
-                <button class="btn btn-outline-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalProfile"><i class="fas fa-user-cog"></i> Προφίλ</button>
-                <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
+            
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel" style="background-color: #4A7C59;">
+                <div class="offcanvas-header border-bottom border-light">
+                    <h5 class="offcanvas-title text-white" id="offcanvasNavbarLabel"><i class="fas fa-tree me-2"></i> Μενού Olea AI</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                        <li class="nav-item">
+                            <a class="nav-link text-white fs-5 mb-2" href="/"><i class="fas fa-home me-2"></i> Αρχική</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white fs-5 mb-2" href="/arxeio"><i class="fas fa-archive me-2"></i> Αρχείο Σοδειών</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white fs-5 mb-2" href="/apothiki"><i class="fas fa-boxes me-2"></i> Αποθήκη</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white fs-5 mb-2" href="#" data-bs-toggle="modal" data-bs-target="#shareModal"><i class="fas fa-share-nodes me-2"></i> Κοινοποίηση Εφαρμογής</a>
+                        </li>
+                        <li class="nav-item border-bottom border-light pb-3 mb-3">
+                            <a class="nav-link text-warning fs-5" href="#" data-bs-toggle="modal" data-bs-target="#modalGuide"><i class="fas fa-book me-2"></i> Οδηγός Χρήσης</a>
+                        </li>
+                    </ul>
+                    
+                    <div class="text-white mb-3">
+                        <small class="text-white-50 d-block mb-1">Συνδεδεμένος ως:</small>
+                        <i class="fas fa-user-circle me-1"></i> <strong>{{ current_user.email }}</strong>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {% if current_user.rolos == 'geoponos' %}
+                        <a href="/dashboard_geoponou" class="btn btn-warning text-dark fw-bold mb-2">
+                            <i class="fas fa-microscope"></i> Portal Γεωπόνου
+                        </a>
+                        {% endif %}
+                        <!-- Κουμπί Ρυθμίσεων -->
+                        <button class="btn btn-outline-light text-start mb-2" data-bs-toggle="modal" data-bs-target="#modalProfile">
+                            <i class="fas fa-user-cog me-2"></i> Ρυθμίσεις Λογαριασμού & AI
+                        </button>
+                        <a href="/eksodos" class="btn btn-danger text-start">
+                            <i class="fas fa-sign-out-alt me-2"></i> Έξοδος
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
+
+    <!-- Modal Profile Update & AI Settings (Τώρα είναι διαθέσιμο σε όλες τις σελίδες) -->
+    <div class="modal fade" id="modalProfile" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-edit"></i> Ρυθμίσεις Λογαριασμού & AI</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('core_app.enimerosi_profil') }}" method="POST">
+                        <!-- ΝΕΟ: Διακόπτης AI Ρυθμίσεων -->
+                        <h6 class="border-bottom pb-1 text-success"><i class="fas fa-robot"></i> Ρυθμίσεις AI</h6>
+                        <div class="border p-3 rounded bg-light shadow-sm mb-3">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="ai_auto_ergasies" name="ai_auto_ergasies" style="transform: scale(1.2); margin-top: 0.2em;" {% if current_user.ai_auto_ergasies %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-dark ms-2" for="ai_auto_ergasies">
+                                    Ο AI Γεωπόνος να προσαρμόζει αυτόματα τις Εργασίες
+                                </label>
+                            </div>
+                            <small class="d-block text-muted mt-2" style="font-size: 0.85em;">Αν είναι ενεργό, οι προτεινόμενες εργασίες από το AI θα προστίθενται αυτόματα στις εκκρεμείς εργασίες του κτήματος. Αν είναι ανενεργό, το AI θα δίνει μόνο τη συνταγή.</small>
+                        </div>
+
+                        <div class="border p-3 rounded bg-light shadow-sm mb-4">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="geoponos_auto_ergasies" name="geoponos_auto_ergasies" style="transform: scale(1.2); margin-top: 0.2em;" {% if current_user.geoponos_auto_ergasies %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-dark ms-2" for="geoponos_auto_ergasies">
+                                    <i class="fas fa-user-md text-primary"></i> Ο Γεωπόνος να προσαρμόζει αυτόματα τις Εργασίες
+                                </label>
+                            </div>
+                            <small class="d-block text-muted mt-2" style="font-size: 0.85em;">Αν είναι ενεργό, οι εργασίες από τις συνταγές του συνεργαζόμενου Γεωπόνου θα προστίθενται αυτόματα στις εκκρεμείς εργασίες σας.</small>
+                        </div>
+
+                        <h6 class="text-primary border-bottom pb-2">Προσωπικά Στοιχεία</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Ονοματεπώνυμο</label>
+                            <input type="text" name="onoma" class="form-control" value="{{ current_user.onoma or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ΑΦΜ</label>
+                            <input type="text" name="afm" class="form-control" value="{{ current_user.afm or '' }}" maxlength="9">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Αρ. Ταυτότητας</label>
+                            <input type="text" name="ar_tautotitas" class="form-control" value="{{ current_user.ar_tautotitas or '' }}">
+                        </div>
+                        
+                        <h6 class="text-danger border-bottom pb-2 mt-4">Αλλαγή Κωδικού (Προαιρετικό)</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Τρέχων Κωδικός</label>
+                            <input type="password" name="trexwn_kwdikos" class="form-control" placeholder="Συμπληρώστε ΜΟΝΟ αν αλλάζετε κωδικό">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Νέος Κωδικός</label>
+                            <input type="password" name="neos_kwdikos" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Επιβεβαίωση Νέου Κωδικού</label>
+                            <input type="password" name="epivevaiosi_kwdikou" class="form-control">
+                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">Αποθήκευση Αλλαγών</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>

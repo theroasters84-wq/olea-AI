@@ -4,7 +4,7 @@ import time
 import io
 import requests
 import PIL.Image
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from core import vasi, ai_client, api_key_ai
@@ -252,15 +252,120 @@ def apantisi_sto_ai(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     user_reply = request.form.get('user_reply')
     client = genai.Client(api_key=api_key_ai)
-    prompt = f"Question: {ktima.ekkremis_erotisi_ai}. Answer: {user_reply}..."
+    prompt = (
+        f"Ο γεωπόνος (AI) ρώτησε τον αγρότη: '{ktima.ekkremis_erotisi_ai}'.\nΟ αγρότης απάντησε: '{user_reply}'.\n"
+        f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου.\n"
+        f"ΟΔΗΓΙΑ 2: Αν ο αγρότης αναφέρει ότι ΕΧΕΙ ΗΔΗ ΚΑΝΕΙ εργασίες (π.χ. 'έριξα χαλκό', 'κλάδεψα'), γράψε στο τέλος τη φράση 'ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:' και δίπλα τις εργασίες χωρισμένες με κόμμα.\n"
+        f"ΟΔΗΓΙΑ 3: Αν ο αγρότης περιγράφει το φαινολογικό στάδιο (π.χ. 'μούρο', 'μπουμπούκια', 'ανθοταξίες'), γράψε στο τέλος τη φράση 'ΝΕΟ ΣΤΑΔΙΟ:' και δίπλα μια σύντομη ονομασία του σταδίου."
+    )
     response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
     
-    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"Answered: {user_reply} -> {response.text.strip()}", imerominia=datetime.now())
+    ai_text = response.text.strip()
+    symperasma = ai_text
+    completed_tasks = []
+    neo_stadio = None
+    
+    if "ΝΕΟ ΣΤΑΔΙΟ:" in symperasma:
+        parts = symperasma.split("ΝΕΟ ΣΤΑΔΙΟ:")
+        symperasma = parts[0].strip()
+        neo_stadio_raw = parts[1]
+        if "ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:" in neo_stadio_raw: neo_stadio = neo_stadio_raw.split("ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:")[0].strip()
+        else: neo_stadio = neo_stadio_raw.strip()
+
+    if "ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:" in ai_text:
+        parts = ai_text.split("ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:")
+        tasks_raw = parts[1]
+        if "ΝΕΟ ΣΤΑΔΙΟ:" in tasks_raw: tasks_str = tasks_raw.split("ΝΕΟ ΣΤΑΔΙΟ:")[0].strip()
+        else: tasks_str = tasks_raw.strip()
+        completed_tasks = [t.strip() for t in tasks_str.split(',') if t.strip()]
+        if "ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:" in symperasma: symperasma = symperasma.split("ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:")[0].strip()
+        
+    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"Συμπέρασμα AI (Από Chat): {symperasma}", imerominia=datetime.now())
     vasi.session.add(nea_diagnosi)
+    
+    for task_name in completed_tasks:
+        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now() - timedelta(days=15), proelevsi='AI Ιστορικό'))
+        
+    if neo_stadio: ktima.fainologiko_stadio = neo_stadio
+        
     ktima.ekkremis_erotisi_ai = None
     vasi.session.commit()
-    flash('Απάντηση ελήφθη.', 'success')
+    
+    # Ανανέωση των δεδομένων AI μετά την απάντηση (ώστε να λάβει υπόψη το νέο συμπέρασμα άμεσα)
+    try:
+        from logic import syghronismos_ai_ktimatos
+        syghronismos_ai_ktimatos(ktima)
+    except Exception as e:
+        print(f"Σφάλμα κατά τον συγχρονισμό μετά την απάντηση: {e}")
+        
+    flash('Η απάντησή σας καταγράφηκε και ο AI Γεωπόνος ενημερώθηκε!', 'success')
     return redirect(url_for('core_app.arxikh'))
+
+@ai_bp.route('/apantisi_sto_ai_ajax/<int:ktima_id>', methods=['POST'])
+@login_required
+def apantisi_sto_ai_ajax(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+        
+    req_data = request.get_json()
+    user_reply = req_data.get('user_reply', '')
+    current_question = req_data.get('current_question', ktima.ekkremis_erotisi_ai)
+    
+    client = genai.Client(api_key=api_key_ai)
+    prompt = (
+        f"Ο γεωπόνος (AI) ρώτησε τον αγρότη: '{current_question}'.\nΟ αγρότης απάντησε: '{user_reply}'.\n"
+        f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου.\n"
+        f"ΟΔΗΓΙΑ 2: Αν ο αγρότης αναφέρει ότι ΕΧΕΙ ΗΔΗ ΚΑΝΕΙ εργασίες (π.χ. 'έριξα χαλκό', 'κλάδεψα'), γράψε στο τέλος τη φράση 'ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:' και δίπλα τις εργασίες χωρισμένες με κόμμα.\n"
+        f"ΟΔΗΓΙΑ 3: Αν ο αγρότης περιγράφει το φαινολογικό στάδιο (π.χ. 'μούρο', 'μπουμπούκια', 'ανθοταξίες'), γράψε στο τέλος τη φράση 'ΝΕΟ ΣΤΑΔΙΟ:' και δίπλα μια σύντομη ονομασία του σταδίου."
+    )
+    
+    response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+    ai_text = response.text.strip()
+    
+    symperasma = ai_text
+    completed_tasks = []
+    neo_stadio = None
+    
+    if "ΝΕΟ ΣΤΑΔΙΟ:" in symperasma:
+        parts = symperasma.split("ΝΕΟ ΣΤΑΔΙΟ:")
+        symperasma = parts[0].strip()
+        neo_stadio_raw = parts[1]
+        if "ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:" in neo_stadio_raw: neo_stadio = neo_stadio_raw.split("ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:")[0].strip()
+        else: neo_stadio = neo_stadio_raw.strip()
+
+    if "ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:" in ai_text:
+        parts = ai_text.split("ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:")
+        tasks_raw = parts[1]
+        if "ΝΕΟ ΣΤΑΔΙΟ:" in tasks_raw: tasks_str = tasks_raw.split("ΝΕΟ ΣΤΑΔΙΟ:")[0].strip()
+        else: tasks_str = tasks_raw.strip()
+        completed_tasks = [t.strip() for t in tasks_str.split(',') if t.strip()]
+        if "ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:" in symperasma: symperasma = symperasma.split("ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:")[0].strip()
+        
+    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"Συμπέρασμα AI (Από Chat): {symperasma}", imerominia=datetime.now())
+    vasi.session.add(nea_diagnosi)
+    
+    for task_name in completed_tasks:
+        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now() - timedelta(days=15), proelevsi='AI Ιστορικό'))
+        
+    if neo_stadio: ktima.fainologiko_stadio = neo_stadio
+        
+    # Αφαιρούμε την τρέχουσα ερώτηση για να δούμε αν ο συγχρονισμός θα βγάλει καινούργια
+    ktima.ekkremis_erotisi_ai = None
+    vasi.session.commit()
+    
+    try:
+        from logic import syghronismos_ai_ktimatos
+        syghronismos_ai_ktimatos(ktima) # Ο "εγκέφαλος" διαβάζει τα νέα δεδομένα επιτόπου
+        vasi.session.refresh(ktima)
+        
+        return jsonify({
+            'success': True, 
+            'next_question': ktima.ekkremis_erotisi_ai
+        })
+    except Exception as e:
+        vasi.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @ai_bp.route('/paragogi_syntaghs/<int:ktima_id>', methods=['POST'])
 @login_required
@@ -281,10 +386,20 @@ def paragogi_syntaghs(ktima_id):
         prompt = (
             f"Είσαι Επαγγελματίας Γεωπόνος. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
             f"ΟΔΗΓΙΕΣ ΓΙΑ ΤΗ ΣΥΝΤΑΓΗ:\n"
-            f"1. ΜΗΝ ΠΡΟΤΕΙΝΕΙΣ εργασίες που έγιναν πρόσφατα (δες το Ιστορικό).\n"
+            f"1. FULL STACK ΠΡΟΣΕΓΓΙΣΗ: Πρότεινε ΟΛΕΣ τις αναγκαίες εργασίες χωρίς περιορισμό. Αν το ιστορικό του κτήματος είναι κενό, φτιάξε ένα πλήρες, ολοκληρωμένο πρόγραμμα για τη βέλτιστη υποστήριξη της καλλιέργειας. Αν ο αγρότης έχει καταχωρήσει εργασίες (π.χ. έγινε βασική λίπανση), αφαίρεσέ τες θεωρώντας ότι το φυτό έχει καλυφθεί στις αντίστοιχες ανάγκες του.\n"
+            f"1α. ΒΑΣΙΚΗ ΠΡΟΛΗΨΗ: Την Άνοιξη (Μάρτιο/Απρίλιο) και το Φθινόπωρο, ο προληπτικός ψεκασμός με Χαλκό ή Μυκητοκτόνα (π.χ. για κυκλοκόνιο) είναι απαραίτητος. Αν δεν υπάρχει τέτοια καταγραφή στο ιστορικό, συμπερίλαβέ τον στις άμεσες προτεραιότητες, ΕΚΤΟΣ αν το δέντρο βρίσκεται στο στάδιο της πλήρους άνθισης.\n"
+            f"1β. Στο 'keimeno_syntaghs', ΕΝΗΜΕΡΩΣΕ ΞΕΚΑΘΑΡΑ τον αγρότη για τα χρονικά περιθώρια! Εξήγησέ του ΠΟΤΕ ακριβώς πρέπει να έχει γίνει η κάθε εργασία και γιατί (π.χ. 'Αυτός ο ψεκασμός πρέπει να γίνει το αργότερο έως τις 15/04 για να προλάβουμε το άνοιγμα του άνθους').\n"
+            f"1γ. Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ του κτήματος και αν απαιτείται διαφορετική μεταχείριση, ανέφερέ το στο κείμενο (π.χ. ιδιαίτερες ευαισθησίες μιας ποικιλίας σε ασθένειες ή ελλείψεις).\n"
+            f"1δ. ΥΠΟΛΟΓΙΣΜΟΣ ΔΟΣΟΛΟΓΙΑΣ & ΙΣΤΟΡΙΚΟ: Υπολόγισε την προτεινόμενη συνολική δοσολογία (νερό και φάρμακο/λίπασμα) με βάση τον Αριθμό Δέντρων και την Ηλικία τους ανά ποικιλία. ΑΝ από το ιστορικό προκύπτει ότι πέρυσι υπήρξε έξαρση (π.χ. Δάκος, Κυκλοκόνιο), ΠΡΟΣΑΡΜΟΣΕ τη δόση στα ανώτατα επιτρεπτά όρια ή αύξησε τη συχνότητα των εφαρμογών εξηγώντας τον λόγο. Παρουσίασε αναλυτικά τους υπολογισμούς στο κείμενο.\n"
+            f"1ε. ΜΕΣΟ ΨΕΚΑΣΜΟΥ: Αν προτείνεις ψεκασμό, ΡΩΤΑ ΞΕΚΑΘΑΡΑ με ποιο μέσο θα γίνει η εφαρμογή (τουρμπίνα, μπεκ/λάστιχο, ψεκαστήρας πλάτης, drone) ώστε στην επόμενη συνομιλία σας να προσαρμόσεις με ακρίβεια τον όγκο του ψεκαστικού υγρού.\n"
+            f"1στ. ΣΕΙΡΑ ΑΝΑΜΕΙΞΗΣ: Αν προτείνεις ψεκασμό με μίγμα 2 ή παραπάνω σκευασμάτων (π.χ. χαλκός + ιχνοστοιχεία + κολλητικό), ΠΕΡΙΓΡΑΨΕ ΞΕΚΑΘΑΡΑ μέσα στο 'keimeno_syntaghs' την επιστημονικά σωστή σειρά προσθήκης τους στο βυτίο (π.χ. νερό ως τη μέση, μετά σκόνες WP/WG, μετά υγρά SC/EC, τέλος διαβρέκτες/κολλητικά) για να μην κόψει το φάρμακο.\n"
+            f"1ζ. ΑΣΥΜΒΑΤΟΤΗΤΕΣ & ΤΟΞΙΚΟΤΗΤΑ: Αν προτείνεις μίγμα (tank mix), έλεγξε ΑΥΣΤΗΡΑ την επιστημονική συμβατότητα των ουσιών (π.χ. Απαγορεύεται αυστηρά η ανάμειξη Χαλκού με Αμινοξέα). Αν εντοπίσεις πρόβλημα συμβατότητας στα υλικά που έχει η αποθήκη, ΜΗΝ τα βάλεις στο ίδιο βυτίο. Προειδοποίησε τον αγρότη και σπάσε τις εργασίες σε ξεχωριστούς ψεκασμούς με διαφορά ημερών.\n"
+            f"1η. ΑΝΑΜΟΝΗ & ΧΡΟΝΟΜΕΤΡΑ: Αν δεις στις 'Εκκρεμείς Εργασίες' ότι υπάρχει 'Χρονόμετρο', ΣΕΒΑΣΟΥ ΤΟ. Επίσης, αν εσύ προτείνεις μια εργασία που πρέπει να καθυστερήσει (π.χ. PHI, αναμονή σταδίου, ασυμβατότητα), πρόσθεσε στην αρχή του πεδίου 'farmaka' το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]' με την ημερομηνία που θα είναι ασφαλές να γίνει. Το σύστημα θα ανάψει πράσινο όταν έρθει η ώρα.\n"
+            f"1θ. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να ζητάς από τον αγρότη πληροφορίες για τον καιρό ή προβλέψεις (λαμβάνεις ήδη την Πρόγνωση 4 ημερών από τα δεδομένα σου).\n"
             f"2. ΔΙΑΧΕΙΡΙΣΗ ΥΓΡΑΣΙΑΣ & ΨΕΚΑΣΜΩΝ: Αν βλέπεις χαμηλή υγρασία (<20%) ΜΟΝΟ από τον 'Δορυφόρο', ΜΗΝ είσαι απόλυτος και ΜΗΝ απαγορεύεις τις εργασίες. Πρότεινε κανονικά τις επόμενες αναγκαίες ενέργειες (π.χ. τον επόμενο ψεκασμό βάσει σταδίου), αλλά δώσε την ενέργεια ως *πρόταση*, υπενθυμίζοντας στον αγρότη να επιβεβαιώσει πρώτα την υγρασία στο χωράφι και να ποτίσει αν χρειάζεται πριν ψεκάσει, για να μην κάψει τα δέντρα.\n"
             f"3. ΜΟΝΟ αν η 'Χειροκίνητη Μέτρηση Υγρασίας' είναι <20% ή το UVI είναι επικίνδυνα υψηλό (>8), εφάρμοσε αυστηρούς περιορισμούς στους ψεκασμούς.\n"
             f"4. Δώσε ΠΡΟΤΕΡΑΙΟΤΗΤΑ στα υλικά της Αποθήκης.\n"
+            f"5. Στο πεδίο 'eidos' κάθε εργασίας, ΠΡΟΣΘΕΣΕ ΥΠΟΧΡΕΩΤΙΚΑ το χρονικό περιθώριο ή την προϋπόθεση (π.χ. 'Ψεκασμός - Έως 20/04' ή 'Λίπανση - Πριν την άνθιση'). Αν το ιδανικό στάδιο/εποχή έχει περάσει, μην περιλάβεις την εργασία καθόλου.\n"
             f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
             f"{{\"keimeno_syntaghs\": \"Εδώ γράψε την επίσημη συνταγή και τις οδηγίες.\", "
             f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα\", \"farmaka\": \"Ονόματα φαρμάκων/λιπασμάτων\"}}]}} "
@@ -313,20 +428,23 @@ def paragogi_syntaghs(ktima_id):
         vasi.session.add(nea_syntagh)
         
         # 2. ΑΥΤΟΜΑΤΗ ΔΗΜΙΟΥΡΓΙΑ ΕΡΓΑΣΙΩΝ
-        for erg in data.get('ergasies', []):
-            nea_ergasia = Ergasia(
-                ktima_id=ktima.id,
-                eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
-                farmaka_lipasmata=erg.get('farmaka', ''),
-                katastasi='Εκκρεμεί',
-                proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
-                imerominia=datetime.now()
-            )
-            vasi.session.add(nea_ergasia)
-            
+        is_geoponos = getattr(current_user, 'rolos', 'agroths') == 'geoponos'
+        epitrepetai_auto = ktima.idioktitis.geoponos_auto_ergasies if is_geoponos else current_user.ai_auto_ergasies
+        
+        if epitrepetai_auto:
+            for erg in data.get('ergasies', []):
+                nea_ergasia = Ergasia(
+                    ktima_id=ktima.id,
+                    eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
+                    farmaka_lipasmata=erg.get('farmaka', ''),
+                    katastasi='Εκκρεμεί',
+                    proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+                    imerominia=datetime.now()
+                )
+                vasi.session.add(nea_ergasia)
+                
         vasi.session.commit()
         return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs'], 'syntagh_id': nea_syntagh.id})
-        
 
     except Exception as e:
         vasi.session.rollback()
@@ -354,7 +472,7 @@ def refine_syntagh(ktima_id):
             f"Είσαι Επαγγελματίας Γεωπόνος. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
             f"--- ΠΡΟΗΓΟΥΜΕΝΗ ΣΥΝΤΑΓΗ ΣΟΥ ---\n{previous_recipe}\n\n"
             f"--- ΣΧΟΛΙΟ / ΔΙΕΥΚΡΙΝΙΣΗ ΑΓΡΟΤΗ ---\n{user_reply}\n\n"
-            f"ΟΔΗΓΙΑ: Αναπροσάρμοσε την προηγούμενη συνταγή σου με βάση το σχόλιο του αγρότη.\n"
+            f"ΟΔΗΓΙΑ: Αναπροσάρμοσε την προηγούμενη συνταγή σου με βάση το σχόλιο του αγρότη. Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ, τον ΑΡΙΘΜΟ και την ΗΛΙΚΙΑ των δέντρων, καθώς και τα ΠΕΡΣΙΝΑ ΠΡΟΒΛΗΜΑΤΑ (π.χ. δάκος) για να αυξομειώσεις τις δόσεις. Αν ο αγρότης απάντησε με ποιο ΜΕΣΟ ΨΕΚΑΣΜΟΥ θα ψεκάσει, ΠΡΟΣΑΡΜΟΣΕ τον όγκο του υγρού. Αν ο αγρότης ζητήσει να αναμείξει στο βυτίο ουσίες που είναι ασύμβατες (π.χ. Χαλκός με Αμινοξέα), ΑΠΑΓΟΡΕΥΣΕ το έντονα στο κείμενο. Αν βάλεις εργασίες με αναμονή, βάλε το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]'. Αν η συνταγή περιλαμβάνει μίγμα, ΕΞΗΓΗΣΕ τη σωστή σειρά ανάμειξης. Φρόντισε κάθε νέα εργασία να έχει ξεκάθαρο χρονικό περιθώριο. ΜΗΝ ρωτάς για τον καιρό ή για προβλέψεις.\n"
             f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
             f"{{\"keimeno_syntaghs\": \"Εδώ γράψε τη νέα, αναθεωρημένη συνταγή απαντώντας και στο σχόλιο του αγρότη.\", "
             f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα ή Άρδευση\", \"farmaka\": \"Ονόματα φαρμάκων/ενεργειών\"}}]}} "
@@ -375,10 +493,14 @@ def refine_syntagh(ktima_id):
         # Πριν δημιουργήσουμε τις νέες εργασίες από την αναθεωρημένη συνταγή,
         # διαγράφουμε τις προηγούμενες εκκρεμείς εργασίες που είχε βγάλει το AI,
         # ώστε να μην υπάρχουν διπλότυπα ή παλιές οδηγίες.
-        Ergasia.query.filter_by(
-            ktima_id=ktima.id, katastasi='Εκκρεμεί', proelevsi='AI Γεωπόνος'
-        ).delete(synchronize_session=False)
+        is_geoponos = getattr(current_user, 'rolos', 'agroths') == 'geoponos'
+        epitrepetai_auto = ktima.idioktitis.geoponos_auto_ergasies if is_geoponos else current_user.ai_auto_ergasies
         
+        if epitrepetai_auto:
+            Ergasia.query.filter_by(
+                ktima_id=ktima.id, katastasi='Εκκρεμεί', proelevsi='Γεωπόνος' if is_geoponos else 'AI Γεωπόνος'
+            ).delete(synchronize_session=False)
+            
         nea_syntagh = Syntagh(
             ktima_id=ktima.id, 
             keimeno=data['keimeno_syntaghs'], 
@@ -387,21 +509,96 @@ def refine_syntagh(ktima_id):
         )
         vasi.session.add(nea_syntagh)
         
-        for erg in data.get('ergasies', []):
-            nea_ergasia = Ergasia(
-                ktima_id=ktima.id,
-                eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
-                farmaka_lipasmata=erg.get('farmaka', ''),
-                katastasi='Εκκρεμεί',
-                proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
-                imerominia=datetime.now()
-            )
-            vasi.session.add(nea_ergasia)
-            
+        if epitrepetai_auto:
+            for erg in data.get('ergasies', []):
+                nea_ergasia = Ergasia(
+                    ktima_id=ktima.id,
+                    eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
+                    farmaka_lipasmata=erg.get('farmaka', ''),
+                    katastasi='Εκκρεμεί',
+                    proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+                    imerominia=datetime.now()
+                )
+                vasi.session.add(nea_ergasia)
+        
         vasi.session.commit()
         return jsonify({'success': True, 'syntagh': data['keimeno_syntaghs'], 'syntagh_id': nea_syntagh.id})
-        
+
     except Exception as e:
         vasi.session.rollback()
-        print(f"Σφάλμα AI Αναθεώρησης Συνταγής: {e}")
+        print(f"Σφάλμα κατά την αναθεώρηση: {e}")
         return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/xeirokiniti_syntagh/<int:ktima_id>', methods=['POST'])
+@login_required
+def xeirokiniti_syntagh(ktima_id):
+    from models import Ktima, Syntagh, Ergasia
+    ktima = vasi.session.get(Ktima, ktima_id)
+    
+    # Πρόσβαση μόνο σε Γεωπόνους (ή τον ιδιοκτήτη αν θέλουμε)
+    if not ktima or getattr(current_user, 'rolos', '') != 'geoponos':
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση. Μόνο οι Γεωπόνοι μπορούν να εκδώσουν χειροκίνητη συνταγή.'}), 403
+
+    data = request.get_json()
+    keimeno_geoponou = data.get('keimeno', '').strip()
+    
+    if not keimeno_geoponou:
+        return jsonify({'error': 'Το κείμενο της συνταγής δεν μπορεί να είναι κενό.'}), 400
+
+    try:
+        # 1. Αποθήκευση της Πρωτότυπης Συνταγής του Γεωπόνου
+        nea_syntagh = Syntagh(ktima_id=ktima.id, keimeno=keimeno_geoponou, proelevsi='Γεωπόνος', geoponos_id=current_user.id)
+        vasi.session.add(nea_syntagh)
+        vasi.session.commit()
+
+        # 2. Το AI διαβάζει τη συνταγή του Γεωπόνου και βγάζει τις Εργασίες
+        epitrepetai_auto = ktima.idioktitis.geoponos_auto_ergasies
+        
+        if epitrepetai_auto:
+            prompt = (
+                f"Ένας επαγγελματίας γεωπόνος μόλις έγραψε την παρακάτω συνταγή/οδηγία για το κτήμα του αγρότη:\n"
+                f"\"{keimeno_geoponou}\"\n\n"
+                f"ΟΔΗΓΙΑ: Διάβασε το κείμενο και εξήγαγε ΜΟΝΟ τις εργασίες/ψεκασμούς/λιπάνσεις που ζητάει ο γεωπόνος να γίνουν. "
+                f"Φρόντισε να βάλεις στο 'eidos' το χρονικό περιθώριο αν αναφέρεται (π.χ. 'Ψεκασμός - Έως 20/04').\n"
+                f"Αν εντοπίσεις κάποιο επιστημονικό λάθος στη δοσολογία Ή λάθος στη συμβατότητα του μίγματος (π.χ. προτείνει ανάμειξη χαλκού με αμινοξέα ή ασύμβατων ουσιών), πρόσθεσε μια ευγενική πρόταση διόρθωσης μέσα στο πεδίο 'farmaka' (π.χ. '... [Σημείωση AI: Προσοχή, η ανάμειξη αυτών των σκευασμάτων ίσως προκαλέσει τοξικότητα / αχρήστευση]').\n"
+                f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
+                f"{{\"ergasies\": [{{\"eidos\": \"Είδος Εργασίας\", \"farmaka\": \"Φάρμακα/Λιπάσματα που αναφέρονται\"}}]}}\n"
+                f"Μην γράψεις markdown κώδικα, επέστρεψε απευθείας το καθαρό JSON object."
+            )
+            
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
+            ai_data = json.loads(json_text)
+            
+            # Διαγραφή παλιών εκκρεμών εργασιών που είχε βγάλει ο Γεωπόνος
+            Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί', proelevsi='Γεωπόνος').delete(synchronize_session=False)
+
+            for erg in ai_data.get('ergasies', []):
+                vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'), farmaka_lipasmata=erg.get('farmaka', ''), katastasi='Εκκρεμεί', proelevsi='Γεωπόνος', imerominia=datetime.now()))
+            
+            vasi.session.commit()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        vasi.session.rollback()
+        print(f"Σφάλμα Χειροκίνητης Συνταγής: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/akyrosi_erotisis_ai/<int:ktima_id>', methods=['POST'])
+@login_required
+def akyrosi_erotisis_ai(ktima_id):
+    from models import Ktima, Ergasia
+    ktima = vasi.session.get(Ktima, ktima_id)
+    
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+        
+    completed_tasks = sum(1 for e in ktima.ergasies if e.katastasi == 'Ολοκληρώθηκε')
+    if completed_tasks == 0 or (ktima.ekkremis_erotisi_ai and ('Καλώς' in ktima.ekkremis_erotisi_ai or 'καλώς' in ktima.ekkremis_erotisi_ai.lower())):
+        # Αν ακυρώσει το onboarding, προσθέτουμε μια εικονική εργασία για να μην τον ξαναρωτήσει
+        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Έναρξη Χρήσης (Χωρίς προηγούμενο ιστορικό)', katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='Αγρότης'))
+        
+    ktima.ekkremis_erotisi_ai = None
+    vasi.session.commit()
+    return jsonify({'success': True})

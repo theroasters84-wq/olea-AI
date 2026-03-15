@@ -128,6 +128,37 @@
                 <div id="analytikiChatLoadingGeoponos{{ ktima.id }}" class="d-none text-primary mt-1"><i class="fas fa-spinner fa-spin"></i> Αναμονή...</div>
                 <div id="analytikiRefinedResultGeoponos{{ ktima.id }}" class="d-none alert alert-success mt-2 text-start mb-0 p-2"></div>
             </div>
+            
+            <!-- ΠΑΝΕΛ ΓΕΩΠΟΝΟΥ ΓΙΑ ΧΕΙΡΟΚΙΝΗΤΗ ΣΥΝΤΑΓΗ -->
+            <h6 class="mt-4 text-primary border-bottom border-primary pb-1"><i class="fas fa-edit"></i> Έκδοση Συνταγής Γεωπόνου</h6>
+            <div class="card bg-light border-primary shadow-sm mb-3">
+                <div class="card-body p-3">
+                    <p class="small text-muted mb-2"><i class="fas fa-magic text-warning"></i> Γράψτε τη συνταγή/οδηγίες σας παρακάτω. Το σύστημα AI θα τη διαβάσει αυτόματα και θα μετατρέψει τις οδηγίες σας σε "Εκκρεμείς Εργασίες" στην εφαρμογή του αγρότη.</p>
+                    <textarea id="keimenoSyntaghsGeoponou{{ ktima.id }}" class="form-control border-primary mb-2" rows="5" placeholder="Αγαπητέ παραγωγέ,&#10;Παρακαλώ προχωρήστε άμεσα σε ψεκασμό με χαλκό 300gr/100L νερό..."></textarea>
+                    <button id="btnGeoponosSyntagh{{ ktima.id }}" class="btn btn-primary w-100 fw-bold" onclick="steileSyntaghGeoponou('{{ ktima.id }}')">
+                        <i class="fas fa-paper-plane"></i> Αποστολή Συνταγής στον Αγρότη
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Εμφάνιση του Ιστορικού Συνταγών για τον Γεωπόνο -->
+            <h6 class="mt-3 text-secondary border-bottom border-secondary pb-1"><i class="fas fa-history"></i> Ιστορικό Εκδοθέντων Συνταγών</h6>
+            <div id="syntagesContainerGeoponos{{ ktima.id }}" style="max-height: 250px; overflow-y: auto;">
+                {% for syntagh in ktima.syntages|sort(attribute='imerominia', reverse=True) %}
+                    <div class="card border-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} mb-2 shadow-sm">
+                        <div class="card-header bg-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} text-white py-1 small d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-{{ 'user-md' if syntagh.proelevsi == 'Γεωπόνος' else 'robot' }}"></i> {{ syntagh.proelevsi }}</span>
+                            <div>
+                                <span class="me-2">{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
+                                <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }}"></i></button>
+                            </div>
+                        </div>
+                        <div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">{{ syntagh.keimeno }}</div>
+                    </div>
+                {% else %}
+                    <p class="small text-muted fst-italic">Δεν υπάρχουν παλαιότερες συνταγές.</p>
+                {% endfor %}
+            </div>
         {% else %}
             <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός) -->
             <div class="flex-shrink-0">
@@ -176,7 +207,7 @@
                     </div>
                     {% if ktima.symvouli %}
                         <div style="margin-top: 5px; padding: 5px 10px; background-color: {{ ktima.symvouli.xroma }}; color: white; border-radius: 5px; font-size: 0.9em;">
-                            <strong><i class="fas fa-exclamation-circle"></i> Συμβουλή:</strong> {{ ktima.symvouli.minima }}
+                            <strong><i class="fas fa-exclamation-circle"></i> Συμβουλή:</strong> {{ ktima.symvouli.minima }} <i class="fas fa-info-circle ms-1 text-white-50" style="cursor: help;" title="Αντιλαμβάνεται επικίνδυνα καιρικά φαινόμενα (π.χ. παγετό, καύσωνα) και στρεσογόνες καταστάσεις."></i>
                         </div>
                     {% endif %}
 
@@ -202,39 +233,59 @@
                     {% if not is_geoponos_view %}
                     <div class="mt-2">
                         <button class="btn btn-sm btn-outline-primary" onclick="rwtaAI('{{ ktima.id }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.kairos.perigrafi }}', this)"><i class="fas fa-robot"></i> Ρώτα το AI</button>
+                        <i class="fas fa-info-circle text-primary ms-1 me-2" style="cursor: help;" title="Παράγει μια άμεση, εξατομικευμένη συμβουλή προσαρμοσμένη στα δεδομένα της στιγμής."></i>
                         <button class="btn btn-sm btn-outline-secondary" onclick="steileAnafora('{{ ktima.onoma_ktimatos }}', {{ ktima.kairos.thermokrasia }}, {{ ktima.kairos.ygrasia }}, '{{ ktima.id }}')"><i class="fas fa-envelope"></i> Email</button>
                     </div>
-                    <div id="ai-apantisi-{{ ktima.id }}" style="margin-top: 5px; font-style: italic; color: #006400; font-size: 0.85em;"></div>
+                    
+                    <!-- Εμφάνιση Έτοιμης AI Συμβουλής -->
+                    <div id="ai-apantisi-{{ ktima.id }}" style="margin-top: 8px; font-size: 0.85em; padding: 8px; background-color: #e8f5e9; border-left: 4px solid #28a745; border-radius: 4px;">
+                        {% if ktima.ai_sumvouli_cache %}
+                            <strong><i class="fas fa-robot text-success"></i> AI Γεωπόνος:</strong> <span class="fst-italic text-dark">{{ ktima.ai_sumvouli_cache }}</span>
+                        {% else %}
+                            <span class="text-muted"><i class="fas fa-robot"></i> Πατήστε "Ρώτα το AI" για προσωποποιημένη συμβουλή.</span>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 {% endif %}
             </div>
 
-            {% if ktima.ekkremis_erotisi_ai and not is_geoponos_view %}
+            {% set completed_tasks_count = ktima.ergasies|selectattr("katastasi", "equalto", "Ολοκληρώθηκε")|list|length %}
+            {% set default_onb = "Καλώς ήρθατε! Για να προσαρμόσω με απόλυτη ακρίβεια το πρόγραμμα, πείτε μου: α) Ποιες εργασίες έχετε ήδη κάνει φέτος (π.χ. κλάδεμα, λίπανση, χαλκό), β) Αν πέρυσι αντιμετωπίσατε προβλήματα (π.χ. δάκο, γλοιοσπόριο) και γ) Αν υπάρχει πρόσφατη ανάλυση εδάφους." %}
+            {% set current_ai_question = ktima.ekkremis_erotisi_ai if ktima.ekkremis_erotisi_ai else (default_onb if completed_tasks_count == 0 else None) %}
+
+            {% if current_ai_question and not is_geoponos_view %}
             <div class="alert alert-warning p-2 mt-2 mb-2 d-flex align-items-center justify-content-between border-warning shadow-sm" style="animation: pulse 2s infinite;">
-                <span><i class="fas fa-robot text-danger fa-bounce fa-lg me-2"></i> <strong>Το AI ρωτάει:</strong> {{ ktima.ekkremis_erotisi_ai }}</span>
+                <span><i class="fas fa-robot text-danger fa-bounce fa-lg me-2"></i> <strong>Το AI ρωτάει:</strong> {{ current_ai_question }}</span>
                 <button type="button" class="btn btn-sm btn-danger ms-2 text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση</button>
             </div>
             
-            <div class="modal fade" id="modalAiReply{{ ktima.id }}" tabindex="-1">
+            <div class="modal fade" id="modalAiReply{{ ktima.id }}" tabindex="-1" data-bs-backdrop="static">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form action="{{ url_for('ai.apantisi_sto_ai', ktima_id=ktima.id) }}" method="POST">
-                            <div class="modal-header bg-danger text-white">
-                                <h5 class="modal-title"><i class="fas fa-robot"></i> Απάντηση στον Γεωπόνο (AI)</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p><strong>Η ερώτηση του AI από τον δορυφόρο:</strong></p>
-                                <p class="text-muted fst-italic">"{{ ktima.ekkremis_erotisi_ai }}"</p>
-                                <div class="mb-3 mt-4">
-                                    <label class="form-label fw-bold">Η απάντησή σας / Διευκρίνιση:</label>
-                                    <textarea class="form-control border-primary" name="user_reply" rows="3" required placeholder="π.χ. Ναι, μόλις έκανα βαθύ κλάδεμα..." autofocus></textarea>
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title"><i class="fas fa-robot"></i> Συνομιλία με AI Γεωπόνο</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="location.reload()"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="aiChatHistory{{ ktima.id }}" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column;">
+                                <div class="p-2 mb-2 bg-light border border-danger rounded shadow-sm w-75 align-self-start">
+                                    <strong><i class="fas fa-robot text-danger"></i> AI:</strong><br>
+                                    <span id="aiCurrentQuestion{{ ktima.id }}">{{ current_ai_question }}</span>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="submit" class="btn btn-danger"><i class="fas fa-paper-plane"></i> Αποστολή στο AI</button>
+                            
+                            <div id="aiChatInputArea{{ ktima.id }}">
+                                <label class="form-label fw-bold small text-muted"><i class="fas fa-pen"></i> Η απάντησή σας:</label>
+                                <div class="input-group shadow-sm">
+                                    <textarea id="aiUserReply{{ ktima.id }}" class="form-control border-danger" rows="2" placeholder="Πληκτρολογήστε την απάντησή σας..." autofocus onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendAiReply('{{ ktima.id }}'); }"></textarea>
+                                    <button type="button" id="btnSendAiReply{{ ktima.id }}" class="btn btn-danger px-3" onclick="sendAiReply('{{ ktima.id }}')"><i class="fas fa-paper-plane"></i></button>
+                                </div>
                             </div>
-                        </form>
+                            <div class="text-center mt-3 d-flex justify-content-between gap-2">
+                                <button type="button" class="btn btn-outline-danger btn-sm w-50" onclick="cancelAiQuestion('{{ ktima.id }}')"><i class="fas fa-trash-alt"></i> Διαγραφή Ερώτησης</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm w-50" data-bs-dismiss="modal" onclick="location.reload()">Κλείσιμο</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -259,7 +310,10 @@
             {% if not is_geoponos_view %}
             <div class="mb-2">
                 <button class="btn btn-outline-info w-100 text-start shadow-sm d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvisor{{ ktima.id }}" aria-expanded="false" aria-controls="collapseAdvisor{{ ktima.id }}" style="font-weight: 600;">
-                    <span><i class="fas fa-book-open"></i> Προληπτικός Σύμβουλος</span>
+                    <span>
+                        <i class="fas fa-book-open"></i> Προληπτικός Σύμβουλος
+                        <i class="fas fa-info-circle ms-1" style="cursor: help; color: #17a2b8;" title="Προτείνει προληπτικές ενέργειες βάσει εποχής, καιρού και σταδίου του δέντρου."></i>
+                    </span>
                     <i class="fas fa-chevron-down"></i>
                 </button>
                 <div class="collapse" id="collapseAdvisor{{ ktima.id }}">

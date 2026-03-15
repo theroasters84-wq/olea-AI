@@ -137,8 +137,15 @@ def prosthes_ktima():
                                     vasi.session.add(nea_diagnosi)
                     except Exception as e:
                         print(f"Auto-Satellite Error: {e}")
-            
+                        
+            # --- ΝΕΟ: ONBOARDING AI QUESTION ---
             vasi.session.commit()
+            try:
+                from logic import syghronismos_ai_ktimatos
+                syghronismos_ai_ktimatos(neo)
+            except Exception as e: 
+                print(f"Onboarding AI Question Error: {e}")
+            
             flash('Το κτήμα προστέθηκε!', 'success')
         except Exception as e:
             vasi.session.rollback()
@@ -185,6 +192,25 @@ def oloklirosi_ergasias(ktima_id):
         if kostos_str and float(kostos_str) > 0:
             vasi.session.add(Exodo(ktima_id=ktima_id, perigrafi=f"{eidos} (Κόστος Εργασίας)", poso=float(kostos_str), imerominia=datetime.now()))
         
+        # --- ΑΥΤΟΜΑΤΟ ΧΡΟΝΟΜΕΤΡΟ ΑΜΙΝΟΞΕΩΝ (7 ΗΜΕΡΩΝ) ΜΕΤΑ ΑΠΟ ΧΑΛΚΟ ---
+        farmaka = request.form.get('farmaka_lipasmata', '')
+        if 'χαλκ' in eidos.lower() or 'χαλκ' in farmaka.lower() or 'kocide' in farmaka.lower():
+            # Ελέγχουμε αν υπάρχει ήδη εκκρεμής εργασία για αμινοξέα
+            yparxei_amino = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%αμινοξ%')).first()
+            if not yparxei_amino:
+                nea_imerominia = datetime.now() + timedelta(days=7)
+                date_str = nea_imerominia.strftime('%Y-%m-%d')
+                nea_ergasia_amino = Ergasia(
+                    ktima_id=ktima_id,
+                    eidos_ergasias='Διαφυλλική με Αμινοξέα',
+                    farmaka_lipasmata=f'[ΧΡΟΝΟΜΕΤΡΟ:{date_str}] Εφαρμογή αυστηρά μετά από 7 ημέρες από τον Χαλκό για αποφυγή τοξικότητας.',
+                    katastasi='Εκκρεμεί',
+                    imerominia=nea_imerominia,
+                    proelevsi='AI Σύστημα Ασφαλείας'
+                )
+                vasi.session.add(nea_ergasia_amino)
+                flash('Το σύστημα πρόσθεσε αυτόματα χρονόμετρο αναμονής 7 ημερών για τα Αμινοξέα, ώστε να μην καούν τα δέντρα από τον Χαλκό!', 'info')
+
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
     except Exception as e:
