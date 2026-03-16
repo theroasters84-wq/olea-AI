@@ -87,7 +87,7 @@ def arxikh():
                     
                     if soil or uvi:
                         ktima.agro_data = {'soil': soil, 'uvi': uvi}
-                    ktima.agro_forecast = agro_forecast
+                    ktima.agro_forecast = None
 
                 ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
                 if ktima.kairos:

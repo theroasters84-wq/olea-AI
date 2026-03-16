@@ -276,8 +276,46 @@ def lixi_xronias(ktima_id):
 @ktima_actions_bp.route('/epeksergasia_poikiliwn/<int:ktima_id>', methods=['POST'])
 @login_required
 def epeksergasia_poikiliwn(ktima_id):
-    flash('Ενημερώθηκε.', 'success')
-    return redirect(url_for('core_app.arxikh'))
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+        return redirect(url_for('core_app.arxikh'))
+
+    try:
+        # Λήψη δεδομένων από τη φόρμα
+        poikilia_onomata = request.form.getlist('poikilia_onoma')
+        poikilia_dentra_str = request.form.getlist('poikilia_dentra')
+        poikilia_ilikies = request.form.getlist('poikilia_ilikia')
+
+        # Καθαρισμός παλιών εγγραφών
+        KtimaPoikilia.query.filter_by(ktima_id=ktima.id).delete()
+
+        total_trees = 0
+        valid_varieties = []
+
+        for i, onoma_p in enumerate(poikilia_onomata):
+            try:
+                d = int(poikilia_dentra_str[i])
+                ilikia_p = poikilia_ilikies[i] if i < len(poikilia_ilikies) else None
+                if d > 0:
+                    vasi.session.add(KtimaPoikilia(ktima_id=ktima.id, poikilia_onoma=onoma_p, arithmos_dentron=d, ilikia_dentron=ilikia_p))
+                    total_trees += d
+                    valid_varieties.append(onoma_p)
+            except ValueError:
+                pass
+
+        # Ενημέρωση κεντρικών πεδίων του κτήματος
+        ktima.arithmos_dentron = total_trees
+        ktima.poikilia = 'Ανάμεικτο' if len(valid_varieties) > 1 else (valid_varieties[0] if valid_varieties else 'Δεν ορίστηκε')
+        if len(poikilia_ilikies) > 0 and poikilia_ilikies[0]: ktima.ilikia_dentron = poikilia_ilikies[0]
+
+        vasi.session.commit()
+        flash('Τα δέντρα και οι ποικιλίες ενημερώθηκαν επιτυχώς!', 'success')
+    except Exception as e:
+        vasi.session.rollback()
+        flash(f'Σφάλμα κατά την ενημέρωση: {e}', 'danger')
+        
+    return redirect(request.referrer or url_for('core_app.arxikh'))
 
 @ktima_actions_bp.route('/steile_anafora', methods=['POST'])
 @login_required
