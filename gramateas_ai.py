@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from core import vasi
-from models import Ktima, Ergasia, Diagnosi, Exodo
+from models import Ktima, Ergasia, Diagnosi, Exodo, Apothiki
 from google import genai
 from google.genai import types
 
@@ -17,7 +17,7 @@ def ai_secretary():
     ktima_id = request.form.get('ktima_id')
     text = request.form.get('text', '')
     history_str = request.form.get('history', '[]')
-    image_file = request.files.get('image')
+    image_files = request.files.getlist('images')
 
     ktima = vasi.session.get(Ktima, ktima_id) if ktima_id else None
     if ktima and ktima.idioktitis != current_user:
@@ -68,7 +68,7 @@ def ai_secretary():
         1. Έλεγχος Αποθήκης: Πριν προτείνεις οποιοδήποτε υλικό, φάρμακο ή εργασία, ΕΛΕΓΞΕ ΑΥΣΤΗΡΑ την "ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ" στο προφίλ του κτήματος. Αν το υλικό υπάρχει ήδη διαθέσιμο, πρότεινε να χρησιμοποιήσει αυτό για οικονομία.
         2. Ανάλυση Φωτογραφίας/Εγγράφου & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία ή έγγραφο ανάλυσης, εκτός από τυχόν ασθένειες, παρατήρησε: α) Το έδαφος (Τι τύπος εδάφους φαίνεται ή αναγράφεται; π.χ. Αργιλώδες, Αμμώδες, Πετρώδες. Υπάρχουν λάστιχα ποτίσματος;), β) Τα χόρτα (είναι κομμένα;), γ) Την πυκνότητα φύτευσης (είναι υπέρπυκνη;). Αν δεις κάτι που διαφέρει από το τρέχον προφίλ του κτήματος, ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ ΑΜΕΣΩΣ. Ρώτα πρώτα τον χρήστη στο "reply" (π.χ. "Βλέπω λάστιχα ποτίσματος. Θέλετε να ενημερώσω το κτήμα σε Αρδευόμενο;" ή "Ο τύπος εδάφους φαίνεται αργιλώδης. Να τον καταχωρήσω;"). Θέσε action: "DIAGNOSIS".
         3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης στο κείμενό του ΣΟΥ ΕΠΙΒΕΒΑΙΩΣΕΙ να κάνεις μια αλλαγή στα στοιχεία του κτήματος (π.χ. "Ναι, άλλαξέ το", "Είναι αρδευόμενο", "Άλλαξέ το σε βιολογική", "Κάνε τα στρέμματα 15", "Έχω 150 δέντρα", "Το έδαφος είναι αμμώδες"), βάλε action: "UPDATE_KTIMA" και συμπλήρωσε τις νέες τιμές στο object "updates".
-        4. Προσθήκη Εργασίας: Αν ο χρήστης λέει ότι έκανε μια εργασία (π.χ. "ράντισα", "έριξα λίπασμα", "φρεζάρισα"), βάλε action: "ADD_TASK" και συμπλήρωσε το "task_name" και "task_materials".
+        4. Προσθήκη Εργασίας: Αν ο χρήστης λέει ότι έκανε μια εργασία, βάλε action: "ADD_TASK". ΣΗΜΑΝΤΙΚΟ: Αν ο χρήστης αναφέρει εμπορικό όνομα σκευάσματος, βρες τη δραστική του ουσία και γράψε την σε παρένθεση στο "task_materials". Αν αναφέρει ΚΑΙ το κόστος (π.χ. "μου κόστισε 50 ευρώ"), συμπλήρωσε τα "expense_amount" και "expense_desc". ΑΝ αναφέρει ποσότητα υλικού που χρησιμοποίησε (π.χ. "έριξα 2 λίτρα") και το υλικό υπάρχει στην "ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ", συμπλήρωσε το "used_material_name" με το ΑΚΡΙΒΕΣ ΟΝΟΜΑ από την αποθήκη και το "used_material_amount" με τον αριθμό.
         5. Διαγραφή Εργασιών: Αν ο χρήστης ζητήσει να διαγράψεις εργασίες (π.χ. "σβήσε όλες τις εργασίες", "διέγραψε το κλάδεμα"), βάλε action: "DELETE_TASKS". Στο "task_name" γράψε "ΟΛΕΣ" για ολική διαγραφή, ή μια λέξη-κλειδί για συγκεκριμένη (π.χ. "Κλάδεμα").
         6. Πληροφορίες Ιστορικού & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, τον καιρό, κλπ (αν υπάρχουν στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τη λίστα. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Αν βλέπεις δεδομένα πολλών κτημάτων, δώσε συγκεντρωτική αναφορά. Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
         7. Οικονομικά & Έξοδα: Αν ο χρήστης ρωτήσει για τα έξοδά του ή το συνολικό κόστος, διάβασε τα από την ενότητα 'ΟΙΚΟΝΟΜΙΚΑ / ΕΞΟΔΑ' και απάντησε στο "reply". Αν αναφέρει νέο έξοδο (π.χ. "πλήρωσα 100 ευρώ για λιπάσματα"), βάλε action: "ADD_EXPENSE", το ποσό στο "expense_amount" και την περιγραφή στο "expense_desc".
@@ -81,8 +81,10 @@ def ai_secretary():
             "target_ktima_id": Αριθμός ID του κτήματος (του επιλεγμένου ή αυτού που αναφέρει ο χρήστης. Αν δεν μπορείς να το βρεις, βάλε null),
             "task_name": "Ονομασία Εργασίας (π.χ. 'Ψεκασμός με Χαλκό') ή 'ΟΛΕΣ' - ΚΕΝΟ αν δεν αφορά εργασία",
             "task_materials": "Όνομα φαρμάκου/λιπάσματος - ΚΕΝΟ αν δεν αναφέρεται",
-            "expense_amount": Ποσό σε ευρώ (αριθμός, π.χ. 100.5) - null αν action!=ADD_EXPENSE,
-            "expense_desc": "Περιγραφή του εξόδου" - ΚΕΝΟ αν action!=ADD_EXPENSE,
+            "expense_amount": Ποσό σε ευρώ (αριθμός, π.χ. 100.5) - null αν δεν αναφέρεται κόστος,
+            "expense_desc": "Περιγραφή του εξόδου" - ΚΕΝΟ αν δεν αναφέρεται κόστος,
+            "used_material_name": "Ακριβές όνομα υλικού από αποθήκη" - ΚΕΝΟ αν δεν αναφέρεται,
+            "used_material_amount": Αριθμός (π.χ. 2.5) - null αν δεν αναφέρεται ποσότητα,
             "updates": {
                 "ardefsi": "Αρδευόμενο" ή "Ξηρικό" ή null,
                 "diacheirisi_edafous": "Καθαρό (Οργωμένο/Ζιζανιοκτονία)" ή "Φυσική Βλάστηση (Άκοπα χόρτα)" ή "Κομμένα Χόρτα" ή null,
@@ -129,6 +131,28 @@ def ai_secretary():
         if action == 'ADD_TASK' and ktima:
             nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias=data.get('task_name', 'AI Καταχώρηση'), farmaka_lipasmata=data.get('task_materials', ''), katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='AI Γραμματέας')
             vasi.session.add(nea_ergasia)
+            
+            # Ανέφερε και κόστος, οπότε καταχωρούμε και την αντίστοιχη δαπάνη
+            poso = data.get('expense_amount')
+            if poso is not None:
+                try:
+                    neo_exodo = Exodo(ktima_id=ktima.id, perigrafi=data.get('expense_desc') or f"Κόστος: {data.get('task_name', 'Εργασία')}", poso=float(poso), imerominia=datetime.now())
+                    vasi.session.add(neo_exodo)
+                except (ValueError, TypeError): pass
+                
+            # Ανέφερε ποσότητα υλικού από την αποθήκη
+            used_material_name = data.get('used_material_name')
+            used_material_amount = data.get('used_material_amount')
+            if used_material_name and used_material_amount is not None:
+                try:
+                    amount = float(used_material_amount)
+                    item = Apothiki.query.filter_by(xrhsths_id=current_user.id, onoma_proiontos=used_material_name).first()
+                    if item and amount > 0:
+                        item.posotita = max(0, item.posotita - amount)
+                        nea_diagnosi_apothiki = Diagnosi(ktima_id=ktima.id, apotelesma=f"📦 AI Αποθήκη: Αφαιρέθηκαν {amount} {item.monada_metrisis} από '{item.onoma_proiontos}'.", imerominia=datetime.now())
+                        vasi.session.add(nea_diagnosi_apothiki)
+                except (ValueError, TypeError): pass
+                
         elif action == 'UPDATE_KTIMA' and ktima:
             updates = data.get('updates', {})
             updated_fields = []

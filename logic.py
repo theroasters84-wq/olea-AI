@@ -369,7 +369,7 @@ def xtise_plires_context(ktima):
         if pending: ctx += f"Εκκρεμείς Εργασίες στο σύστημα: {', '.join(pending)}\n\n"
             
     if ktima.idioktitis and ktima.idioktitis.apothiki_items:
-        stock = [f"{i.onoma_proiontos}" for i in ktima.idioktitis.apothiki_items]
+        stock = [f"'{i.onoma_proiontos}' ({i.posotita} {i.monada_metrisis})" for i in ktima.idioktitis.apothiki_items]
         if stock: ctx += f"--- ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ ---\nΔιαθέσιμα: {', '.join(stock)}\n"
             
     if ktima.exoda:
