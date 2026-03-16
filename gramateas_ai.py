@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from core import vasi
 from models import Ktima, Ergasia, Diagnosi, Exodo
 from google import genai
+from google.genai import types
 
 gramateas_bp = Blueprint('gramateas', __name__)
 
@@ -98,8 +99,13 @@ def ai_secretary():
 
         for img_file in image_files:
             if img_file.filename != '':
-                img = PIL.Image.open(img_file)
-                contents.append(img)
+                mime_type = img_file.mimetype
+                if 'pdf' in mime_type:
+                    file_data = img_file.read()
+                    contents.append(types.Part.from_bytes(data=file_data, mime_type='application/pdf'))
+                else:
+                    img = PIL.Image.open(img_file)
+                    contents.append(img)
         
         response = client.models.generate_content(model='gemini-2.5-flash', contents=contents)
         
