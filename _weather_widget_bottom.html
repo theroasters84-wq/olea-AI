@@ -1,0 +1,22 @@
+<!-- Preventive Advisor (Collapsible context) -->
+{% if not is_geoponos_view %}
+<div class="mb-2">
+    <button class="btn btn-outline-info w-100 text-start shadow-sm d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvisor{{ ktima.id }}" aria-expanded="false" aria-controls="collapseAdvisor{{ ktima.id }}" style="font-weight: 600;">
+        <span><i class="fas fa-book-open"></i> Προληπτικός Σύμβουλος <i class="fas fa-info-circle ms-1" style="cursor: help; color: #17a2b8;" title="Προτείνει προληπτικές ενέργειες βάσει εποχής, καιρού και σταδίου του δέντρου."></i></span>
+        <i class="fas fa-chevron-down"></i>
+    </button>
+    <div class="collapse" id="collapseAdvisor{{ ktima.id }}">
+        <div class="card card-body mt-1 bg-light border-info small">
+            {% if ktima.protaseis %}
+                <ul class="mb-0 ps-3 text-dark">
+                    {% for protasi in ktima.protaseis %}
+                        <li>{{ protasi }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="mb-0 text-muted">Καμία επείγουσα ενέργεια.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}

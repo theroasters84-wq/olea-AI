@@ -10,15 +10,38 @@
                 <!-- Ανάλυση Εδάφους/Φύλλων -->
                 <div class="mb-3">
                     <form action="{{ url_for('ai.analysi_egrafou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
-                        <div class="input-group input-group-sm">
+                        <div class="input-group input-group-sm mb-2">
                             <input type="file" name="fwtografia_analysis" accept="image/*,.pdf" class="form-control" required>
-                            <button class="btn btn-secondary" type="submit"><i class="fas fa-file-medical-alt"></i> Ανάλυση</button>
+                            <button class="btn btn-secondary" type="submit" id="btnAnalysiEgrafou{{ ktima.id }}"><i class="fas fa-file-medical-alt"></i> Ανάλυση</button>
+                        </div>
+                        <div id="analysiEgrafouLoading{{ ktima.id }}" class="d-none text-center text-primary small">
+                            <i class="fas fa-spinner fa-spin me-2"></i> Αναλύεται το έγγραφο... Παρακαλώ περιμένετε.
                         </div>
                     </form>
                     <h6 style="color: #555;"><i class="fas fa-chart-bar"></i> Ανάλυση Εδάφους/Φύλλων</h6>
                     <div class="p-2 border rounded bg-light" style="font-size: 0.9em;">
                         {{ ktima.analysi_dedomena if ktima.analysi_dedomena else 'Δεν έχουν καταχωρηθεί δεδομένα ανάλυσης.' }}
                     </div>
+                </div>
+                
+                <!-- Ιστορικό Αναλύσεων Εδάφους/Φύλλων -->
+                <h6 class="mt-3" style="color: #555;"><i class="fas fa-history"></i> Ιστορικό Αναλύσεων Εδάφους/Φύλλων</h6>
+                <div class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
+                    {% for analysi in ktima.analuseis_edafous|sort(attribute='imerominia', reverse=True) %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">{{ analysi.imerominia.strftime('%d/%m/%Y %H:%M') }}</small><br>
+                            <strong>pH:</strong> {{ analysi.ph or '-' }}, <strong>Οργανική:</strong> {{ analysi.organiki_ousia or '-' }}%, <strong>N:</strong> {{ analysi.azwto or '-' }}, <strong>P:</strong> {{ analysi.fwsforos or '-' }}, <strong>K:</strong> {{ analysi.kalio or '-' }}
+                        </div>
+                        <form action="{{ url_for('ai.delete_analysi_edafous', analysi_id=analysi.id) }}" method="POST" onsubmit="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την ανάλυση;');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Διαγραφή Ανάλυσης">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-muted">Δεν υπάρχουν καταχωρημένες αναλύσεις.</div>
+                    {% endfor %}
                 </div>
 
                 <div class="d-grid gap-2 mb-3">

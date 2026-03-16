@@ -10,10 +10,13 @@
                 <!-- AI Διάγνωση Ασθενειών -->
                 <div class="mb-3">
                     <h6 style="color: #555;"><i class="fas fa-camera"></i> AI Διάγνωση Ασθενειών</h6>
-                    <form action="{{ url_for('ai.diagnosi_fwtografias', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2">
-                        <div class="input-group input-group-sm">
+                    <form action="{{ url_for('ai.diagnosi_fwtografias', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2" id="diagnosiFwtografiasForm{{ ktima.id }}">
+                        <div class="input-group input-group-sm mb-2">
                             <input type="file" name="fwtografia" accept="image/*" required class="form-control">
-                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Ανάλυση</button>
+                            <button class="btn btn-primary" type="submit" id="btnDiagnosiFwtografias{{ ktima.id }}"><i class="fas fa-search"></i> Ανάλυση</button>
+                        </div>
+                        <div id="diagnosiFwtografiasLoading{{ ktima.id }}" class="d-none text-center text-primary small">
+                            <i class="fas fa-spinner fa-spin me-2"></i> Αναλύεται η φωτογραφία... Παρακαλώ περιμένετε.
                         </div>
                     </form>
                     {% if ktima.diagnoseis %}
@@ -25,16 +28,41 @@
                         </div>
                     {% endif %}
                 </div>
+                
+                <!-- Ιστορικό Διαγνώσεων -->
+                <h6 class="mt-3" style="color: #555;"><i class="fas fa-history"></i> Ιστορικό Διαγνώσεων</h6>
+                <div class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
+                    {% for diagnosi in ktima.diagnoseis|sort(attribute='imerominia', reverse=True) %}
+                        {% if not diagnosi.apotelesma.startswith('🛰️ Δορυφόρος') and not diagnosi.apotelesma.startswith('📄 Έγγραφο Ανάλυσης') and not diagnosi.apotelesma.startswith('💧 Ανάλυση Νερού') and not diagnosi.apotelesma.startswith('🌿 Αναγνώριση Σταδίου') and not diagnosi.apotelesma.startswith('Συμπέρασμα AI (Από Chat)') %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">{{ diagnosi.imerominia.strftime('%d/%m/%Y %H:%M') }}</small><br>
+                                    {{ diagnosi.apotelesma }}
+                                </div>
+                                <form action="{{ url_for('ai.delete_diagnosi', diagnosi_id=diagnosi.id) }}" method="POST" onsubmit="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη διάγνωση;');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Διαγραφή Διάγνωσης">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="list-group-item text-muted">Δεν υπάρχουν καταχωρημένες διαγνώσεις.</div>
+                    {% endfor %}
+                </div>
 
                 <hr>
 
                 <!-- AI Phenological Stage Recognition -->
                 <div class="mb-3">
                     <h6 style="color: #555;"><i class="fas fa-calendar-day"></i> AI Αναγνώριση Σταδίου</h6>
-                    <form action="{{ url_for('ai.anagnorisi_stadiou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                    <form action="{{ url_for('ai.anagnorisi_stadiou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center" id="anagnorisiStadiouForm{{ ktima.id }}">
                         <input type="file" name="fwtografia_stadiou" accept="image/*" class="form-control form-control-sm me-2" required>
-                        <button type="submit" class="btn btn-sm btn-info text-white"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
+                        <button type="submit" class="btn btn-sm btn-info text-white" id="btnAnagnorisiStadiou{{ ktima.id }}"><i class="fas fa-leaf"></i> Βρες Στάδιο</button>
                     </form>
+                    <div id="anagnorisiStadiouLoading{{ ktima.id }}" class="d-none text-center text-primary small mt-2">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Αναλύεται η φωτογραφία...
+                    </div>
                 </div>
 
                 <hr>
@@ -42,9 +70,29 @@
                 <!-- AI Yield Estimation -->
                 <div class="mb-3">
                     <h6 style="color: #555;"><i class="fas fa-balance-scale"></i> AI Εκτίμηση Παραγωγής</h6>
-                    <form action="{{ url_for('ai.ektimisi_paragogis', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center">
+                    <form action="{{ url_for('ai.ektimisi_paragogis', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mt-2 d-flex align-items-center" id="ektimisiParagogisForm{{ ktima.id }}">
                         <input type="file" name="fwtografia_paragogis" accept="image/*" class="form-control form-control-sm me-2" required>
-                        <button type="submit" class="btn btn-sm btn-warning text-dark"><i class="fas fa-chart-line"></i> Εκτίμηση</button>
+                        <button type="submit" class="btn btn-sm btn-warning text-dark" id="btnEktimisiParagogis{{ ktima.id }}"><i class="fas fa-chart-line"></i> Εκτίμηση</button>
+                    </form>
+                    <div id="ektimisiParagogisLoading{{ ktima.id }}" class="d-none text-center text-primary small mt-2">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Εκτιμάται η παραγωγή...
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- AI Auto-Fill Task (from modal_ergasies.html, moved here for consistency) -->
+                <div class="mb-3">
+                    <h6 style="color: #2c3e50;"><i class="fas fa-magic"></i> Αυτόματη Καταγραφή Ετικέτας</h6>
+                    <form action="{{ url_for('ai.ai_input_scan', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-3" id="aiInputScanForm{{ ktima.id }}">
+                        <div class="input-group input-group-sm mb-2">
+                            <input type="file" name="fwtografia_input" class="form-control" accept="image/*,.pdf" required>
+                            <button type="submit" class="btn btn-success" id="btnAiInputScan{{ ktima.id }}"><i class="fas fa-camera"></i> Σάρωση</button>
+                        </div>
+                        <div id="aiInputScanLoading{{ ktima.id }}" class="d-none text-center text-primary small">
+                            <i class="fas fa-spinner fa-spin me-2"></i> Σάρωση ετικέτας...
+                        </div>
+                        <div class="form-text" style="font-size: 0.8em;">📸 Θέλετε να βγάλετε φωτογραφία την ετικέτα από το μπουκάλι/σακί για αυτόματη καταγραφή στο ψηφιακό αρχείο;</div>
                     </form>
                 </div>
             </div>

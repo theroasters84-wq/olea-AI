@@ -129,7 +129,7 @@ def analysi_egrafou(ktima_id):
         
         ktima.analysi_dedomena = response.text if response else "Αδυναμία ανάλυσης κειμένου."
         
-        # Καταγραφή στο ημερολόγιο διαγνώσεων για να μετράμε τον χρόνο (Ανάλυση Φύλλων/Εγγράφου)
+        # Καταγραφή στο ημερολόγιο διαγνώσεων
         if response:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma="📄 Έγγραφο Ανάλυσης: Ολοκληρώθηκε", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
@@ -174,6 +174,7 @@ def anagnorisi_stadiou(ktima_id):
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
         ktima.fainologiko_stadio = response.text.strip().replace('.', '') if response else "Άγνωστο"
         
+        flash(f'Το AI αναγνώρισε το στάδιο: {ktima.fainologiko_stadio}', 'success')
         # Καταγραφή της ημερομηνίας που βρέθηκε το στάδιο
         if response:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🌿 Αναγνώριση Σταδίου: {ktima.fainologiko_stadio}", imerominia=datetime.now())
@@ -191,6 +192,7 @@ def ektimisi_paragogis(ktima_id):
     if file:
         img = PIL.Image.open(file)
         poikilies = ", ".join([f"{p.poikilia_onoma}" for p in ktima.poikilies_details]) or ktima.poikilia
+        # Ensure ktima.arithmos_dentron is an integer for the prompt
         prompt = f"Είσαι ειδικός γεωπόνος... Εκτίμηση παραγωγής για {ktima.arithmos_dentron} δέντρα ({poikilies})..."
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
         flash(f'Εκτίμηση: {response.text}', 'info')
@@ -198,6 +200,7 @@ def ektimisi_paragogis(ktima_id):
 
 @ai_bp.route('/ai_input_scan/<int:ktima_id>', methods=['POST'])
 @login_required
+# Moved from core_app.py to ai_tools.py
 def ai_input_scan(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     file = request.files.get('fwtografia_input')
@@ -217,6 +220,7 @@ def ai_input_scan(ktima_id):
         nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός/Λίπανση (AI)', katastasi='Ολοκληρώθηκε', farmaka_lipasmata=ai_summary, imerominia=datetime.now())
         vasi.session.add(nea_ergasia)
         # Auto-remove pending tasks logic here (omitted for brevity but implied same as original)
+        flash('Η ετικέτα σαρώθηκε και η εργασία καταγράφηκε!', 'success')
         vasi.session.commit()
         flash('Καταγράφηκε!', 'success')
     return redirect(url_for('core_app.arxikh'))
@@ -616,3 +620,34 @@ def akyrosi_erotisis_ai(ktima_id):
     ktima.ekkremis_erotisi_ai = None
     vasi.session.commit()
     return jsonify({'success': True})
+
+@ai_bp.route('/delete_diagnosi/<int:diagnosi_id>', methods=['POST'])
+@login_required
+def delete_diagnosi(diagnosi_id):
+    diagnosi = vasi.session.get(Diagnosi, diagnosi_id)
+    if not diagnosi:
+        flash('Η διάγνωση δεν βρέθηκε.', 'danger')
+        return redirect(request.referrer or url_for('core_app.arxikh'))
+    
+    # Έλεγχος ιδιοκτησίας
+    if diagnosi.ktima.idioktitis != current_user:
+        flash('Δεν έχετε δικαίωμα να διαγράψετε αυτή τη διάγνωση.', 'danger')
+        return redirect(request.referrer or url_for('core_app.arxikh'))
+        
+    vasi.session.delete(diagnosi)
+    vasi.session.commit()
+    flash('Η διάγνωση διαγράφηκε επιτυχώς.', 'success')
+    return redirect(request.referrer or url_for('core_app.arxikh'))
+
+@ai_bp.route('/delete_analysi_edafous/<int:analysi_id>', methods=['POST'])
+@login_required
+def delete_analysi_edafous(analysi_id):
+    analysi = vasi.session.get(AnalysiEdafous, analysi_id)
+    if not analysi or analysi.ktima.idioktitis != current_user:
+        flash('Δεν βρέθηκε η ανάλυση ή δεν έχετε δικαίωμα διαγραφής.', 'danger')
+        return redirect(request.referrer or url_for('core_app.arxikh'))
+    
+    vasi.session.delete(analysi)
+    vasi.session.commit()
+    flash('Η ανάλυση εδάφους διαγράφηκε επιτυχώς.', 'success')
+    return redirect(request.referrer or url_for('core_app.arxikh'))

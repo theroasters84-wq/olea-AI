@@ -362,7 +362,7 @@ def xtise_plires_context(ktima):
         if recent: ctx += f"--- ΙΣΤΟΡΙΚΟ ΠΡΟΒΛΗΜΑΤΩΝ & ΕΥΡΗΜΑΤΑ ---\n{' | '.join(recent)}\n\n"
             
     if ktima.ergasies:
-        completed = [f"{e.eidos_ergasias}{' - ' + e.farmaka_lipasmata if e.farmaka_lipasmata else ''} ({e.imerominia.strftime('%d/%m')})" for e in sorted(ktima.ergasies, key=lambda x: x.imerominia, reverse=True) if not e.archived and e.katastasi == 'Ολοκληρώθηκε'][:4]
+        completed = [f"{e.eidos_ergasias}{' - ' + e.farmaka_lipasmata if e.farmaka_lipasmata else ''} ({e.imerominia.strftime('%d/%m/%Y')})" for e in sorted(ktima.ergasies, key=lambda x: x.imerominia, reverse=True) if not e.archived and e.katastasi == 'Ολοκληρώθηκε'][:15]
         if completed: ctx += f"--- ΙΣΤΟΡΙΚΟ ΕΡΓΑΣΙΩΝ ---\nΤελευταίες Ολοκληρωμένες: {', '.join(completed)}\n\n"
         
         pending = [f"{e.eidos_ergasias} ({e.proelevsi})" for e in ktima.ergasies if not e.archived and e.katastasi == 'Εκκρεμεί']

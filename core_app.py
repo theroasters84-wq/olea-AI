@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, Response, make_response
 from flask_login import login_required, current_user, logout_user
@@ -10,6 +11,19 @@ from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smar
 from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro
 
 core_bp = Blueprint('core_app', __name__)
+
+# Απλή in-memory cache για να μην κολλάει η εφαρμογή στις κλήσεις APIs
+_api_cache = {}
+
+def get_cached_api_data(key, fetch_func, ttl_seconds=600): # Προεπιλογή 10 λεπτά (600 δευτ.)
+    now = time.time()
+    if key in _api_cache:
+        val, timestamp = _api_cache[key]
+        if now - timestamp < ttl_seconds:
+            return val
+    val = fetch_func()
+    _api_cache[key] = (val, now)
+    return val
 
 # Διόρθωση: Περνάμε το datetime στα templates για να μην σκάει το 500 error
 @core_bp.context_processor
@@ -60,9 +74,10 @@ def arxikh():
                 # Ενσωμάτωση Agromonitoring API
                 ktima.agro_data = None
                 if ktima.agromonitoring_poly_id:
-                    soil = get_agro_soil_data(ktima.agromonitoring_poly_id)
-                    uvi = get_agro_uvi(ktima.agromonitoring_poly_id)
-                    agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
+                    soil = get_cached_api_data(f"soil_{ktima.agromonitoring_poly_id}", lambda: get_agro_soil_data(ktima.agromonitoring_poly_id))
+                    uvi = get_cached_api_data(f"uvi_{ktima.agromonitoring_poly_id}", lambda: get_agro_uvi(ktima.agromonitoring_poly_id))
+                    # Το agro_forecast δεν χρησιμοποιείται στο template, γλιτώνουμε 1 κλήση:
+                    # agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
                     
                     # Μετατροπή της ώρας του Δορυφόρου σε αναγνώσιμη μορφή (π.χ. 13/03/2026 14:30)
                     if soil and 'dt' in soil:
@@ -80,6 +95,10 @@ def arxikh():
                     ktima.protaseis = paragwgi_protasewn(ktima, ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], ktima.kairos['perigrafi'])
                 else:
                     ktima.protaseis = []
+                ktima.agro_forecast = None
+                ktima.kairos = None
+                ktima.symvouli = None
+                ktima.protaseis = []
                 
                 ideal_tasks = generate_smart_tasks(ktima)
                 if isinstance(ideal_tasks, list):
@@ -602,14 +621,15 @@ def ndvi_analyze(ktima_id):
                 # 2. Αναζήτηση Εικόνας (Τελευταίες 365 μέρες)
                 end_time = int(time.time()) - 60
                 start_time = end_time - (365 * 24 * 60 * 60)
-                img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
                 
-                time.sleep(1)
-                img_res = requests.get(img_url)
+                def fetch_images_analyze():
+                    url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+                    res = requests.get(url)
+                    if res.status_code == 200 and res.json():
+                        return res.json()
+                    return []
                 
-                images = []
-                if img_res.status_code == 200 and img_res.json():
-                    images = img_res.json()
+                images = get_cached_api_data(f"ndvi_images_{ktima.agromonitoring_poly_id}", fetch_images_analyze, ttl_seconds=86400)
 
                 # Αν δεν βρεθούν εικόνες, δοκιμάζουμε να ξανα-δηλώσουμε το πολύγωνο και να ξανα-ψάξουμε (μόνο αν δεν το κάναμε ήδη)
                 if not images and ktima.polygon_geojson and not polygon_changed:
@@ -631,7 +651,7 @@ def ndvi_analyze(ktima_id):
                             images = img_res_retry.json()
 
                 # --- Τελική Αναζήτηση στην τελική λίστα εικόνων ---
-                ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = None, None, None, None, None
+                ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url, image_dt = None, None, None, None, None, None
                 if images:
                     images.sort(key=lambda x: x['dt'], reverse=True)
                     
@@ -644,6 +664,7 @@ def ndvi_analyze(ktima_id):
                             evi_url = img_data.get('evi')
                             truecolor_url = img_data.get('truecolor')
                             falsecolor_url = img_data.get('falsecolor')
+                            image_dt = img.get('dt')
                             break
                             
                     # 2. Αν όλα τα περάσματα έχουν σύννεφα, αναγκαστικά παίρνουμε την πιο πρόσφατη
@@ -656,6 +677,7 @@ def ndvi_analyze(ktima_id):
                                 evi_url = img_data.get('evi')
                                 truecolor_url = img_data.get('truecolor')
                                 falsecolor_url = img_data.get('falsecolor')
+                                image_dt = img.get('dt')
                                 break
                     
                     # 3. Διόρθωση URL (HTTPS & API Key) για όλους τους χάρτες
@@ -666,6 +688,8 @@ def ndvi_analyze(ktima_id):
                             urls_dict[k] = v.replace("http://", "https://")
                     
                     ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = urls_dict['ndvi_url'], urls_dict['ndwi_url'], urls_dict['evi_url'], urls_dict['truecolor_url'], urls_dict['falsecolor_url']
+                    
+                    image_date_str = datetime.fromtimestamp(image_dt).strftime('%d/%m/%Y %H:%M') if image_dt else ''
                     
                     ai_msg = "Ο χάρτης ανανεώθηκε, αλλά δεν έγινε ανάλυση AI."
                     if ndvi_url:
@@ -708,7 +732,8 @@ def ndvi_analyze(ktima_id):
                 'ndwi_url': ndwi_url if 'ndwi_url' in locals() else '',
                 'evi_url': evi_url if 'evi_url' in locals() else '',
                 'truecolor_url': truecolor_url if 'truecolor_url' in locals() else '',
-                'falsecolor_url': falsecolor_url if 'falsecolor_url' in locals() else ''
+                'falsecolor_url': falsecolor_url if 'falsecolor_url' in locals() else '',
+                'image_date': image_date_str if 'image_date_str' in locals() else ''
             })
         
         return jsonify({'error': 'Δεν βρέθηκαν δεδομένα χάρτη'}), 400
@@ -751,17 +776,18 @@ def trexe_doriforo(ktima_id):
             return jsonify({'success': False, 'message': f'Ο δορυφόρος απέρριψε τον χάρτη. Βεβαιωθείτε ότι το πολύγωνο δεν τέμνεται και είναι επαρκούς μεγέθους. (Σφάλμα: {repost_res.status_code})'}), 400
 
     try:
-        # Αναζήτηση Εικόνας NDVI (Τελευταίες 365 μέρες)
+        # Αναζήτηση Εικόνας NDVI (Τελευταίες 365 μέρες) με 24ωρη προσωρινή μνήμη
         end_time = int(time.time()) - 60 # Αφαιρούμε 60 δευτερόλεπτα για να αποφύγουμε σφάλματα συγχρονισμού
         start_time = end_time - (365 * 24 * 60 * 60)
-        img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
         
-        img_res = requests.get(img_url)
-        
-        # Προσωρινή αποθήκευση αποτελεσμάτων για έλεγχο
-        images = []
-        if img_res.status_code == 200 and img_res.json():
-            images = img_res.json()
+        def fetch_images_trexe():
+            url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
+            res = requests.get(url)
+            if res.status_code == 200 and res.json():
+                return res.json()
+            return []
+            
+        images = get_cached_api_data(f"ndvi_images_{ktima.agromonitoring_poly_id}", fetch_images_trexe, ttl_seconds=86400)
         
         # Αν δεν βρεθούν εικόνες, δοκιμάζουμε να ξανα-δηλώσουμε το πολύγωνο και να ξανα-ψάξουμε
         if not images and ktima.polygon_geojson:
@@ -780,10 +806,10 @@ def trexe_doriforo(ktima_id):
                 time.sleep(1)
                 img_res_retry = requests.get(img_url_retry)
                 if img_res_retry.status_code == 200 and img_res_retry.json():
-                    images = img_res.json()
+                    images = img_res_retry.json() # Διόρθωση bug (ήταν img_res αντί για img_res_retry)
         
         if images:
-            ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = None, None, None, None, None
+            ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url, image_dt = None, None, None, None, None, None
             images.sort(key=lambda x: x['dt'], reverse=True)
             
             for img in images:
@@ -794,6 +820,7 @@ def trexe_doriforo(ktima_id):
                     evi_url = img_data.get('evi')
                     truecolor_url = img_data.get('truecolor')
                     falsecolor_url = img_data.get('falsecolor')
+                    image_dt = img.get('dt')
                     break
                     
             if not ndvi_url:
@@ -805,6 +832,7 @@ def trexe_doriforo(ktima_id):
                         evi_url = img_data.get('evi')
                         truecolor_url = img_data.get('truecolor')
                         falsecolor_url = img_data.get('falsecolor')
+                        image_dt = img.get('dt')
                         break
             
             if ndvi_url:
@@ -815,6 +843,8 @@ def trexe_doriforo(ktima_id):
                         urls_dict[k] = v.replace("http://", "https://")
                 
                 ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url = urls_dict['ndvi_url'], urls_dict['ndwi_url'], urls_dict['evi_url'], urls_dict['truecolor_url'], urls_dict['falsecolor_url']
+                
+                image_date_str = datetime.fromtimestamp(image_dt).strftime('%d/%m/%Y %H:%M') if image_dt else ''
                 
                 # ΕΛΕΓΧΟΣ CACHE ΓΙΑ ΑΠΟΦΥΓΗ ΠΕΡΙΤΤΩΝ ΚΛΗΣΕΩΝ AI
                 now_dt = datetime.now()
@@ -885,7 +915,8 @@ def trexe_doriforo(ktima_id):
                     'ndwi_url': ndwi_url,
                     'evi_url': evi_url,
                     'truecolor_url': truecolor_url,
-                    'falsecolor_url': falsecolor_url
+                    'falsecolor_url': falsecolor_url,
+                    'image_date': image_date_str
                 })
             else:
                 return jsonify({'success': False, 'message': 'Βρέθηκαν περάσματα δορυφόρου αλλά κανένα δεν είχε έτοιμο δείκτη NDVI. Δοκιμάστε αργότερα.'})
@@ -1034,6 +1065,39 @@ def api_ndvi_history(ktima_id):
             return jsonify({'labels': labels, 'means': means})
     except Exception as e: pass
     return jsonify({'error': 'Αποτυχία λήψης ιστορικού'})
+
+# --- API ΓΙΑ ΑΣΥΓΧΡΟΝΗ ΦΟΡΤΩΣΗ ΚΑΙΡΟΥ & AI ---
+@core_bp.route('/api/ktima_weather_widget/<int:ktima_id>')
+@login_required
+def ktima_weather_widget(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
+        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
+        
+    is_geoponos_view = getattr(current_user, 'rolos', '') == 'geoponos' and request.args.get('is_geoponos_view') == 'true'
+
+    ktima.agro_data = None
+    if ktima.agromonitoring_poly_id:
+        soil = get_cached_api_data(f"soil_{ktima.agromonitoring_poly_id}", lambda: get_agro_soil_data(ktima.agromonitoring_poly_id), ttl_seconds=86400)
+        uvi = get_cached_api_data(f"uvi_{ktima.agromonitoring_poly_id}", lambda: get_agro_uvi(ktima.agromonitoring_poly_id), ttl_seconds=86400)
+        if soil and 'dt' in soil:
+            soil['dt_formatted'] = datetime.fromtimestamp(soil['dt']).strftime('%d/%m/%Y %H:%M')
+        if uvi and 'dt' in uvi:
+            uvi['dt_formatted'] = datetime.fromtimestamp(uvi['dt']).strftime('%d/%m/%Y %H:%M')
+        if soil or uvi:
+            ktima.agro_data = {'soil': soil, 'uvi': uvi}
+
+    ktima.kairos = get_cached_api_data(f"kairo_{ktima.geografiko_platos}_{ktima.geografiko_mikos}", lambda: pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos), ttl_seconds=1800)
+    if ktima.kairos:
+        ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
+        ktima.protaseis = paragwgi_protasewn(ktima, ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], ktima.kairos['perigrafi'])
+    else:
+        ktima.protaseis = []
+
+    top_html = render_template('_weather_widget_top.html', ktima=ktima, is_geoponos_view=is_geoponos_view)
+    bottom_html = render_template('_weather_widget_bottom.html', ktima=ktima, is_geoponos_view=is_geoponos_view)
+    
+    return jsonify({'top_html': top_html, 'bottom_html': bottom_html})
 
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes

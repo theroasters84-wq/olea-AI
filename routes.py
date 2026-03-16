@@ -5,6 +5,7 @@ from auth import auth_bp
 from ai_tools import ai_bp
 from core_app import core_bp
 from ktima_actions import ktima_actions_bp
+from gramateas_ai import gramateas_bp
 from models import Xrhsths
 
 @core_bp.route('/dashboard_geoponou', methods=['GET', 'POST'])
@@ -32,3 +33,4 @@ efarmogi.register_blueprint(auth_bp)
 efarmogi.register_blueprint(ai_bp)
 efarmogi.register_blueprint(core_bp)
 efarmogi.register_blueprint(ktima_actions_bp)
+efarmogi.register_blueprint(gramateas_bp)
