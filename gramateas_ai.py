@@ -19,7 +19,13 @@ def ai_secretary():
     history_str = request.form.get('history', '[]')
     image_files = request.files.getlist('images')
 
-    ktima = vasi.session.get(Ktima, ktima_id) if ktima_id else None
+    ktima = None
+    if ktima_id and ktima_id not in ['none', 'all']:
+        try:
+            ktima = vasi.session.get(Ktima, int(ktima_id))
+        except (ValueError, TypeError):
+            pass
+            
     if ktima and ktima.idioktitis != current_user:
         return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
 
