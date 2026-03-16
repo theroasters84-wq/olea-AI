@@ -154,6 +154,10 @@ def ai_secretary():
         
         response = client.models.generate_content(model='gemini-2.5-flash', contents=contents)
         
+        # Δικλείδα Ασφαλείας: Αν το AI επιστρέψει κενό (π.χ. λόγω safety filters)
+        if not response or not getattr(response, 'text', None):
+            return jsonify({'success': True, 'reply': 'Υπήρξε ένα στιγμιαίο πρόβλημα επικοινωνίας ή μπλοκάρισμα από τα φίλτρα ασφαλείας του AI. Μπορείτε να το διατυπώσετε διαφορετικά;', 'action': 'ADVICE'})
+            
         json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
         data = json.loads(json_text)
         
