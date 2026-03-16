@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from core import vasi
-from models import Ktima, Ergasia, Diagnosi
+from models import Ktima, Ergasia, Diagnosi, Exodo
 from google import genai
 
 gramateas_bp = Blueprint('gramateas', __name__)
@@ -40,8 +40,15 @@ def ai_secretary():
         if ktima:
             from logic import xtise_plires_context
             context_str += f"\nΤο ΕΝΕΡΓΟ κτήμα στη συζήτηση είναι το '{ktima.onoma_ktimatos}' (ID: {ktima.id}). \nΔεδομένα Κτήματος:\n{xtise_plires_context(ktima)}\n"
+        elif ktima_id == 'all':
+            from logic import xtise_plires_context
+            context_str += "\nΟ αγρότης ΔΕΝ έχει επιλέξει συγκεκριμένο κτήμα (Γενική Προβολή). Σου δίνω ΠΛΗΡΗ ΠΡΟΣΒΑΣΗ στα δεδομένα ΟΛΩΝ των κτημάτων του:\n"
+            for k in current_user.ktimata:
+                context_str += f"\n--- ΑΡΧΗ ΔΕΔΟΜΕΝΩΝ ΓΙΑ ΚΤΗΜΑ: {k.onoma_ktimatos} (ID: {k.id}) ---\n"
+                context_str += xtise_plires_context(k)
+                context_str += f"--- ΤΕΛΟΣ ΔΕΔΟΜΕΝΩΝ ΓΙΑ ΚΤΗΜΑ: {k.onoma_ktimatos} ---\n"
         else:
-            context_str += "\nΠΡΟΣΟΧΗ: Ο αγρότης ΔΕΝ έχει επιλέξει συγκεκριμένο κτήμα στο μενού. Γι' αυτό ΔΕΝ βλέπεις το ιστορικό εργασιών! Αν ρωτάει για εργασίες ή τον καιρό ενός κτήματος, ΠΕΣ ΤΟΥ ΕΥΓΕΝΙΚΑ να το επιλέξει από το αναδιπλούμενο μενού πάνω-πάνω, για να μπορέσεις να διαβάσεις τον φάκελό του.\n"
+            context_str += "\nΠΡΟΣΟΧΗ: Ο αγρότης κάνει 'Γενική Ερώτηση (Χωρίς Κτήμα)'. Αν ρωτάει για εργασίες ή τον καιρό ενός κτήματος που δεν έχεις τα δεδομένα, ΠΕΣ ΤΟΥ ΕΥΓΕΝΙΚΑ να το επιλέξει από το αναδιπλούμενο μενού πάνω-πάνω, για να μπορέσεις να διαβάσεις τον φάκελό του.\n"
 
         # --- ΕΙΣΑΓΩΓΗ ΜΝΗΜΗΣ ΣΤΟ AI ---
         try:
@@ -58,32 +65,41 @@ def ai_secretary():
         prompt += """
         ΟΔΗΓΙΕΣ ΓΙΑ ΤΟ JSON ΚΑΙ ΤΗ ΣΥΜΠΕΡΙΦΟΡΑ ΣΟΥ: 
         1. Έλεγχος Αποθήκης: Πριν προτείνεις οποιοδήποτε υλικό, φάρμακο ή εργασία, ΕΛΕΓΞΕ ΑΥΣΤΗΡΑ την "ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ" στο προφίλ του κτήματος. Αν το υλικό υπάρχει ήδη διαθέσιμο, πρότεινε να χρησιμοποιήσει αυτό για οικονομία.
-        2. Ανάλυση Φωτογραφίας & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία, εκτός από τυχόν ασθένειες, παρατήρησε: α) Το έδαφος (υπάρχουν λάστιχα ποτίσματος;), β) Τα χόρτα (είναι κομμένα;), γ) Την πυκνότητα φύτευσης (είναι υπέρπυκνη;). Αν δεις κάτι που διαφέρει από το τρέχον προφίλ του κτήματος, ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ ΑΜΕΣΩΣ. Ρώτα πρώτα τον χρήστη στο "reply" (π.χ. "Βλέπω λάστιχα ποτίσματος. Θέλετε να ενημερώσω το κτήμα σε Αρδευόμενο;"). Θέσε action: "DIAGNOSIS".
-        3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης στο κείμενό του ΣΟΥ ΕΠΙΒΕΒΑΙΩΣΕΙ να κάνεις μια αλλαγή στα στοιχεία του κτήματος (π.χ. "Ναι, άλλαξέ το", "Είναι αρδευόμενο", "Τα χόρτα είναι κομμένα"), βάλε action: "UPDATE_KTIMA" και συμπλήρωσε τις νέες τιμές στο object "updates".
+        2. Ανάλυση Φωτογραφίας/Εγγράφου & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία ή έγγραφο ανάλυσης, εκτός από τυχόν ασθένειες, παρατήρησε: α) Το έδαφος (Τι τύπος εδάφους φαίνεται ή αναγράφεται; π.χ. Αργιλώδες, Αμμώδες, Πετρώδες. Υπάρχουν λάστιχα ποτίσματος;), β) Τα χόρτα (είναι κομμένα;), γ) Την πυκνότητα φύτευσης (είναι υπέρπυκνη;). Αν δεις κάτι που διαφέρει από το τρέχον προφίλ του κτήματος, ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ ΑΜΕΣΩΣ. Ρώτα πρώτα τον χρήστη στο "reply" (π.χ. "Βλέπω λάστιχα ποτίσματος. Θέλετε να ενημερώσω το κτήμα σε Αρδευόμενο;" ή "Ο τύπος εδάφους φαίνεται αργιλώδης. Να τον καταχωρήσω;"). Θέσε action: "DIAGNOSIS".
+        3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης στο κείμενό του ΣΟΥ ΕΠΙΒΕΒΑΙΩΣΕΙ να κάνεις μια αλλαγή στα στοιχεία του κτήματος (π.χ. "Ναι, άλλαξέ το", "Είναι αρδευόμενο", "Άλλαξέ το σε βιολογική", "Κάνε τα στρέμματα 15", "Έχω 150 δέντρα", "Το έδαφος είναι αμμώδες"), βάλε action: "UPDATE_KTIMA" και συμπλήρωσε τις νέες τιμές στο object "updates".
         4. Προσθήκη Εργασίας: Αν ο χρήστης λέει ότι έκανε μια εργασία (π.χ. "ράντισα", "έριξα λίπασμα", "φρεζάρισα"), βάλε action: "ADD_TASK" και συμπλήρωσε το "task_name" και "task_materials".
         5. Διαγραφή Εργασιών: Αν ο χρήστης ζητήσει να διαγράψεις εργασίες (π.χ. "σβήσε όλες τις εργασίες", "διέγραψε το κλάδεμα"), βάλε action: "DELETE_TASKS". Στο "task_name" γράψε "ΟΛΕΣ" για ολική διαγραφή, ή μια λέξη-κλειδί για συγκεκριμένη (π.χ. "Κλάδεμα").
-        6. Πληροφορίες Ιστορικού & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΛΗΡΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, τον καιρό, την πρόγνωση κλπ (είναι όλα γραμμένα στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τη λίστα των εργασιών μέσα στο πεδίο "reply". ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
-        7. Απλή συμβουλή: Αν ο χρήστης ρωτάει μια συμβουλή, δώσε την απάντηση και βάλε action: "ADVICE".
+        6. Πληροφορίες Ιστορικού & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, τον καιρό, κλπ (αν υπάρχουν στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τη λίστα. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Αν βλέπεις δεδομένα πολλών κτημάτων, δώσε συγκεντρωτική αναφορά. Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
+        7. Οικονομικά & Έξοδα: Αν ο χρήστης ρωτήσει για τα έξοδά του ή το συνολικό κόστος, διάβασε τα από την ενότητα 'ΟΙΚΟΝΟΜΙΚΑ / ΕΞΟΔΑ' και απάντησε στο "reply". Αν αναφέρει νέο έξοδο (π.χ. "πλήρωσα 100 ευρώ για λιπάσματα"), βάλε action: "ADD_EXPENSE", το ποσό στο "expense_amount" και την περιγραφή στο "expense_desc".
+        8. Απλή συμβουλή: Αν ο χρήστης ρωτάει μια συμβουλή, δώσε την απάντηση και βάλε action: "ADVICE".
         
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "ADD_TASK" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS",
+            "action": "ADD_TASK" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "ADD_EXPENSE",
             "target_ktima_id": Αριθμός ID του κτήματος (του επιλεγμένου ή αυτού που αναφέρει ο χρήστης. Αν δεν μπορείς να το βρεις, βάλε null),
             "task_name": "Ονομασία Εργασίας (π.χ. 'Ψεκασμός με Χαλκό') ή 'ΟΛΕΣ' - ΚΕΝΟ αν δεν αφορά εργασία",
             "task_materials": "Όνομα φαρμάκου/λιπάσματος - ΚΕΝΟ αν δεν αναφέρεται",
+            "expense_amount": Ποσό σε ευρώ (αριθμός, π.χ. 100.5) - null αν action!=ADD_EXPENSE,
+            "expense_desc": "Περιγραφή του εξόδου" - ΚΕΝΟ αν action!=ADD_EXPENSE,
             "updates": {
                 "ardefsi": "Αρδευόμενο" ή "Ξηρικό" ή null,
                 "diacheirisi_edafous": "Καθαρό (Οργωμένο/Ζιζανιοκτονία)" ή "Φυσική Βλάστηση (Άκοπα χόρτα)" ή "Κομμένα Χόρτα" ή null,
-                "puknotita_dentron": "Αραιή" ή "Κανονική" ή "Πυκνή/Υπέρπυκνη" ή null
+                "puknotita_dentron": "Αραιή" ή "Κανονική" ή "Πυκνή/Υπέρπυκνη" ή null,
+                "kalliergeia_typos": "Βιολογική" ή "Συμβατική" ή null,
+                "ilikia_dentron": "Νεαρά (1-5 ετών)" ή "Παραγωγικά (6-40 ετών)" ή "Γηραιά (40+ ετών)" ή null,
+                "stremmata": Αριθμός στρεμμάτων (π.χ. 12.5) ή null,
+                "arithmos_dentron": Αριθμός δέντρων (ακέραιος, π.χ. 150) ή null,
+                "typos_edafous": "Αμμώδες" ή "Αργιλώδες" ή "Πηλώδες" ή "Πετρώδες" ή null
             }
         }
         """
         contents.append(prompt)
 
-        if image_file and image_file.filename != '':
-            img = PIL.Image.open(image_file)
-            contents.append(img)
+        for img_file in image_files:
+            if img_file.filename != '':
+                img = PIL.Image.open(img_file)
+                contents.append(img)
         
         response = client.models.generate_content(model='gemini-2.5-flash', contents=contents)
         
@@ -119,6 +135,27 @@ def ai_secretary():
             if updates.get('puknotita_dentron'):
                 ktima.puknotita_dentron = updates['puknotita_dentron']
                 updated_fields.append('Πυκνότητα Δέντρων')
+            if updates.get('kalliergeia_typos'):
+                ktima.kalliergeia_typos = updates['kalliergeia_typos']
+                updated_fields.append('Τύπος Καλλιέργειας')
+            if updates.get('ilikia_dentron'):
+                ktima.ilikia_dentron = updates['ilikia_dentron']
+                updated_fields.append('Ηλικία Δέντρων')
+            if updates.get('stremmata') is not None:
+                try:
+                    ktima.stremmata = float(updates['stremmata'])
+                    updated_fields.append('Στρέμματα')
+                except (ValueError, TypeError):
+                    pass
+            if updates.get('arithmos_dentron') is not None:
+                try:
+                    ktima.arithmos_dentron = int(updates['arithmos_dentron'])
+                    updated_fields.append('Αριθμός Δέντρων')
+                except (ValueError, TypeError):
+                    pass
+            if updates.get('typos_edafous'):
+                ktima.typos_edafous = updates['typos_edafous']
+                updated_fields.append('Τύπος Εδάφους')
             if updated_fields:
                 nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"⚙️ Ενημέρωση Προφίλ από AI: {', '.join(updated_fields)}", imerominia=datetime.now())
                 vasi.session.add(nea_diagnosi)
@@ -132,7 +169,17 @@ def ai_secretary():
                 Ergasia.query.filter_by(ktima_id=ktima.id).filter(Ergasia.eidos_ergasias.ilike(f"%{task_name}%")).delete(synchronize_session=False)
                 nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🗑️ AI Γραμματέας: Έγινε διαγραφή εργασιών: {task_name}.", imerominia=datetime.now())
                 vasi.session.add(nea_diagnosi)
-        elif (action == 'DIAGNOSIS' or (image_file and image_file.filename != '')) and ktima:
+        elif action == 'ADD_EXPENSE' and ktima:
+            poso = data.get('expense_amount')
+            perigrafi = data.get('expense_desc', 'Νέο Έξοδο (Από AI)')
+            try:
+                poso = float(poso)
+                neo_exodo = Exodo(ktima_id=ktima.id, perigrafi=perigrafi, poso=poso, imerominia=datetime.now())
+                vasi.session.add(neo_exodo)
+                nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"💶 AI Γραμματέας: Προστέθηκε έξοδο '{perigrafi}' ({poso}€).", imerominia=datetime.now())
+                vasi.session.add(nea_diagnosi)
+            except (ValueError, TypeError): pass
+        elif (action == 'DIAGNOSIS' or any(img.filename != '' for img in image_files)) and ktima:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"📸 AI Γραμματέας: {reply_text}", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
             

@@ -139,6 +139,8 @@ class ArxeioSygkomidis(vasi.Model):
     ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
     imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
     tonoi = vasi.Column(vasi.Float, nullable=False)
+    kila_ladi = vasi.Column(vasi.Float, default=0.0)
+    esoda = vasi.Column(vasi.Float, default=0.0)
     kila_ana_dentro = vasi.Column(vasi.Float, nullable=False)
     synoliko_kostos = vasi.Column(vasi.Float, nullable=False)
 

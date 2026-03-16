@@ -365,3 +365,54 @@ def xeirokiniti_analysi(ktima_id):
         flash('Παρακαλώ εισάγετε έγκυρους αριθμητικούς χαρακτήρες.', 'danger')
         
     return redirect(url_for('core_app.arxikh'))
+
+@ktima_actions_bp.route('/nea_sodeia', methods=['POST'])
+@login_required
+def nea_sodeia():
+    ktima_id = request.form.get('ktima_id')
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        flash("Άρνηση πρόσβασης", "danger")
+        return redirect(url_for('core_app.arxeio'))
+        
+    try:
+        kila_karpou = float(request.form.get('kila_karpou', 0))
+        kila_ladi = float(request.form.get('kila_ladi', 0))
+        esoda = float(request.form.get('esoda', 0))
+        
+        # Υπολογισμός Συνολικών Εξόδων της σεζόν πριν αρχειοθετηθούν
+        synoliko_kostos = sum([e.poso for e in ktima.exoda if not e.archived])
+        kila_ana_dentro = kila_karpou / ktima.arithmos_dentron if ktima.arithmos_dentron and ktima.arithmos_dentron > 0 else 0
+        
+        vasi.session.add(ArxeioSygkomidis(
+            ktima_id=ktima.id, 
+            tonoi=kila_karpou, # Χρησιμοποιούμε τη στήλη tonoi για τα Κιλά Καρπού
+            kila_ladi=kila_ladi,
+            esoda=esoda,
+            kila_ana_dentro=kila_ana_dentro, 
+            synoliko_kostos=synoliko_kostos, 
+            imerominia=datetime.now()
+        ))
+        
+        for e in ktima.ergasies: e.archived = True
+        for ex in ktima.exoda: ex.archived = True
+        
+        vasi.session.commit()
+        flash(f'Η σοδειά καταγράφηκε! Όλες οι τρέχουσες εργασίες και έξοδα του κτήματος "{ktima.onoma_ktimatos}" αρχειοθετήθηκαν επιτυχώς.', 'success')
+    except ValueError: 
+        flash('Παρακαλώ εισάγετε έγκυρους αριθμούς.', 'danger')
+        
+    return redirect(url_for('core_app.arxeio'))
+
+@ktima_actions_bp.route('/diagrafi_sodeias/<int:sodeia_id>', methods=['POST'])
+@login_required
+def diagrafi_sodeias(sodeia_id):
+    sodeia = vasi.session.get(ArxeioSygkomidis, sodeia_id)
+    if not sodeia or sodeia.ktima.idioktitis != current_user:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+        return redirect(url_for('core_app.arxeio'))
+    
+    vasi.session.delete(sodeia)
+    vasi.session.commit()
+    flash('Η καταχώρηση της σοδειάς διαγράφηκε επιτυχώς.', 'success')
+    return redirect(url_for('core_app.arxeio'))

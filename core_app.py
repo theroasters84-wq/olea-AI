@@ -419,6 +419,19 @@ def prosthes_ktima():
             flash(f'Σφάλμα: {e}', 'danger')
     return redirect(url_for('core_app.arxikh'))
 
+@core_bp.route('/arxeiothetisi_ktimatos/<int:ktima_id>', methods=['POST'])
+@login_required
+def arxeiothetisi_ktimatos(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+        return redirect(url_for('core_app.arxikh'))
+    
+    ktima.is_active = False
+    vasi.session.commit()
+    flash(f'Το κτήμα "{ktima.onoma_ktimatos}" αρχειοθετήθηκε επιτυχώς. Δε θα εμφανίζεται πλέον στην αρχική σας σελίδα.', 'info')
+    return redirect(url_for('core_app.arxikh'))
+
 @core_bp.route('/prosthes_ergasia/<int:ktima_id>', methods=['POST'])
 @login_required
 def prosthes_ergasia(ktima_id):
@@ -1098,6 +1111,40 @@ def ktima_weather_widget(ktima_id):
     bottom_html = render_template('_weather_widget_bottom.html', ktima=ktima, is_geoponos_view=is_geoponos_view)
     
     return jsonify({'top_html': top_html, 'bottom_html': bottom_html})
+
+@core_bp.route('/arxeiothetimena_ktimata')
+@login_required
+def arxeiothetimena_ktimata():
+    ktimata = [k for k in current_user.ktimata if not k.is_active]
+    return render_template('arxeiothetimena_ktimata.html', ktimata=ktimata)
+
+@core_bp.route('/epanafora_ktimatos/<int:ktima_id>', methods=['POST'])
+@login_required
+def epanafora_ktimatos(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+        return redirect(url_for('core_app.arxeiothetimena_ktimata'))
+    ktima.is_active = True
+    vasi.session.commit()
+    flash(f'Το κτήμα "{ktima.onoma_ktimatos}" επαναφέρθηκε επιτυχώς στην αρχική σας σελίδα.', 'success')
+    return redirect(url_for('core_app.arxeiothetimena_ktimata'))
+
+@core_bp.route('/metonomasia_ktimatos/<int:ktima_id>', methods=['POST'])
+@login_required
+def metonomasia_ktimatos(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+        return redirect(url_for('core_app.arxikh'))
+    
+    neo_onoma = request.form.get('neo_onoma')
+    if neo_onoma and neo_onoma.strip():
+        ktima.onoma_ktimatos = neo_onoma.strip()
+        vasi.session.commit()
+        flash('Το όνομα του κτήματος ενημερώθηκε επιτυχώς!', 'success')
+        
+    return redirect(request.referrer or url_for('core_app.arxikh'))
 
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes

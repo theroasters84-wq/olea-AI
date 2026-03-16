@@ -372,6 +372,12 @@ def xtise_plires_context(ktima):
         stock = [f"{i.onoma_proiontos}" for i in ktima.idioktitis.apothiki_items]
         if stock: ctx += f"--- ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ ---\nΔιαθέσιμα: {', '.join(stock)}\n"
             
+    if ktima.exoda:
+        exoda_list = [f"{e.perigrafi}: {e.poso}€ ({e.imerominia.strftime('%d/%m/%Y')})" for e in sorted(ktima.exoda, key=lambda x: x.imerominia, reverse=True) if not e.archived][:10]
+        synoliko_kostos = sum([e.poso for e in ktima.exoda if not e.archived])
+        if exoda_list:
+            ctx += f"--- ΟΙΚΟΝΟΜΙΚΑ / ΕΞΟΔΑ ---\nΣυνολικό Κόστος (Τρέχουσας Σεζόν): {synoliko_kostos}€\nΤελευταία Έξοδα: {', '.join(exoda_list)}\n\n"
+            
     return ctx
 
 def generate_smart_tasks(ktima):

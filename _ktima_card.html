@@ -182,11 +182,14 @@
             <div class="flex-shrink-0">
                 <div class="d-flex justify-content-between align-items-start">
                     <h4 class="mb-1" style="word-break: break-word;">{{ ktima.onoma_ktimatos }}</h4>
-                    <form action="{{ url_for('ktima_actions.diagrafi_ktimatos', ktima_id=ktima.id) }}" method="POST" class="ms-2" onsubmit="return confirm('ΠΡΟΣΟΧΗ: Είστε σίγουροι ότι θέλετε να διαγράψετε ΟΡΙΣΤΙΚΑ αυτό το κτήμα; Θα διαγραφεί και από τον δορυφόρο. Αυτή η ενέργεια δεν αναιρείται.');">
-                        <button type="submit" class="btn btn-danger rounded-circle shadow-sm" title="Οριστική Διαγραφή Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                    <div class="d-flex">
+                        <button type="button" class="btn btn-primary rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalRenameKtima{{ ktima.id }}" title="Μετονομασία Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                        <button type="button" class="btn btn-danger rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalDeleteArchive{{ ktima.id }}" title="Διαχείριση Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-times"></i>
                         </button>
-                    </form>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-between small text-muted mb-1">
                     <span><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} | ⛰️ {{ ktima.ypsometro }}m{% endif %}</span>
@@ -319,5 +322,57 @@
                 </div>
             </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Modal Διαγραφής/Αρχειοθέτησης -->
+<div class="modal fade" id="modalDeleteArchive{{ ktima.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Διαχείριση Κτήματος</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <p class="mb-4">Τι θέλετε να κάνετε με το κτήμα <strong>"{{ ktima.onoma_ktimatos }}"</strong>;</p>
+                
+                <form action="{{ url_for('core_app.arxeiothetisi_ktimatos', ktima_id=ktima.id) }}" method="POST" class="mb-3">
+                    <button type="submit" class="btn btn-warning w-100 text-dark shadow-sm py-2">
+                        <strong><i class="fas fa-archive fa-lg mb-1"></i> Αρχειοθέτηση</strong><br>
+                        <small class="fw-normal">Το κτήμα θα κρυφτεί από την αρχική σελίδα, αλλά δεν θα χάσετε τα δεδομένα του.</small>
+                    </button>
+                </form>
+                
+                <form action="{{ url_for('ktima_actions.diagrafi_ktimatos', ktima_id=ktima.id) }}" method="POST" onsubmit="return confirm('Είστε απόλυτα σίγουροι; Όλα τα δεδομένα, οι εργασίες και οι χάρτες θα διαγραφούν ΜΟΝΙΜΑ.');">
+                    <button type="submit" class="btn btn-outline-danger w-100 shadow-sm py-2">
+                        <strong><i class="fas fa-trash-alt fa-lg mb-1"></i> Οριστική Διαγραφή</strong><br>
+                        <small class="fw-normal">Αυτή η ενέργεια ΔΕΝ αναιρείται.</small>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Μετονομασίας -->
+<div class="modal fade" id="modalRenameKtima{{ ktima.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Μετονομασία Κτήματος</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('core_app.metonomasia_ktimatos', ktima_id=ktima.id) }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Νέο Όνομα Κτήματος</label>
+                        <input type="text" name="neo_onoma" class="form-control" value="{{ ktima.onoma_ktimatos }}" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Αποθήκευση Αλλαγών</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>

@@ -172,6 +172,22 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'ilikia_dentron' υπάρχει ήδη στον πίνακα 'ktima_poikilies' ({e})")
                 conn.rollback()
 
+            # Προσθήκη στήλης kila_ladi στο arxeia_sygkomidis
+            try:
+                conn.execute(text("ALTER TABLE arxeia_sygkomidis ADD COLUMN kila_ladi FLOAT DEFAULT 0.0"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'kila_ladi' στο arxeia_sygkomidis")
+            except Exception as e:
+                conn.rollback()
+
+            # Προσθήκη στήλης esoda στο arxeia_sygkomidis
+            try:
+                conn.execute(text("ALTER TABLE arxeia_sygkomidis ADD COLUMN esoda FLOAT DEFAULT 0.0"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'esoda' στο arxeia_sygkomidis")
+            except Exception as e:
+                conn.rollback()
+
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")
 
