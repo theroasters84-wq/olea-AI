@@ -9,7 +9,7 @@
             <div class="modal-body">
                 <!-- Οικονομικά -->
                 <h5 style="color: #c0392b;"><i class="fas fa-coins"></i> Οικονομικά</h5>
-                <form action="{{ url_for('ktima_actions.prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;">
+                <form action="{{ url_for('ktima_actions.prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;" onsubmit="sessionStorage.setItem('reopenModal', 'modalOikonomika{{ ktima.id }}');">
                     <div class="input-group input-group-sm mb-1">
                         <input type="text" name="perigrafi" class="form-control" placeholder="Περιγραφή" required>
                         <input type="number" name="poso" class="form-control" placeholder="€" step="0.01" required>

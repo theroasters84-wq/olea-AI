@@ -1,4 +1,19 @@
 <script>
+    // Επαναφορά Modal αν είχε παραμείνει ανοιχτό πριν την ανανέωση
+    document.addEventListener('DOMContentLoaded', function() {
+        const reopenModalId = sessionStorage.getItem('reopenModal');
+        if (reopenModalId) {
+            setTimeout(() => {
+                const modalEl = document.getElementById(reopenModalId);
+                if (modalEl) {
+                    const myModal = new bootstrap.Modal(modalEl);
+                    myModal.show();
+                }
+            }, 150); // Καθυστέρηση 150ms για να προλάβει να φορτώσει το γραφικό περιβάλλον
+            sessionStorage.removeItem('reopenModal');
+        }
+    });
+
     // AJAX Weather Loading
     document.addEventListener('DOMContentLoaded', function() {
         const weatherContainers = document.querySelectorAll('.weather-async-top');

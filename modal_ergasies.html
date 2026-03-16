@@ -39,7 +39,7 @@
                 </ul>
 
                 <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
-                <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;">
+                <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;" onsubmit="sessionStorage.setItem('reopenModal', 'modalErgasies{{ ktima.id }}');">
                     <div class="mb-1">
                         <select name="eidos_ergasias" class="form-select form-select-sm" required>
                             <option value="" disabled selected>Επιλογή Εργασίας</option>
