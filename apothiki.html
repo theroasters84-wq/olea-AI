@@ -86,7 +86,7 @@
                                     <td class="fw-bold">{{ proion.onoma_proiontos }}</td>
                                     <td>{{ proion.posotita }} {{ proion.monada_metrisis }}</td>
                                     <td class="text-end">
-                                        <form action="{{ url_for('diagrafi_apothikis', item_id=proion.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το προϊόν (π.χ. άδειασε ή χύθηκε);');">
+                                        <form action="{{ url_for('core_app.diagrafi_apothikis', item_id=proion.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το προϊόν (π.χ. άδειασε ή χύθηκε);');">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Διαγραφή">
                                                 <i class="fas fa-times"></i>
                                             </button>
