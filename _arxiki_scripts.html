@@ -85,6 +85,7 @@
                     container.onclick = function(e){
                         e.preventDefault(); e.stopPropagation();
                         container.innerHTML = '<i class="fas fa-spinner fa-spin text-primary" style="font-size: 1.2em;"></i>';
+                        map._gpsClicked = true;
                         map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true});
                     }
                     return container;
@@ -92,7 +93,11 @@
             });
             map.addControl(new GpsControl());
             map.on('locationfound', function(e) { const ctrl = map.getContainer().querySelector('.fa-spinner'); if (ctrl) { ctrl.className = 'fas fa-crosshairs text-primary'; } });
-            map.on('locationerror', function(e) { const ctrl = map.getContainer().querySelector('.fa-spinner'); if (ctrl) { ctrl.className = 'fas fa-crosshairs text-primary'; } alert("Δεν ήταν δυνατή η πρόσβαση στο GPS. Ελέγξτε αν έχετε δώσει άδεια τοποθεσίας στον browser σας."); });
+            map.on('locationerror', function(e) { 
+                const ctrl = map.getContainer().querySelector('.fa-spinner'); 
+                if (ctrl) { ctrl.className = 'fas fa-crosshairs text-primary'; } 
+                if (map._gpsClicked) { alert("Δεν ήταν δυνατή η πρόσβαση στο GPS. Ελέγξτε αν έχετε δώσει άδεια τοποθεσίας στον browser σας."); map._gpsClicked = false; }
+            });
         };
 
         // --- Add Ktima Modal Map & Form Logic ---
@@ -177,6 +182,9 @@
 
                     if (savedGeoJsonStr && savedGeoJsonStr !== "None" && savedGeoJsonStr !== "") {
                         try { const geoLayer = L.geoJSON(JSON.parse(savedGeoJsonStr)); geoLayer.eachLayer(function(layer) { drawnItems.addLayer(layer); }); map.fitBounds(drawnItems.getBounds()); } catch (e) {}
+                    } else if (lat === 37.9838) {
+                        // Προεπιλογή Αθήνας από AI: Ζήτα τοποθεσία χρήστη (GPS) αυτόματα
+                        map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true});
                     }
 
                     map.on(L.Draw.Event.CREATED, function (e) {

@@ -110,11 +110,12 @@ def ai_secretary():
         13. Γενικές / Άσχετες Ερωτήσεις (Internet Access): Είσαι πλέον συνδεδεμένος και στο διαδίκτυο (Google Search). Αν ο χρήστης σε ρωτήσει κάτι εντελώς άσχετο με τα χωράφια (π.χ. συνταγή μαγειρικής, ποιος κέρδισε έναν αγώνα, ειδήσεις, ιστορία), ΑΠΑΝΤΗΣΕ ΤΟΥ ΦΥΣΙΟΛΟΓΙΚΑ, φιλικά και σύντομα. ΜΗΝ προσπαθήσεις να συνδέσεις την ερώτηση με τα κτήματα. Βάλε action: "ADVICE".
         14. Δημιουργία Νέου Κτήματος: Αν ο χρήστης ζητήσει να δημιουργήσεις ένα νέο κτήμα (π.χ. "φτιάξε ένα κτήμα"), βάλε action: "ADD_KTIMA" και συμπλήρωσε το "new_ktima_data". Το "onoma_ktimatos" είναι υποχρεωτικό. Στο "reply" σου πες του ευγενικά: "Το κτήμα δημιουργήθηκε! Σας ανοίγω αυτόματα τον χάρτη για να ορίσετε την ακριβή τοποθεσία.". ΜΗΝ ρωτάς "Σε ποια περιοχή βρίσκεται".
         15. Διαγραφή Κτήματος: Αν ο χρήστης ζητήσει να ΔΙΑΓΡΑΨΕΙ ένα κτήμα, ΡΩΤΑ ΤΟΝ ΠΡΩΤΑ για επιβεβαίωση (action: "DIAGNOSIS"). Αν επιβεβαιώσει οριστικά ότι θέλει διαγραφή, βάλε action: "DELETE_KTIMA" και "target_ktima_id" το ID του (ή "ALL" για όλα).
+        16. Επιλογή/Αλλαγή Κτήματος: Αν ο χρήστης ζητήσει να αλλάξετε ή να επιλέξετε ένα κτήμα για τη συνέχεια της συζήτησης (π.χ. "Πάμε στο κτήμα...", "Άνοιξε το...", "Δες όλα τα κτήματα"), βρες το ID του από τη Λίστα Ενεργών Κτημάτων και βάλε action: "SWITCH_KTIMA" και "target_ktima_id" το ID (ή "ALL" για όλα τα κτήματα). Στο "reply" επιβεβαίωσε την αλλαγή.
         
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA",
+            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "SWITCH_KTIMA",
             "tasks": [
                 {
                     "target_ktima_id": "Αριθμός ID κτήματος Ή 'ALL'",
@@ -224,11 +225,13 @@ def ai_secretary():
                 target_ktima = vasi.session.get(Ktima, ktima_id_int)
                 if target_ktima and target_ktima.idioktitis == current_user:
                     ktima = target_ktima
+                    target_ktima_id = ktima.id
             except (ValueError, TypeError):
                 # Δοκιμή εύρεσης με βάση το όνομα (Σε περίπτωση που το AI έστειλε όνομα αντί για ID)
                 for k in energa_ktimata:
                     if str(target_ktima_id).lower().strip() in k.onoma_ktimatos.lower():
                         ktima = k
+                        target_ktima_id = ktima.id
                         break
         
         if action in ['ADD_TASK', 'ADD_TASKS']:
@@ -706,7 +709,14 @@ def ai_secretary():
         current_user.secretary_history = json.dumps(history)
         
         vasi.session.commit()
-        return jsonify({'success': True, 'reply': reply_text, 'action': action, 'new_ktima_data': data.get('new_ktima_data'), 'new_ktima_id': data.get('new_ktima_id')})
+        return jsonify({
+            'success': True, 
+            'reply': reply_text, 
+            'action': action, 
+            'new_ktima_data': data.get('new_ktima_data'), 
+            'new_ktima_id': data.get('new_ktima_id'),
+            'target_ktima_id': target_ktima_id
+        })
     except Exception as e:
         error_msg = str(e)
         if '502' in error_msg or '503' in error_msg or 'Bad Gateway' in error_msg:
