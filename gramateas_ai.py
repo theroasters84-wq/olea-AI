@@ -272,7 +272,15 @@ def ai_secretary():
                         except: pass
                         
                     status_ergasias = task_data.get('status', 'Ολοκληρώθηκε')
-                    nea_ergasia = Ergasia(ktima_id=target_k.id, eidos_ergasias=
+                    nea_ergasia = Ergasia(
+                        ktima_id=target_k.id, 
+                        eidos_ergasias=task_data.get('task_name', 'Νέα Εργασία'),
+                        katastasi=status_ergasias,
+                        imerominia=im,
+                        farmaka_lipasmata=task_data.get('task_materials', ''),
+                        proelevsi='AI Γραμματέας'
+                    )
+                    vasi.session.add(nea_ergasia)
                     
                     poso = task_data.get('expense_amount')
                     if poso is not None:
