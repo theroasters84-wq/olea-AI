@@ -55,6 +55,17 @@ def arxikh():
 
         for ktima in ktimata:
             try:
+                # --- ΑΥΤΟΜΑΤΗ ΕΠΙΔΙΟΡΘΩΣΗ ΔΕΝΤΡΩΝ & ΠΟΙΚΙΛΙΩΝ ---
+                if ktima.poikilies_details:
+                    pragmatika_dentra = sum(p.arithmos_dentron for p in ktima.poikilies_details if p.arithmos_dentron and p.arithmos_dentron > 0)
+                    unique_p = list(set([p.poikilia_onoma for p in ktima.poikilies_details if p.arithmos_dentron and p.arithmos_dentron > 0]))
+                    sosti_poikilia = 'Ανάμεικτο' if len(unique_p) > 1 else (unique_p[0] if unique_p else 'Δεν ορίστηκε')
+                    
+                    if ktima.arithmos_dentron != pragmatika_dentra or (pragmatika_dentra > 0 and ktima.poikilia != sosti_poikilia):
+                        ktima.arithmos_dentron = pragmatika_dentra
+                        if pragmatika_dentra > 0: ktima.poikilia = sosti_poikilia
+                        vasi.session.commit()
+
                 # --- ΑΥΤΟΜΑΤΗ ΕΠΙΔΙΟΡΘΩΣΗ: Ανάκτηση χαμένου πολυγώνου από τον Δορυφόρο ---
                 if ktima.agromonitoring_poly_id and not ktima.polygon_geojson:
                     api_key = os.getenv('AGROMONITORING_API_KEY')

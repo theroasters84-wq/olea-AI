@@ -1,3 +1,11 @@
+// --- FIX: Αποτροπή μηνυμάτων σφάλματος [Intervention] για touch events στο Leaflet ---
+const originalPreventDefault = Event.prototype.preventDefault;
+Event.prototype.preventDefault = function() {
+    if (this.cancelable !== false) {
+        originalPreventDefault.call(this);
+    }
+};
+
 // PWA Installation Logic
 let deferredPrompt;
 const installBtn = document.getElementById('installBtn');
@@ -230,3 +238,101 @@ window.changeMapLayer = function(mapId, url, ktimaId) {
         window.ndviMapOverlays[mapId] = overlay;
     }
 };
+
+// --- UX Βελτιώσεις για Κινητά & PWA (Διατήρηση θέσης οθόνης) ---
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Επαναφορά θέσης scroll
+    const savedPath = sessionStorage.getItem('scrollPath');
+    const scrollPos = sessionStorage.getItem('scrollPosition');
+    
+    if (savedPath === window.location.pathname && scrollPos) {
+        // Μικρή καθυστέρηση για να προλάβουν να φορτώσουν τα στοιχεία της σελίδας
+        setTimeout(() => {
+            window.scrollTo({ top: parseInt(scrollPos), behavior: 'auto' });
+        }, 100);
+    }
+    
+    // 2. Επαναφορά ανοιχτού Κτήματος (Αν χρησιμοποιείς Bootstrap Accordion/Collapse)
+    const openCollapseId = sessionStorage.getItem('openCollapseId');
+    if (openCollapseId && savedPath === window.location.pathname) {
+        const collapseEl = document.getElementById(openCollapseId);
+        if (collapseEl && typeof bootstrap !== 'undefined' && !collapseEl.classList.contains('show')) {
+            new bootstrap.Collapse(collapseEl, { toggle: true });
+        }
+    }
+
+    // Παρακολούθηση ανοίγματος/κλεισίματος για να θυμόμαστε τι βλέπει ο χρήστης
+    document.querySelectorAll('.collapse').forEach(function(el) {
+        el.addEventListener('shown.bs.collapse', function (e) {
+            if (e.target.id) sessionStorage.setItem('openCollapseId', e.target.id);
+            
+            // Βελτιστοποίηση: Όταν ανοίγει ένα κτήμα, "ξυπνάμε" τον χάρτη ακαριαία (invalidateSize) 
+            // για να μην εμφανίζει "γκρι κουτάκια" και να προφορτώνει τα πλακίδια (tiles).
+            setTimeout(() => {
+                const maps = Object.assign({}, window.initializedMaps || {}, window.analytikiMaps || {});
+                for (let mapId in maps) {
+                    let map = maps[mapId];
+                    if (map && map._container && e.target.contains(map._container)) {
+                        map.invalidateSize();
+                    }
+                }
+            }, 50);
+        });
+        el.addEventListener('hidden.bs.collapse', function (e) {
+            if (e.target.id === sessionStorage.getItem('openCollapseId')) {
+                sessionStorage.removeItem('openCollapseId');
+            }
+        });
+    });
+});
+
+window.addEventListener("beforeunload", function() {
+    // Αποθήκευση της θέσης scroll πριν την ανανέωση ή υποβολή φόρμας
+    sessionStorage.setItem('scrollPath', window.location.pathname);
+    sessionStorage.setItem('scrollPosition', window.scrollY);
+});
+
+// --- FIX: Αποτροπή αναπήδησης (Jump) του χάρτη πάνω-αριστερά στα κινητά ---
+let isMapDraggingGlobal = false;
+let dragTimerGlobal;
+
+// --- ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ ΤΑΧΥΤΗΤΑΣ & CACHE ΧΑΡΤΗ ---
+if (typeof L !== 'undefined' && L.TileLayer) {
+    L.TileLayer.mergeOptions({
+        keepBuffer: 4,             // Διατήρηση 4x περισσότερων πλακιδίων στη μνήμη (ταχύτερη επιστροφή στο ίδιο σημείο)
+        updateWhenIdle: true,      // Φόρτωση νέων κομματιών χάρτη ΜΟΝΟ όταν σταματάς να τον σέρνεις (αποτρέπει κολλήματα)
+        updateWhenZooming: false   // Σταματάει τη λήψη εικόνων κατά τη διάρκεια του Zoom animation
+    });
+}
+
+if (typeof L !== 'undefined' && L.Map) {
+    // Απενεργοποιούμε το προεπιλεγμένο 'tap' του Leaflet που προκαλεί το bug σε οθόνες αφής
+    L.Map.addInitHook(function () {
+        if (L.Browser.mobile) {
+            this.options.tap = false;
+        }
+        
+        // Παρακολούθηση συρσίματος (drag) για αποτροπή τυχαίων κλικ
+        this.on('dragstart', function() { isMapDraggingGlobal = true; });
+        this.on('dragend', function() {
+            clearTimeout(dragTimerGlobal);
+            dragTimerGlobal = setTimeout(() => { isMapDraggingGlobal = false; }, 400); // Προστασία/κλείδωμα κλικ για 400ms μετά το σύρσιμο
+        });
+    });
+}
+
+// Μπλοκάρουμε το 'click' (πριν φτάσει στο εργαλείο σχεδίασης) αμέσως μετά από σύρσιμο του χάρτη!
+document.addEventListener('click', function(e) {
+    if (isMapDraggingGlobal && e.target && typeof e.target.closest === 'function') {
+        if (e.target.closest('.leaflet-container')) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }
+}, true); // Το true σημαίνει Capture phase (το πιάνει πρώτο από όλους)
+
+document.addEventListener("DOMContentLoaded", function() {
+    const leafletTouchFix = document.createElement('style');
+    leafletTouchFix.innerHTML = ".leaflet-container { touch-action: none !important; -webkit-tap-highlight-color: transparent; }";
+    document.head.appendChild(leafletTouchFix);
+});

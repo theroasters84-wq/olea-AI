@@ -110,7 +110,7 @@ def ai_secretary():
         13. Γενικές / Άσχετες Ερωτήσεις (Internet Access): Είσαι πλέον συνδεδεμένος και στο διαδίκτυο (Google Search). Αν ο χρήστης σε ρωτήσει κάτι εντελώς άσχετο με τα χωράφια (π.χ. συνταγή μαγειρικής, ποιος κέρδισε έναν αγώνα, ειδήσεις, ιστορία), ΑΠΑΝΤΗΣΕ ΤΟΥ ΦΥΣΙΟΛΟΓΙΚΑ, φιλικά και σύντομα. ΜΗΝ προσπαθήσεις να συνδέσεις την ερώτηση με τα κτήματα. Βάλε action: "ADVICE".
         14. Δημιουργία Νέου Κτήματος: Αν ο χρήστης ζητήσει να δημιουργήσεις ένα νέο κτήμα (π.χ. "φτιάξε ένα κτήμα"), βάλε action: "ADD_KTIMA" και συμπλήρωσε το "new_ktima_data". Το "onoma_ktimatos" είναι υποχρεωτικό. Στο "reply" σου πες του ευγενικά: "Το κτήμα δημιουργήθηκε! Σας ανοίγω αυτόματα τον χάρτη για να ορίσετε την ακριβή τοποθεσία.". ΜΗΝ ρωτάς "Σε ποια περιοχή βρίσκεται".
         15. Διαγραφή Κτήματος: Αν ο χρήστης ζητήσει να ΔΙΑΓΡΑΨΕΙ ένα κτήμα, ΕΛΕΓΞΕ ΠΡΩΤΑ αν υπάρχει. Αν δεν υπάρχει, πες ότι δεν το βρίσκεις. Αν υπάρχει, ΡΩΤΑ ΤΟΝ ΠΡΩΤΑ για επιβεβαίωση (action: "DIAGNOSIS"). Αν επιβεβαιώσει οριστικά ότι θέλει διαγραφή, βάλε action: "DELETE_KTIMA" και "target_ktima_id" το ID του (ή "ALL" για όλα).
-        16. Επιλογή/Αλλαγή Κτήματος: Αν ο χρήστης ζητήσει να αλλάξετε ή να επιλέξετε ένα κτήμα για τη συνέχεια της συζήτησης (π.χ. "Πάμε στο κτήμα...", "Άνοιξε το...", "Δες όλα τα κτήματα"), βρες το ID του από τη Λίστα Ενεργών Κτημάτων και βάλε action: "SWITCH_KTIMA" και "target_ktima_id" το ID (ή "ALL" για όλα τα κτήματα). Στο "reply" επιβεβαίωσε την αλλαγή.
+        16. Επιλογή/Αλλαγή Κτήματος: Αν ο χρήστης ζητήσει να αλλάξετε ή να επιλέξετε ένα κτήμα (π.χ. "Πάμε στο...", "Άνοιξε το...", "Δες όλα τα κτήματα" ή γράψει το όνομα σε greeklish), βρες ΑΥΣΤΗΡΑ τον αριθμό ID του από τη Λίστα Ενεργών Κτημάτων που σου έδωσα παραπάνω. Βάλε action: "SWITCH_KTIMA" και "target_ktima_id" τον ΑΡΙΘΜΟ ID (π.χ. 2 ή "ALL"). ΜΗΝ βάλεις το όνομα ως target_ktima_id! Στο "reply" επιβεβαίωσε την αλλαγή αναφέροντας ΜΟΝΟ το όνομα του κτήματος και ΠΟΤΕ το ID του.
         
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
@@ -155,7 +155,8 @@ def ai_secretary():
                 "onoma_ktimatos": "Όνομα...",
                 "arithmos_dentron": 20,
                 "poikilia": "Κορωνέικη",
-                "ilikia_dentron": "Παραγωγικά (6-40 ετών) ή ότι αναφέρει"
+                "ilikia_dentron": "Παραγωγικά (6-40 ετών) ή ότι αναφέρει",
+                "poikilies_multi": [{"onoma": "Κορωνέικη", "arithmos": 20}]
             },
             "nero_ph": 7.2,
             "nero_agwgimotita": 1.5,
@@ -212,6 +213,8 @@ def ai_secretary():
         
         action = data.get('action', 'ADVICE')
         reply_text = data.get('reply', 'Δεν κατάλαβα ακριβώς τι ζητάς.')
+        import re
+        reply_text = re.sub(r'\s*\(?ID:\s*\d+\)?', '', reply_text, flags=re.IGNORECASE)
         target_ktima_id = data.get('target_ktima_id')
         
         # Χρήση της επιλογής από το μενού ως προεπιλογή αν το AI δεν έστειλε κάτι
@@ -269,8 +272,7 @@ def ai_secretary():
                         except: pass
                         
                     status_ergasias = task_data.get('status', 'Ολοκληρώθηκε')
-                    nea_ergasia = Ergasia(ktima_id=target_k.id, eidos_ergasias=task_data.get('task_name', 'AI Καταχώρηση'), farmaka_lipasmata=task_data.get('task_materials', ''), katastasi=status_ergasias, imerominia=im, proelevsi='AI Γραμματέας')
-                    vasi.session.add(nea_ergasia)
+                    nea_ergasia = Ergasia(ktima_id=target_k.id, eidos_ergasias=
                     
                     poso = task_data.get('expense_amount')
                     if poso is not None:
@@ -375,7 +377,9 @@ def ai_secretary():
                                             break
                                     if not found:
                                         from models import KtimaPoikilia
-                                        vasi.session.add(KtimaPoikilia(ktima_id=target_k.id, poikilia_onoma=v_name, arithmos_dentron=v_diff, ilikia_dentron=v_age or target_k.ilikia_dentron))
+                                        neo_p = KtimaPoikilia(ktima_id=target_k.id, poikilia_onoma=v_name, arithmos_dentron=v_diff, ilikia_dentron=v_age or target_k.ilikia_dentron)
+                                        vasi.session.add(neo_p)
+                                        target_k.poikilies_details.append(neo_p)
                                 else:
                                     ypoloipo = abs(v_diff)
                                     for p in list(target_k.poikilies_details):
@@ -388,12 +392,14 @@ def ai_secretary():
                                                 break
                                             else:
                                                 ypoloipo -= p.arithmos_dentron
+                                                p.arithmos_dentron = 0
                                                 vasi.session.delete(p)
                         vasi.session.flush()
                         
                         energes_poikilies = [p for p in target_k.poikilies_details if p.arithmos_dentron > 0]
                         target_k.arithmos_dentron = sum(p.arithmos_dentron for p in energes_poikilies)
-                        target_k.poikilia = 'Ανάμεικτο' if len(energes_poikilies) > 1 else (energes_poikilies[0].poikilia_onoma if energes_poikilies else 'Δεν ορίστηκε')
+                        unique_p = list(set([p.poikilia_onoma for p in energes_poikilies]))
+                        target_k.poikilia = 'Ανάμεικτο' if len(unique_p) > 1 else (unique_p[0] if unique_p else 'Δεν ορίστηκε')
                         updated_fields.append('Πολλαπλές Ποικιλίες (Δέντρα)')
                         tree_count_changed = True
                     except Exception as e:
@@ -433,7 +439,9 @@ def ai_secretary():
                                     if not found:
                                         from models import KtimaPoikilia
                                         ilikia_to_save = requested_ilikia if requested_ilikia else target_k.ilikia_dentron
-                                        vasi.session.add(KtimaPoikilia(ktima_id=target_k.id, poikilia_onoma=requested_poikilia, arithmos_dentron=diff, ilikia_dentron=ilikia_to_save))
+                                        neo_p = KtimaPoikilia(ktima_id=target_k.id, poikilia_onoma=requested_poikilia, arithmos_dentron=diff, ilikia_dentron=ilikia_to_save)
+                                        vasi.session.add(neo_p)
+                                        target_k.poikilies_details.append(neo_p)
                                         target_k.poikilia = 'Ανάμεικτο'
                                 else:
                                     ypoloipo = abs(diff)
@@ -445,6 +453,7 @@ def ai_secretary():
                                                 break
                                             else:
                                                 ypoloipo -= p.arithmos_dentron
+                                                p.arithmos_dentron = 0
                                                 vasi.session.delete(p)
                             elif target_k.poikilies_details:
                                 if diff > 0:
@@ -458,6 +467,7 @@ def ai_secretary():
                                             break
                                         else:
                                             ypoloipo -= p.arithmos_dentron
+                                            p.arithmos_dentron = 0
                                             vasi.session.delete(p)
                     except (ValueError, TypeError): pass
                 if updates.get('typos_edafous'):
@@ -658,6 +668,11 @@ def ai_secretary():
                     vasi.session.flush() # Λήψη του νέου ID
                     
                     poikilies_multi = nk_data.get('poikilies_multi')
+                    if not poikilies_multi and isinstance(data.get('updates'), dict):
+                        poikilies_multi = data['updates'].get('poikilies_multi')
+                    if not poikilies_multi:
+                        poikilies_multi = data.get('poikilies_multi')
+                        
                     if poikilies_multi and isinstance(poikilies_multi, list) and len(poikilies_multi) > 0:
                         total_trees = 0
                         valid_varieties = []
@@ -667,7 +682,9 @@ def ai_secretary():
                             except: p_arithmos = 0
                             if p_onoma and p_arithmos > 0:
                                 from models import KtimaPoikilia
-                                vasi.session.add(KtimaPoikilia(ktima_id=neo_ktima.id, poikilia_onoma=p_onoma, arithmos_dentron=p_arithmos, ilikia_dentron=p.get('ilikia') or 'Άγνωστη'))
+                                neo_p = KtimaPoikilia(ktima_id=neo_ktima.id, poikilia_onoma=p_onoma, arithmos_dentron=p_arithmos, ilikia_dentron=p.get('ilikia') or 'Άγνωστη')
+                                vasi.session.add(neo_p)
+                                neo_ktima.poikilies_details.append(neo_p)
                                 total_trees += p_arithmos
                                 valid_varieties.append(p_onoma)
                         neo_ktima.arithmos_dentron = total_trees

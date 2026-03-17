@@ -452,8 +452,8 @@ def paragogi_syntaghs(ktima_id):
             for erg in data.get('ergasies', []):
                 nea_ergasia = Ergasia(
                     ktima_id=ktima.id,
-                    eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
-                    farmaka_lipasmata=erg.get('farmaka', ''),
+                    eidos_ergasias=str(erg.get('eidos', 'Άλλη Εργασία'))[:100],
+                    farmaka_lipasmata=str(erg.get('farmaka', ''))[:255],
                     katastasi='Εκκρεμεί',
                     proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
                     imerominia=datetime.now()
@@ -531,8 +531,8 @@ def refine_syntagh(ktima_id):
             for erg in data.get('ergasies', []):
                 nea_ergasia = Ergasia(
                     ktima_id=ktima.id,
-                    eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'),
-                    farmaka_lipasmata=erg.get('farmaka', ''),
+                    eidos_ergasias=str(erg.get('eidos', 'Άλλη Εργασία'))[:100],
+                    farmaka_lipasmata=str(erg.get('farmaka', ''))[:255],
                     katastasi='Εκκρεμεί',
                     proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
                     imerominia=datetime.now()
@@ -592,7 +592,7 @@ def xeirokiniti_syntagh(ktima_id):
             Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί', proelevsi='Γεωπόνος').delete(synchronize_session=False)
 
             for erg in ai_data.get('ergasies', []):
-                vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=erg.get('eidos', 'Άλλη Εργασία'), farmaka_lipasmata=erg.get('farmaka', ''), katastasi='Εκκρεμεί', proelevsi='Γεωπόνος', imerominia=datetime.now()))
+                vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=str(erg.get('eidos', 'Άλλη Εργασία'))[:100], farmaka_lipasmata=str(erg.get('farmaka', ''))[:255], katastasi='Εκκρεμεί', proelevsi='Γεωπόνος', imerominia=datetime.now()))
             
             vasi.session.commit()
 
