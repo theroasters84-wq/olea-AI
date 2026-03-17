@@ -12,6 +12,7 @@
                 <a href="{{ url_for('core_app.ananeosi_ergasion', ktima_id=ktima.id) }}" class="btn btn-sm btn-outline-success mb-2"><i class="fas fa-sync-alt"></i> Επικαιροποίηση AI για την Περιοχή</a>
                 
                 <ul class="list-group mb-3" style="font-size: 0.9em;">
+                    <!-- AI Smart Tasks -->
                     {% for task in ktima.pending_tasks %}
                     <li class="list-group-item d-flex justify-content-between align-items-center task-item-{{ ktima.id }}" data-proelevsi="AI Γεωπόνος">
                         <div>
@@ -31,11 +32,35 @@
                             </form>
                         </div>
                     </li>
-                    {% else %}
+                    {% endfor %}
+                    
+                    <!-- Database Manual Pending Tasks -->
+                    {% for db_task in ktima.manual_pending_tasks %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center task-item-{{ ktima.id }}" data-proelevsi="{{ db_task.proelevsi }}">
+                        <div>
+                            <strong>{{ db_task.eidos_ergasias }}</strong>
+                            {% if db_task.farmaka_lipasmata %}<br><small class="text-muted">{{ db_task.farmaka_lipasmata }}</small>{% endif %}
+                            <br>
+                            <span class="badge {% if db_task.proelevsi == 'AI Γεωπόνος' %}bg-info text-dark{% elif db_task.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %}">{{ db_task.proelevsi }}</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-success btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#completeManualTaskModal{{ db_task.id }}">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="eidos_ergasias" value="{{ db_task.eidos_ergasias }}">
+                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
+                                <button type="submit" class="btn btn-secondary btn-sm py-0 px-2" title="Ακύρωση"><i class="fas fa-times"></i></button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if not ktima.pending_tasks and not ktima.manual_pending_tasks %}
                     <li class="list-group-item text-center text-success">
                         <i class="fas fa-check-circle"></i> 🎉 Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!
                     </li>
-                    {% endfor %}
+                    {% endif %}
                 </ul>
 
                 <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
@@ -75,7 +100,7 @@
                         <ul class="list-group">
                             {% for ergasia in ktima.ergasies|reverse %}
                               {% if not ergasia.archived %}
-                                <li class="list-group-item">
+                                <li class="list-group-item {% if ergasia.katastasi == 'Εκκρεμεί' %}bg-light{% endif %}">
                                     <strong>{{ ergasia.eidos_ergasias }}</strong> - {{ ergasia.katastasi }}<br>
                                     <small class="text-muted">{{ ergasia.imerominia.strftime('%d/%m/%Y') }}</small>
                                     {% if ergasia.farmaka_lipasmata %}
@@ -127,6 +152,46 @@
             <div class="mb-3">
                 <label class="form-label text-danger"><i class="fas fa-euro-sign"></i> Επιπλέον Κόστος Εργασίας (€) (Προαιρετικό)</label>
                 <input type="number" step="0.01" name="kostos" class="form-control form-control-sm" placeholder="0.00">
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Αποθήκευση & Ολοκλήρωση</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- MODAL ΟΛΟΚΛΗΡΩΣΗΣ ΓΙΑ ΧΕΙΡΟΚΙΝΗΤΕΣ ΕΡΓΑΣΙΕΣ (DATABASE) -->
+{% for db_task in ktima.manual_pending_tasks %}
+<div class="modal fade" id="completeManualTaskModal{{ db_task.id }}" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="fas fa-check-circle"></i> Ολοκλήρωση</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6 class="text-center mb-3">{{ db_task.eidos_ergasias }}</h6>
+        <form action="{{ url_for('ktima_actions.oloklirosi_ergasias', ktima_id=ktima.id) }}" method="POST">
+            <input type="hidden" name="ergasia_id" value="{{ db_task.id }}">
+            <input type="hidden" name="eidos_ergasias" value="{{ db_task.eidos_ergasias }}">
+            
+            <div class="mb-3">
+                <label class="form-label text-primary"><i class="fas fa-warehouse"></i> Χρησιμοποιήσατε υλικό από την αποθήκη;</label>
+                <select name="yliko_id" class="form-select form-select-sm">
+                    <option value="">-- Όχι / Άλλο υλικό --</option>
+                    {% if current_user.apothiki_items %}
+                        {% for item in current_user.apothiki_items %}
+                            <option value="{{ item.id }}">{{ item.onoma_proiontos }} (Διαθέσιμα: {{ item.posotita }} {{ item.monada_metrisis }})</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Ποσότητα που χρησιμοποιήσατε:</label>
+                <input type="number" step="0.01" name="posotita_xrisis" class="form-control form-control-sm" placeholder="π.χ. 2.5">
             </div>
             <div class="d-grid">
                 <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Αποθήκευση & Ολοκλήρωση</button>

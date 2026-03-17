@@ -25,6 +25,7 @@ class Xrhsths(vasi.Model, UserMixin):
     apothiki_items = vasi.relationship('Apothiki', backref='idioktitis_apothikis', lazy=True, cascade="all, delete-orphan")
     ai_auto_ergasies = vasi.Column(vasi.Boolean, default=True)
     geoponos_auto_ergasies = vasi.Column(vasi.Boolean, default=True)
+    secretary_history = vasi.Column(vasi.Text, default='[]')
 
     def __repr__(self):
         return f"Xrhsths('{self.email}', Ρόλος: '{self.rolos}')"

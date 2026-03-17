@@ -11,6 +11,13 @@ from google.genai import types
 
 gramateas_bp = Blueprint('gramateas', __name__)
 
+@gramateas_bp.route('/api/clear_secretary_history', methods=['POST'])
+@login_required
+def clear_secretary_history():
+    current_user.secretary_history = '[]'
+    vasi.session.commit()
+    return jsonify({'success': True})
+
 @gramateas_bp.route('/api/ai_secretary', methods=['POST'])
 @login_required
 def ai_secretary():
@@ -88,10 +95,11 @@ def ai_secretary():
         3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης επιβεβαιώσει αλλαγή (π.χ. "Είναι αρδευόμενο", "Άλλαξέ το σε βιολογική", "Μετονόμασε σε...", "Το στάδιο είναι άνθιση", "Είναι ορεινό") Ή αν αναφέρει ότι φύτεψε/αφαίρεσε δέντρα ή διόρθωσε την ποικιλία, συμπλήρωσε τις νέες τιμές στο object "updates". Αν λέει "Φύτεψα 2 ελιές Κορωνέικης", βάλε "arithmos_dentron" τον νέο συνολικό αριθμό ΚΑΙ "poikilia": "Κορωνέικη". Το "updates" επεξεργάζεται ΠΑΡΑΛΛΗΛΑ με οποιοδήποτε action. Αν είναι απλή ενημέρωση προφίλ χωρίς εργασία, βάλε action: "UPDATE_KTIMA".
         4. Προσθήκη Εργασιών (Πολλαπλές & Ημερομηνίες): Αν ο χρήστης λέει ότι έκανε μία ή ΠΟΛΛΑΠΛΕΣ εργασίες (π.χ. "ράντισα και μετά από ένα μήνα κλάδεψα"), βάλε action: "ADD_TASKS".
            - Υπολόγισε την ΗΜΕΡΟΜΗΝΙΑ: Αν λέει "τον Νοέμβριο μετά τη συγκομιδή", υπολόγισε και βάλε μια σχετική ημερομηνία στο "date" (π.χ. "2025-11-15"). Αν είναι ασαφές, ρώτα τον στο "reply" (action: "DIAGNOSIS").
+           - Κατάσταση (status): Αν η εργασία ΕΧΕΙ ΓΙΝΕΙ, βάλε "status": "Ολοκληρώθηκε". Αν ο χρήστης λέει "πρέπει να ραντίσω", "βάλε σε εκκρεμότητα/αναμονή να...", "πρόσθεσε στο πρόγραμμα", βάλε "status": "Εκκρεμεί".
            - Για κάθε εργασία, φτιάξε ένα αντικείμενο στη λίστα "tasks".
            - Αν ζητάει καταχώρηση σε ΟΛΑ τα κτήματα, βάλε "target_ktima_id": "ALL" στο task.
            - ΣΗΜΑΝΤΙΚΟ: Αν αναφέρει εμπορικό όνομα, βάλε τη δραστική στο "task_materials".
-        5. Διαγραφή ή Τροποποίηση Εργασιών: Αν ζητήσει διαγραφή, ρώτα τον πρώτα και βάλε action: "DIAGNOSIS". Αν επιβεβαιώσει, βάλε action: "DELETE_TASKS" και στο "task_name" τη λέξη κλειδί. Αν ζητήσει να ΤΡΟΠΟΠΟΙΗΣΕΙ μια εργασία (π.χ. "άλλαξε την ημερομηνία στο χθεσινό ψέκασμα σε 15/03"), βάλε action: "UPDATE_TASK", γράψε στο "task_name" μια λέξη-κλειδί της παλιάς εργασίας (π.χ. "Ψέκασμα") και βάλε τις νέες τιμές στο object "new_task_data".
+        5. Διαγραφή ή Τροποποίηση Εργασιών: Αν ζητήσει διαγραφή (π.χ. "διέγραψε την εργασία"), βάλε action: "DELETE_TASKS". Αν ο χρήστης πει "Έκανα τη χειροκίνητη εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK", βρες τη λέξη κλειδί από τις "Εκκρεμείς Εργασίες" και βάλε "new_task_data": {"status": "Ολοκληρώθηκε"}.
         6. Πληροφορίες Ιστορικού, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, στις "Εκκρεμείς Εργασίες", τον καιρό κλπ (αν υπάρχουν στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;" ή "τι δουλειές πρέπει να γίνουν;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ διαβάζοντας αντίστοιχα το ιστορικό ή τις εκκρεμείς εργασίες. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Αν βλέπεις δεδομένα πολλών κτημάτων, δώσε συγκεντρωτική αναφορά. Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
         7. Οικονομικά (Έξοδα & Έσοδα/Επιδοτήσεις): Αν ο χρήστης ρωτήσει για έξοδα, διάβασέ τα από την ενότητα 'ΟΙΚΟΝΟΜΙΚΑ / ΕΞΟΔΑ'. Αν αναφέρει νέο έξοδο, βάλε action: "ADD_EXPENSE" και συμπλήρωσε "expense_amount" και "expense_desc". Αν αναφέρει ΕΣΟΔΟ (π.χ. "πήρα 500 ευρώ επιδότηση", "αποζημίωση ΕΛΓΑ"), βάλε action: "ADD_INCOME", συμπλήρωσε "income_amount" (θετικός αριθμός) και "income_desc".
         8. Απλή συμβουλή: Αν ο χρήστης ρωτάει μια συμβουλή, δώσε την απάντηση και βάλε action: "ADVICE".
@@ -111,6 +119,7 @@ def ai_secretary():
                     "task_name": "Ονομασία Εργασίας...",
                     "task_materials": "Φάρμακα/Λιπάσματα - ΚΕΝΟ αν δεν αναφέρεται",
                     "date": "YYYY-MM-DD",
+                "status": "Ολοκληρώθηκε ή Εκκρεμεί",
                     "expense_amount": 100.5,
                     "expense_desc": "Περιγραφή κόστους",
                     "used_material_name": "Όνομα από αποθήκη",
@@ -134,7 +143,8 @@ def ai_secretary():
             "new_task_data": {
                 "date": "YYYY-MM-DD",
                 "task_name": "Νέο όνομα αν ζητήθηκε αλλαγή",
-                "task_materials": "Νέα υλικά αν ζητήθηκε αλλαγή"
+            "task_materials": "Νέα υλικά αν ζητήθηκε αλλαγή",
+            "status": "Ολοκληρώθηκε ή Εκκρεμεί ή Ακυρώθηκε"
             },
             "nero_ph": 7.2,
             "nero_agwgimotita": 1.5,
@@ -171,7 +181,16 @@ def ai_secretary():
             tools=[{"google_search": {}}]
         )
         
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=contents, config=config)
+        import time
+        response = None
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(model='gemini-2.5-flash', contents=contents, config=config)
+                break
+            except Exception as e:
+                if attempt == 2:
+                    raise e
+                time.sleep(1.5)
         
         # Δικλείδα Ασφαλείας: Αν το AI επιστρέψει κενό (π.χ. λόγω safety filters)
         if not response or not getattr(response, 'text', None):
@@ -221,7 +240,8 @@ def ai_secretary():
                         try: im = datetime.strptime(date_str, '%Y-%m-%d')
                         except: pass
                         
-                    nea_ergasia = Ergasia(ktima_id=target_k.id, eidos_ergasias=task_data.get('task_name', 'AI Καταχώρηση'), farmaka_lipasmata=task_data.get('task_materials', ''), katastasi='Ολοκληρώθηκε', imerominia=im, proelevsi='AI Γραμματέας')
+                    status_ergasias = task_data.get('status', 'Ολοκληρώθηκε')
+                    nea_ergasia = Ergasia(ktima_id=target_k.id, eidos_ergasias=task_data.get('task_name', 'AI Καταχώρηση'), farmaka_lipasmata=task_data.get('task_materials', ''), katastasi=status_ergasias, imerominia=im, proelevsi='AI Γραμματέας')
                     vasi.session.add(nea_ergasia)
                     
                     poso = task_data.get('expense_amount')
@@ -239,6 +259,9 @@ def ai_secretary():
                                 item.posotita = max(0, item.posotita - amount)
                                 vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"📦 AI Αποθήκη: Αφαιρέθηκαν {amount} {item.monada_metrisis} από '{item.onoma_proiontos}'.", imerominia=datetime.now()))
                         except (ValueError, TypeError): pass
+                    
+                    target_k.teleftaia_enimerosi_ergasion = None
+                    target_k.ekkremis_erotisi_ai = None
                 
         # Ενημερώσεις προφίλ ανεξάρτητα από το action (ώστε να δουλεύει ΠΑΡΑΛΛΗΛΑ με το ADD_TASKS)
         updates = data.get('updates')
@@ -348,6 +371,9 @@ def ai_secretary():
                 elif task_name:
                     Ergasia.query.filter_by(ktima_id=target_k.id).filter(Ergasia.eidos_ergasias.ilike(f"%{task_name}%")).delete(synchronize_session=False)
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🗑️ AI Γραμματέας: Έγινε διαγραφή εργασιών: {task_name}.", imerominia=datetime.now()))
+                
+                target_k.teleftaia_enimerosi_ergasion = None
+                target_k.ekkremis_erotisi_ai = None
         elif action == 'UPDATE_TASK':
             task_name = data.get('task_name', '')
             new_data = data.get('new_task_data') or {}
@@ -365,7 +391,12 @@ def ai_secretary():
                             task_to_edit.eidos_ergasias = new_data['task_name']
                         if new_data.get('task_materials'):
                             task_to_edit.farmaka_lipasmata = new_data['task_materials']
+                    if new_data.get('status'):
+                        task_to_edit.katastasi = new_data['status']
                         vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"✏️ AI Γραμματέας: Τροποποιήθηκε η εργασία '{task_name}'.", imerominia=datetime.now()))
+                
+                target_k.teleftaia_enimerosi_ergasion = None
+                target_k.ekkremis_erotisi_ai = None
 
         elif action == 'ADD_EXPENSE':
             poso = data.get('expense_amount')
@@ -480,7 +511,24 @@ def ai_secretary():
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"📸 AI Γραμματέας: {reply_text}", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
             
+        # --- ΕΝΗΜΕΡΩΣΗ ΜΝΗΜΗΣ ΣΤΗ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ ---
+        try:
+            history = json.loads(history_str)
+            if not isinstance(history, list): history = []
+        except:
+            history = []
+            
+        history.append({"role": "model", "content": reply_text})
+        if len(history) > 40: # Κρατάμε τα τελευταία 40 μηνύματα για ελαφριά μνήμη
+            history = history[-40:]
+            
+        current_user.secretary_history = json.dumps(history)
+        
         vasi.session.commit()
         return jsonify({'success': True, 'reply': reply_text, 'action': action})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        error_msg = str(e)
+        if '502' in error_msg or '503' in error_msg or 'Bad Gateway' in error_msg:
+            return jsonify({'success': True, 'reply': '⚠️ Οι διακομιστές της Google (Gemini AI) αντιμετωπίζουν προσωρινό φόρτο. Παρακαλώ προσπαθήστε ξανά σε λίγο!', 'action': 'ADVICE'})
+            
+        return jsonify({'error': "Προέκυψε ένα σφάλμα: " + error_msg[:100] + "..."}), 500

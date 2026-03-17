@@ -108,6 +108,7 @@ def arxikh():
                 
                 completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
                 ktima.pending_tasks = [task for task in ideal_tasks if task not in completed_tasks]
+                ktima.manual_pending_tasks = [e for e in ktima.ergasies if not e.archived and e.katastasi == 'Εκκρεμεί']
                 
                 # --- SMART INTERACTION: COPPER -> AMINO ACIDS LOGIC ---
                 latest_copper = None
@@ -445,6 +446,8 @@ def prosthes_ergasia(ktima_id):
         im = datetime.now()
         
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
+    ktima.teleftaia_enimerosi_ergasion = None
+    ktima.ekkremis_erotisi_ai = None
     vasi.session.add(nea_ergasia)
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
@@ -507,6 +510,8 @@ def oloklirosi_ergasias(ktima_id):
         except (ValueError, TypeError):
             pass
 
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
         

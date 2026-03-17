@@ -368,6 +368,11 @@ def xtise_plires_context(ktima):
         pending = [f"{e.eidos_ergasias} ({e.proelevsi})" for e in ktima.ergasies if not e.archived and e.katastasi == 'Εκκρεμεί']
         if pending: ctx += f"Εκκρεμείς Εργασίες στο σύστημα: {', '.join(pending)}\n\n"
             
+        completed_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived and e.katastasi == 'Ολοκληρώθηκε']
+        smart_pending = [t.strip() for t in (ktima.topikes_ergasies or '').split('|') if t.strip() and t.strip() not in completed_names]
+        if smart_pending:
+            ctx += f"Προτεινόμενες/Εκκρεμείς Εργασίες Εποχής (AI): {', '.join(smart_pending)}\n\n"
+            
     if ktima.idioktitis and ktima.idioktitis.apothiki_items:
         stock = [f"'{i.onoma_proiontos}' ({i.posotita} {i.monada_metrisis})" for i in ktima.idioktitis.apothiki_items]
         if stock: ctx += f"--- ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ ---\nΔιαθέσιμα: {', '.join(stock)}\n"

@@ -145,7 +145,8 @@ def update_db():
                 ("onoma", "VARCHAR(100)"),
                 ("is_verified", "BOOLEAN DEFAULT TRUE"),
                 ("ai_auto_ergasies", "BOOLEAN DEFAULT TRUE"),
-                ("geoponos_auto_ergasies", "BOOLEAN DEFAULT TRUE")
+                ("geoponos_auto_ergasies", "BOOLEAN DEFAULT TRUE"),
+                ("secretary_history", "TEXT DEFAULT '[]'")
             ]
             
             for col_name, col_type in xrhstes_cols:
