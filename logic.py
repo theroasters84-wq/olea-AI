@@ -14,8 +14,7 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     # Helper to find days since last specific task
     def get_last_task_info(keyword):
         relevant_tasks = [
-            t for t in ktima.ergasies 
-            if not t.archived and t.katastasi == 'Ολοκληρώθηκε' and (keyword in t.eidos_ergasias or (t.farmaka_lipasmata and keyword in t.farmaka_lipasmata))
+            t for t in ktima.ergasies            if not t.archived and t.katastasi == 'Ολοκληρώθηκε' and (keyword in t.eidos_ergasias or (t.farmaka_lipasmata and keyword in t.farmaka_lipasmata))
         ]
         if not relevant_tasks:
             return None, None
