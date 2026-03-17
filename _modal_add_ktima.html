@@ -1,6 +1,10 @@
 
 <!-- Add Ktima Modal -->
-<div class="modal fade" id="addKtimaModal" tabindex="-1" aria-labelledby="addKtimaModalLabel" aria-hidden="true">
+<div class="modal fade" id="addKtimaModal" tabindex="-1" aria-labelledby="addKtimaModalLabel" aria-hidden="true"
+    {% if ktimata and ktimata|length > 0 %}
+        data-default-lat="{{ ktimata[0].geografiko_platos }}"
+        data-default-lng="{{ ktimata[0].geografiko_mikos }}"
+    {% endif %}>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">

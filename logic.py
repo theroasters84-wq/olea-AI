@@ -15,15 +15,15 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     def get_last_task_info(keyword):
         relevant_tasks = [
             t for t in ktima.ergasies 
-            if not t.archived and (keyword in t.eidos_ergasias or (t.farmaka_lipasmata and keyword in t.farmaka_lipasmata))
+            if not t.archived and t.katastasi == 'Ολοκληρώθηκε' and (keyword in t.eidos_ergasias or (t.farmaka_lipasmata and keyword in t.farmaka_lipasmata))
         ]
         if not relevant_tasks:
             return None, None
         latest_task = max(relevant_tasks, key=lambda x: x.imerominia)
         return (now - latest_task.imerominia).days, latest_task.imerominia
 
-    # Get a list of completed tasks for the current season (for simple existence checks)
-    completed_tasks_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
+    # Get a list of completed tasks for the current season
+    completed_tasks_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived and e.katastasi == 'Ολοκληρώθηκε']
 
     # Phase 18: Agronomic Profiling Rules
     if ktima.klisi == 'Επικλινές/Πλαγιά' and ('βροχή' in perigrafi.lower() or 'βροχη' in perigrafi.lower()):
@@ -291,17 +291,31 @@ def xtise_plires_context(ktima):
     if kalliergeia_str == 'Βιολογική':
         kalliergeia_str += " (ΟΔΗΓΙΑ ΑΥΣΤΗΡΗ: Το κτήμα είναι ΒΙΟΛΟΓΙΚΟ. Απαγορεύονται αυστηρά τα χημικά ζιζανιοκτόνα (π.χ. Glyphosate), τα χημικά λιπάσματα και τα χημικά εντομοκτόνα. Πρότεινε ΜΟΝΟ εγκεκριμένα βιολογικά σκευάσματα π.χ. Χαλκό, Βάκιλλο, Φυσικό Πύρεθρο, Ζεόλιθο, Κοπριά κλπ.)"
 
-    ctx = (f"--- ΠΡΟΦΙΛ ΚΤΗΜΑΤΟΣ ---\n"
-           f"Κτήμα: {ktima.onoma_ktimatos}, Τύπος: {kalliergeia_str}\n"
-           f"Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
-           f"Τοποθεσία (Lat, Lng): {ktima.geografiko_platos}, {ktima.geografiko_mikos} (ΟΔΗΓΙΑ: Αξιολόγησε τον χάρτη. Αν είναι παραθαλάσσιο με χαμηλό υψόμετρο, προειδοποίησε για κίνδυνο αλατονέφωσης/εγκαυμάτων από νοτιάδες αν ο καιρός είναι κακός.)\n"
-           f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
-           f"Ηλικία: {ktima.ilikia_dentron}, Πυκνότητα: {ktima.puknotita_dentron}\n"
-           f"Έδαφος: {ktima.typos_edafous}, Κλίση: {klisi_str}\n"
-           f"Ανάλυση Εδάφους: {analysi_str}\n"
-           f"Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ktima.ardefsi}\n"
-           f"Στάδιο: {ktima.fainologiko_stadio}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated else 0:.0f}\n\n")
-           
+    # --- ΝΕΟ: ΕΞΥΠΝΕΣ ΟΔΗΓΙΕΣ ΦΑΙΝΟΛΟΓΙΚΟΥ ΣΤΑΔΙΟΥ ---
+    stadio = ktima.fainologiko_stadio or 'Άγνωστο'
+    stadio_odigia = ""
+    if stadio in ['Σχηματισμός Ταξιανθιών', 'Πριν την άνθιση', 'Κρόκιασμα', 'Μούρο']:
+        stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: Κρίσιμη περίοδος ΠΡΙΝ ανοίξει το άνθος. ΠΡΟΤΕΙΝΕ ΟΠΩΣΔΗΠΟΤΕ διαφυλλικό ψεκασμό με Βόριο, Ιχνοστοιχεία και Αμινοξέα/Φύκια για γερό δέσιμο καρπού, σε συνδυασμό με προληπτικό ψεκασμό για ασθένειες π.χ. Χαλκό, εφόσον είναι συμβατά και το επιτρέπει ο καιρός.)"
+    elif stadio == 'Άνθιση':
+        stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ ο ψεκασμός με χαλκό ή άλλα καυστικά σκευάσματα γιατί καταστρέφουν το άνθος!)"
+    elif stadio in ['Καρπόδεση', 'Ανάπτυξη Καρπού']:
+        stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: Περίοδος ανάπτυξης. Προτεραιότητα σε Άρδευση και Άζωτο. Προσοχή στην έναρξη γενεών Δάκου και Πυρηνοτρήτη.)"
+    elif stadio in ['Σκλήρυνση Πυρήνα', 'Ωρίμανση']:
+        stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: Έμφαση σε Κάλιο για ελαιογένεση και αυστηρή παρακολούθηση Δάκου/Γλοιοσπορίου.)"
+
+    ctx = (
+        f"--- ΠΡΟΦΙΛ ΚΤΗΜΑΤΟΣ ---\n"
+        f"Κτήμα: {ktima.onoma_ktimatos}, Τύπος: {kalliergeia_str}\n"
+        f"Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
+        f"Τοποθεσία (Lat, Lng): {ktima.geografiko_platos}, {ktima.geografiko_mikos} (ΟΔΗΓΙΑ: Αξιολόγησε τον χάρτη. Αν είναι παραθαλάσσιο με χαμηλό υψόμετρο, προειδοποίησε για κίνδυνο αλατονέφωσης/εγκαυμάτων από νοτιάδες αν ο καιρός είναι κακός.)\n"
+        f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
+        f"Ηλικία: {ktima.ilikia_dentron}, Πυκνότητα: {ktima.puknotita_dentron}\n"
+        f"Έδαφος: {ktima.typos_edafous}, Κλίση: {klisi_str}\n"
+        f"Ανάλυση Εδάφους: {analysi_str}\n"
+        f"Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ktima.ardefsi}\n"
+        f"Στάδιο: {stadio}{stadio_odigia}, GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated else 0:.0f}\n\n"
+    )
+
     kairos = getattr(ktima, 'kairos', None) or pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
     if kairos:
         ctx += f"--- ΚΑΙΡΟΣ & ΔΟΡΥΦΟΡΟΣ (LIVE) ---\nΚαιρός: Θερμοκρασία {kairos['thermokrasia']}°C, Υγρασία {kairos['ygrasia']}%, {kairos['perigrafi']}\n"

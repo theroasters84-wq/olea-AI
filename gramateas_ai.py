@@ -91,8 +91,8 @@ def ai_secretary():
         ΟΔΗΓΙΕΣ ΓΙΑ ΤΟ JSON ΚΑΙ ΤΗ ΣΥΜΠΕΡΙΦΟΡΑ ΣΟΥ: 
         0. ΟΡΑΣΗ/ΑΡΧΕΙΑ (ΚΡΙΣΙΜΟ): Έχεις πλήρη ικανότητα Vision! Μπορείς να διαβάσεις και να αναλύσεις κανονικά τις φωτογραφίες και τα PDF που σου επισυνάπτονται. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να πεις ότι δεν μπορείς να δεις ή να διαβάσεις αρχεία. Αν ο χρήστης έστειλε αρχείο, μελέτησέ το και δώσε του την απάντηση.
         1. Έλεγχος Αποθήκης: Πριν προτείνεις οποιοδήποτε υλικό, φάρμακο ή εργασία, ΕΛΕΓΞΕ ΑΥΣΤΗΡΑ την "ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ" στο προφίλ του κτήματος. Αν το υλικό υπάρχει ήδη διαθέσιμο, πρότεινε να χρησιμοποιήσει αυτό για οικονομία.
-        2. Ανάλυση Φωτογραφίας/Εγγράφου & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία (π.χ. ζιζάνιο, έντομο, άρρωστο φύλλο), αναγνώρισέ το αμέσως, πες του τι είναι και πρότεινε λύση. Εκτός από αυτό, παρατήρησε περιφερειακά: α) Το έδαφος (Τι τύπος εδάφους φαίνεται ή αναγράφεται; π.χ. Αργιλώδες, Αμμώδες, Πετρώδες. Υπάρχουν λάστιχα ποτίσματος;), β) Τα χόρτα (είναι κομμένα;), γ) Την πυκνότητα φύτευσης (είναι υπέρπυκνη;). Αν δεις κάτι που διαφέρει από το τρέχον προφίλ του κτήματος, ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ ΑΜΕΣΩΣ. Ρώτα πρώτα τον χρήστη στο "reply" (π.χ. "Βλέπω λάστιχα ποτίσματος. Θέλετε να ενημερώσω το κτήμα σε Αρδευόμενο;" ή "Ο τύπος εδάφους φαίνεται αργιλώδης. Να τον καταχωρήσω;"). Θέσε action: "DIAGNOSIS".
-        3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης επιβεβαιώσει αλλαγή (π.χ. "Είναι αρδευόμενο", "Άλλαξέ το σε βιολογική", "Μετονόμασε σε...", "Το στάδιο είναι άνθιση", "Είναι ορεινό") Ή αν αναφέρει ότι φύτεψε/αφαίρεσε δέντρα ή διόρθωσε την ποικιλία, συμπλήρωσε τις νέες τιμές στο object "updates". Αν λέει "Φύτεψα 2 ελιές Κορωνέικης", βάλε "arithmos_dentron" τον νέο συνολικό αριθμό ΚΑΙ "poikilia": "Κορωνέικη". Το "updates" επεξεργάζεται ΠΑΡΑΛΛΗΛΑ με οποιοδήποτε action. Αν είναι απλή ενημέρωση προφίλ χωρίς εργασία, βάλε action: "UPDATE_KTIMA".
+        2. Ανάλυση Φωτογραφίας & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία (π.χ. ζιζάνιο, έντομο, άρρωστο φύλλο ή άνθος), αναγνώρισέ το αμέσως. ΑΝ διακρίνεις το φαινολογικό στάδιο του δέντρου (π.χ. 'Άνθιση', 'Καρπόδεση'), ΒΑΛΕ ΤΟ ΑΜΕΣΑ στο "updates" -> "fainologiko_stadio" για να ενημερωθεί ο Γεωπόνος. Εκτός από αυτό, παρατήρησε περιφερειακά: Το έδαφος, τα χόρτα κλπ. Αν δεις κάτι που διαφέρει, ρώτα τον χρήστη στο "reply". Θέσε action: "DIAGNOSIS". Σημαντικό: Ό,τι διαγνώσεις θα μεταφερθεί αυτόματα στον Γεωπόνο!
+        3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης επιβεβαιώσει αλλαγή (π.χ. "Είναι αρδευόμενο", "Άλλαξέ το σε βιολογική", "Μετονόμασε σε...", "Το στάδιο είναι άνθιση", "Είναι ορεινό") συμπλήρωσε τις νέες τιμές στο object "updates". Αν ο χρήστης αναφέρει ότι φύτεψε, πρόσθεσε ή αφαίρεσε δέντρα (ακόμα και για ΜΙΑ ποικιλία, π.χ. "έβαλα 10 Αθηνοελιές"), ΧΡΗΣΙΜΟΠΟΙΗΣΕ ΠΑΝΤΑ το "poikilies_multi": [ {"onoma": "Αθηνοελιά", "arithmos": 10, "ilikia": "5 ετών"} ] όπου το "arithmos" είναι η ΔΙΑΦΟΡΑ (+10 για προσθήκη ή -5 για αφαίρεση). Το συνολικό "arithmos_dentron" θα υπολογιστεί αυτόματα, ΜΗΝ το στέλνεις. Αν είναι απλή ενημέρωση προφίλ, βάλε action: "UPDATE_KTIMA". Στο "target_ktima_id" γράψε ΑΥΣΤΗΡΑ το ID του κτήματος.
         4. Προσθήκη Εργασιών (Πολλαπλές & Ημερομηνίες): Αν ο χρήστης λέει ότι έκανε μία ή ΠΟΛΛΑΠΛΕΣ εργασίες (π.χ. "ράντισα και μετά από ένα μήνα κλάδεψα"), βάλε action: "ADD_TASKS".
            - Υπολόγισε την ΗΜΕΡΟΜΗΝΙΑ: Αν λέει "τον Νοέμβριο μετά τη συγκομιδή", υπολόγισε και βάλε μια σχετική ημερομηνία στο "date" (π.χ. "2025-11-15"). Αν είναι ασαφές, ρώτα τον στο "reply" (action: "DIAGNOSIS").
            - Κατάσταση (status): Αν η εργασία ΕΧΕΙ ΓΙΝΕΙ, βάλε "status": "Ολοκληρώθηκε". Αν ο χρήστης λέει "πρέπει να ραντίσω", "βάλε σε εκκρεμότητα/αναμονή να...", "πρόσθεσε στο πρόγραμμα", βάλε "status": "Εκκρεμεί".
@@ -100,19 +100,21 @@ def ai_secretary():
            - Αν ζητάει καταχώρηση σε ΟΛΑ τα κτήματα, βάλε "target_ktima_id": "ALL" στο task.
            - ΣΗΜΑΝΤΙΚΟ: Αν αναφέρει εμπορικό όνομα, βάλε τη δραστική στο "task_materials".
         5. Διαγραφή ή Τροποποίηση Εργασιών: Αν ζητήσει διαγραφή (π.χ. "διέγραψε την εργασία"), βάλε action: "DELETE_TASKS". Αν ο χρήστης πει "Έκανα τη χειροκίνητη εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK", βρες τη λέξη κλειδί από τις "Εκκρεμείς Εργασίες" και βάλε "new_task_data": {"status": "Ολοκληρώθηκε"}.
-        6. Πληροφορίες Ιστορικού, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, στις "Εκκρεμείς Εργασίες", τον καιρό κλπ (αν υπάρχουν στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;" ή "τι δουλειές πρέπει να γίνουν;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ διαβάζοντας αντίστοιχα το ιστορικό ή τις εκκρεμείς εργασίες. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Αν βλέπεις δεδομένα πολλών κτημάτων, δώσε συγκεντρωτική αναφορά. Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
+        6. Πληροφορίες Ιστορικού, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, στις "Εκκρεμείς Εργασίες", τον καιρό κλπ (αν υπάρχουν στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;" ή "τι δουλειές πρέπει να γίνουν;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ. ΕΙΔΙΚΑ για τις εκκρεμείς εργασίες, ταξινόμησέ τες με βάση το ΠΟΣΟ ΕΠΕΙΓΟΥΝ (προτεραιότητα) λαμβάνοντας υπόψη τον καιρό, τα στάδια του δέντρου ή τις ενδείξεις (π.χ. "άμεσα", "έως"), και τόνισε στον αγρότη ποιες πρέπει να γίνουν πρώτες! ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Αν βλέπεις δεδομένα πολλών κτημάτων, δώσε συγκεντρωτική αναφορά. Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
         7. Οικονομικά (Έξοδα & Έσοδα/Επιδοτήσεις): Αν ο χρήστης ρωτήσει για έξοδα, διάβασέ τα από την ενότητα 'ΟΙΚΟΝΟΜΙΚΑ / ΕΞΟΔΑ'. Αν αναφέρει νέο έξοδο, βάλε action: "ADD_EXPENSE" και συμπλήρωσε "expense_amount" και "expense_desc". Αν αναφέρει ΕΣΟΔΟ (π.χ. "πήρα 500 ευρώ επιδότηση", "αποζημίωση ΕΛΓΑ"), βάλε action: "ADD_INCOME", συμπλήρωσε "income_amount" (θετικός αριθμός) και "income_desc".
         8. Απλή συμβουλή: Αν ο χρήστης ρωτάει μια συμβουλή, δώσε την απάντηση και βάλε action: "ADVICE".
-        9. Καταγραφή Συγκομιδής: Αν ο χρήστης αναφέρει δεδομένα συγκομιδής (π.χ. "μάζεψα 5000 κιλά ελιές", "έβγαλα 1 τόνο λάδι", "είχα 2000 ευρώ έσοδα"), βάλε action: "ADD_HARVEST". Στο JSON συμπλήρωσε "tonoi" (κιλά καρπού, 1 τόνος = 1000), "kila_ladi" (κιλά λαδιού) και "esoda" (ευρώ). Αυτόματα θα αρχειοθετηθεί η σεζόν.
+        9. Καταγραφή Συγκομιδής: Αν ο χρήστης αναφέρει δεδομένα συγκομιδής (π.χ. "μάζεψα 5000 κιλά ελιές", "μάζεψα την Κορωνέικη 1000 κιλά"), βάλε action: "ADD_HARVEST". Στο JSON συμπλήρωσε "tonoi" (κιλά καρπού, 1 τόνος = 1000), "kila_ladi" (κιλά λαδιού) και "esoda" (ευρώ). ΣΗΜΑΝΤΙΚΟ: Βάλε "is_final": true ΑΝ ο χρήστης αναφέρει ότι τελείωσε όλη η συγκομιδή για φέτος (για να κλείσει η σεζόν). Αν είναι μερική συγκομιδή (π.χ. μάζεψε μόνο μία ποικιλία και έπεται συνέχεια), βάλε "is_final": false. Προαιρετικά βάλε "poikilia_sygkomidis": "Όνομα ποικιλίας" αν το αναφέρει.
         10. Ασαφή/Ελλιπή Δεδομένα: Αν ο χρήστης ρωτήσει κάτι που ΔΕΝ καλύπτεται από τα δεδομένα που σου έχω δώσει (π.χ. ρωτάει για μια εργασία αλλά το ιστορικό είναι κενό, ή κάνει ασαφή ερώτηση/εντολή), ΑΠΑΓΟΡΕΥΕΤΑΙ να επινοήσεις στοιχεία. Ρώτησέ τον άμεσα να σου δώσει τα δεδομένα που λείπουν και βάλε action: "DIAGNOSIS".
         11. Προσθήκη στην Αποθήκη: Αν ο χρήστης λέει ότι αγόρασε κάποιο υλικό/φάρμακο/λίπασμα (π.χ. "αγόρασα 10 λίτρα χαλκό με 50 ευρώ"), βάλε action: "ADD_INVENTORY". Συμπλήρωσε τα πεδία "inv_name", "inv_category" ("Φάρμακο", "Λίπασμα" ή "Εξοπλισμός"), "inv_amount" (αριθμός) και "inv_unit" ("Λίτρα", "Κιλά" ή "Τεμάχια"). Αν αναφέρει κόστος, βάλε και το "expense_amount".
         12. Διαχείριση Υγρασίας & Νερού: Αν ο χρήστης αναφέρει μέτρηση υγρασίας (π.χ. "η υγρασία του εδάφους είναι 20%") ή ανάλυση νερού ("pH 7.2", "αγωγιμότητα 1.5"), βάλε action: "UPDATE_WATER" και συμπλήρωσε τα "moisture_percentage", "nero_ph", "nero_agwgimotita". Αν ρωτάει πόσο να ποτίσει, διάβασε τις 'Ανάγκες Άρδευσης' από τα δεδομένα και απάντησέ του.
         13. Γενικές / Άσχετες Ερωτήσεις (Internet Access): Είσαι πλέον συνδεδεμένος και στο διαδίκτυο (Google Search). Αν ο χρήστης σε ρωτήσει κάτι εντελώς άσχετο με τα χωράφια (π.χ. συνταγή μαγειρικής, ποιος κέρδισε έναν αγώνα, ειδήσεις, ιστορία), ΑΠΑΝΤΗΣΕ ΤΟΥ ΦΥΣΙΟΛΟΓΙΚΑ, φιλικά και σύντομα. ΜΗΝ προσπαθήσεις να συνδέσεις την ερώτηση με τα κτήματα. Βάλε action: "ADVICE".
+        14. Δημιουργία Νέου Κτήματος: Αν ο χρήστης ζητήσει να δημιουργήσεις ένα νέο κτήμα (π.χ. "φτιάξε ένα κτήμα"), βάλε action: "ADD_KTIMA" και συμπλήρωσε το "new_ktima_data". Το "onoma_ktimatos" είναι υποχρεωτικό. Στο "reply" σου πες του ευγενικά: "Το κτήμα δημιουργήθηκε! Σας ανοίγω αυτόματα τον χάρτη για να ορίσετε την ακριβή τοποθεσία.". ΜΗΝ ρωτάς "Σε ποια περιοχή βρίσκεται".
+        15. Διαγραφή Κτήματος: Αν ο χρήστης ζητήσει να ΔΙΑΓΡΑΨΕΙ ένα κτήμα, ΡΩΤΑ ΤΟΝ ΠΡΩΤΑ για επιβεβαίωση (action: "DIAGNOSIS"). Αν επιβεβαιώσει οριστικά ότι θέλει διαγραφή, βάλε action: "DELETE_KTIMA" και "target_ktima_id" το ID του (ή "ALL" για όλα).
         
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_WATER",
+            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA",
             "tasks": [
                 {
                     "target_ktima_id": "Αριθμός ID κτήματος Ή 'ALL'",
@@ -135,6 +137,8 @@ def ai_secretary():
             "tonoi": 5000,
             "kila_ladi": 1000,
             "esoda": 2000,
+            "is_final": true,
+            "poikilia_sygkomidis": "Κορωνέικη",
             "inv_name": "Όνομα προϊόντος",
             "inv_category": "Φάρμακο",
             "inv_amount": 10,
@@ -145,6 +149,12 @@ def ai_secretary():
                 "task_name": "Νέο όνομα αν ζητήθηκε αλλαγή",
             "task_materials": "Νέα υλικά αν ζητήθηκε αλλαγή",
             "status": "Ολοκληρώθηκε ή Εκκρεμεί ή Ακυρώθηκε"
+            },
+            "new_ktima_data": {
+                "onoma_ktimatos": "Όνομα...",
+                "arithmos_dentron": 20,
+                "poikilia": "Κορωνέικη",
+                "ilikia_dentron": "Παραγωγικά (6-40 ετών) ή ότι αναφέρει"
             },
             "nero_ph": 7.2,
             "nero_agwgimotita": 1.5,
@@ -203,15 +213,23 @@ def ai_secretary():
         reply_text = data.get('reply', 'Δεν κατάλαβα ακριβώς τι ζητάς.')
         target_ktima_id = data.get('target_ktima_id')
         
+        # Χρήση της επιλογής από το μενού ως προεπιλογή αν το AI δεν έστειλε κάτι
+        if not target_ktima_id:
+            target_ktima_id = ktima_id
+            
         # Αν το AI βρήκε άλλο κτήμα βάσει ονόματος (ή πήρε το επιλεγμένο), το χρησιμοποιούμε
-        if target_ktima_id:
+        if target_ktima_id and str(target_ktima_id).upper() not in ['ALL', 'NONE']:
             try:
                 ktima_id_int = int(target_ktima_id)
                 target_ktima = vasi.session.get(Ktima, ktima_id_int)
                 if target_ktima and target_ktima.idioktitis == current_user:
                     ktima = target_ktima
             except (ValueError, TypeError):
-                pass
+                # Δοκιμή εύρεσης με βάση το όνομα (Σε περίπτωση που το AI έστειλε όνομα αντί για ID)
+                for k in energa_ktimata:
+                    if str(target_ktima_id).lower().strip() in k.onoma_ktimatos.lower():
+                        ktima = k
+                        break
         
         if action in ['ADD_TASK', 'ADD_TASKS']:
             tasks_list = data.get('tasks', [])
@@ -260,100 +278,193 @@ def ai_secretary():
                                 vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"📦 AI Αποθήκη: Αφαιρέθηκαν {amount} {item.monada_metrisis} από '{item.onoma_proiontos}'.", imerominia=datetime.now()))
                         except (ValueError, TypeError): pass
                     
-                    target_k.teleftaia_enimerosi_ergasion = None
                     target_k.ekkremis_erotisi_ai = None
                 
         # Ενημερώσεις προφίλ ανεξάρτητα από το action (ώστε να δουλεύει ΠΑΡΑΛΛΗΛΑ με το ADD_TASKS)
         updates = data.get('updates')
-        updated_fields = []
-        if ktima and isinstance(updates, dict):
-            if updates.get('onoma_ktimatos'):
-                ktima.onoma_ktimatos = updates['onoma_ktimatos']
-                updated_fields.append(f"Όνομα (σε {ktima.onoma_ktimatos})")
-            if updates.get('klisi'):
-                ktima.klisi = updates['klisi']
-                updated_fields.append('Κλίση')
-            if updates.get('fainologiko_stadio'):
-                ktima.fainologiko_stadio = updates['fainologiko_stadio']
-                updated_fields.append(f"Στάδιο ({ktima.fainologiko_stadio})")
-            if updates.get('ardefsi'):
-                ktima.ardefsi = updates['ardefsi']
-                updated_fields.append('Άρδευση')
-            if updates.get('diacheirisi_edafous'):
-                ktima.diacheirisi_edafous = updates['diacheirisi_edafous']
-                updated_fields.append('Διαχείριση Εδάφους')
-            if updates.get('puknotita_dentron'):
-                ktima.puknotita_dentron = updates['puknotita_dentron']
-                updated_fields.append('Πυκνότητα Δέντρων')
-            if updates.get('kalliergeia_typos'):
-                ktima.kalliergeia_typos = updates['kalliergeia_typos']
-                updated_fields.append('Τύπος Καλλιέργειας')
-            if updates.get('ilikia_dentron'):
-                ktima.ilikia_dentron = updates['ilikia_dentron']
-                updated_fields.append('Ηλικία Δέντρων')
-            if updates.get('stremmata') is not None:
-                try: ktima.stremmata = float(updates['stremmata']); updated_fields.append('Στρέμματα')
-                except (ValueError, TypeError): pass
-            
-            # Smart Tree & Variety Logic
-            old_dentra = ktima.arithmos_dentron
-            nea_dentra = old_dentra
-            tree_count_changed = False
-            
-            if updates.get('arithmos_dentron') is not None:
-                try:
-                    nea_dentra = int(updates['arithmos_dentron'])
-                    if nea_dentra != old_dentra:
-                        ktima.arithmos_dentron = nea_dentra
-                        updated_fields.append(f'Αριθμός Δέντρων ({nea_dentra})')
+        if isinstance(updates, dict):
+            ktimata_to_update = []
+            if str(target_ktima_id).upper() == 'ALL':
+                ktimata_to_update = energa_ktimata
+            elif ktima:
+                ktimata_to_update = [ktima]
+                
+            for target_k in ktimata_to_update:
+                updated_fields = []
+                if updates.get('onoma_ktimatos'):
+                    target_k.onoma_ktimatos = updates['onoma_ktimatos']
+                    updated_fields.append(f"Όνομα (σε {target_k.onoma_ktimatos})")
+                if updates.get('klisi'):
+                    target_k.klisi = updates['klisi']
+                    updated_fields.append('Κλίση')
+                if updates.get('fainologiko_stadio'):
+                    target_k.fainologiko_stadio = updates['fainologiko_stadio']
+                    updated_fields.append(f"Στάδιο ({target_k.fainologiko_stadio})")
+                if updates.get('ardefsi'):
+                    target_k.ardefsi = updates['ardefsi']
+                    updated_fields.append('Άρδευση')
+                if updates.get('diacheirisi_edafous'):
+                    target_k.diacheirisi_edafous = updates['diacheirisi_edafous']
+                    updated_fields.append('Διαχείριση Εδάφους')
+                if updates.get('puknotita_dentron'):
+                    target_k.puknotita_dentron = updates['puknotita_dentron']
+                    updated_fields.append('Πυκνότητα Δέντρων')
+                if updates.get('kalliergeia_typos'):
+                    target_k.kalliergeia_typos = updates['kalliergeia_typos']
+                    updated_fields.append('Τύπος Καλλιέργειας')
+                if updates.get('ilikia_dentron'):
+                    target_k.ilikia_dentron = updates['ilikia_dentron']
+                    updated_fields.append('Ηλικία Δέντρων')
+                if updates.get('stremmata') is not None:
+                    try: target_k.stremmata = float(updates['stremmata']); updated_fields.append('Στρέμματα')
+                    except (ValueError, TypeError): pass
+                
+                # Smart Tree & Variety Logic
+                old_dentra = target_k.arithmos_dentron
+                nea_dentra = old_dentra
+                tree_count_changed = False
+                
+                raw_arithmos = updates.get('arithmos_dentron')
+                is_zero_trees = False
+                if raw_arithmos is not None:
+                    try:
+                        if int(raw_arithmos) == 0:
+                            is_zero_trees = True
+                    except: pass
+
+                if is_zero_trees:
+                    target_k.arithmos_dentron = 0
+                    for p in list(target_k.poikilies_details):
+                        vasi.session.delete(p)
+                    target_k.poikilia = 'Δεν ορίστηκε'
+                    updated_fields.append('Αριθμός Δέντρων (0)')
+                    tree_count_changed = True
+                elif updates.get('poikilies_multi'):
+                    try:
+                        import unicodedata
+                        def normalize_str(s):
+                            if not s: return ""
+                            s_norm = unicodedata.normalize('NFD', str(s))
+                            return ''.join(c for c in s_norm if unicodedata.category(c) != 'Mn').lower().strip()
+                            
+                        for item in updates['poikilies_multi']:
+                            v_name = item.get('onoma')
+                            v_diff = item.get('arithmos', 0)
+                            v_age = item.get('ilikia')
+                            if v_name and v_diff != 0:
+                                req_p_norm = normalize_str(v_name)
+                                req_age_norm = normalize_str(v_age)
+                                if v_diff > 0:
+                                    found = False
+                                    for p in target_k.poikilies_details:
+                                        if normalize_str(p.poikilia_onoma) == req_p_norm:
+                                            if req_age_norm and p.ilikia_dentron and normalize_str(p.ilikia_dentron) != req_age_norm:
+                                                continue
+                                            p.arithmos_dentron += v_diff
+                                            found = True
+                                            break
+                                    if not found:
+                                        from models import KtimaPoikilia
+                                        vasi.session.add(KtimaPoikilia(ktima_id=target_k.id, poikilia_onoma=v_name, arithmos_dentron=v_diff, ilikia_dentron=v_age or target_k.ilikia_dentron))
+                                else:
+                                    ypoloipo = abs(v_diff)
+                                    for p in list(target_k.poikilies_details):
+                                        if normalize_str(p.poikilia_onoma) == req_p_norm:
+                                            if req_age_norm and p.ilikia_dentron and normalize_str(p.ilikia_dentron) != req_age_norm:
+                                                continue
+                                            if p.arithmos_dentron > ypoloipo:
+                                                p.arithmos_dentron -= ypoloipo
+                                                ypoloipo = 0
+                                                break
+                                            else:
+                                                ypoloipo -= p.arithmos_dentron
+                                                vasi.session.delete(p)
+                        vasi.session.flush()
+                        
+                        energes_poikilies = [p for p in target_k.poikilies_details if p.arithmos_dentron > 0]
+                        target_k.arithmos_dentron = sum(p.arithmos_dentron for p in energes_poikilies)
+                        target_k.poikilia = 'Ανάμεικτο' if len(energes_poikilies) > 1 else (energes_poikilies[0].poikilia_onoma if energes_poikilies else 'Δεν ορίστηκε')
+                        updated_fields.append('Πολλαπλές Ποικιλίες (Δέντρα)')
                         tree_count_changed = True
-                        
-                        diff = nea_dentra - old_dentra
-                        requested_poikilia = updates.get('poikilia')
-                        
-                        if requested_poikilia and ktima.poikilies_details:
-                            import unicodedata
-                            def normalize_str(s):
-                                if not s: return ""
-                                return unicodedata.normalize('NFD', s).encode('ascii', 'ignore').decode("utf-8").lower().strip()
+                    except Exception as e:
+                        print("Σφάλμα multi poikilies AI:", e)
+                elif updates.get('arithmos_dentron') is not None:
+                    try:
+                        nea_dentra = int(updates['arithmos_dentron'])
+                        if nea_dentra != old_dentra:
+                            target_k.arithmos_dentron = nea_dentra
+                            updated_fields.append(f'Αριθμός Δέντρων ({nea_dentra})')
+                            tree_count_changed = True
                             
-                            req_p_norm = normalize_str(requested_poikilia)
-                            requested_ilikia = updates.get('ilikia_dentron')
-                            req_age_norm = normalize_str(requested_ilikia)
+                            diff = nea_dentra - old_dentra
+                            requested_poikilia = updates.get('poikilia')
                             
-                            found = False
-                            for p in ktima.poikilies_details:
-                                if normalize_str(p.poikilia_onoma) == req_p_norm:
-                                    # Αν δόθηκε ηλικία στο μήνυμα, πρέπει να ταιριάζει για να συγχωνευτούν.
-                                    if req_age_norm and p.ilikia_dentron:
-                                        if normalize_str(p.ilikia_dentron) != req_age_norm:
-                                            continue
-                                    p.arithmos_dentron += diff
-                                    if p.arithmos_dentron < 0: p.arithmos_dentron = 0
-                                    found = True
-                                    break
-                            if not found and diff > 0:
-                                from models import KtimaPoikilia
-                                ilikia_to_save = requested_ilikia if requested_ilikia else ktima.ilikia_dentron
-                                vasi.session.add(KtimaPoikilia(ktima_id=ktima.id, poikilia_onoma=requested_poikilia, arithmos_dentron=diff, ilikia_dentron=ilikia_to_save))
-                                ktima.poikilia = 'Ανάμεικτο'
-                        elif ktima.poikilies_details:
-                            ktima.poikilies_details[0].arithmos_dentron += diff
-                            if ktima.poikilies_details[0].arithmos_dentron < 0: ktima.poikilies_details[0].arithmos_dentron = 0
-                except (ValueError, TypeError): pass
-            if updates.get('typos_edafous'):
-                ktima.typos_edafous = updates['typos_edafous']
-                updated_fields.append('Τύπος Εδάφους')
-            if updates.get('poikilia'):
-                nea_poikilia = updates['poikilia']
-                # Μόνο αν δεν προστέθηκαν δέντρα παραπάνω
-                if not tree_count_changed:
-                    ktima.poikilia = nea_poikilia
-                    updated_fields.append(f'Ποικιλία ({nea_poikilia})')
-                    if ktima.poikilies_details and len(ktima.poikilies_details) == 1:
-                        ktima.poikilies_details[0].poikilia_onoma = nea_poikilia
-            if updated_fields:
-                vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"⚙️ Ενημέρωση Προφίλ από AI: {', '.join(updated_fields)}", imerominia=datetime.now()))
+                            if requested_poikilia and target_k.poikilies_details:
+                                import unicodedata
+                                def normalize_str(s):
+                                    if not s: return ""
+                                    s_norm = unicodedata.normalize('NFD', str(s))
+                                    return ''.join(c for c in s_norm if unicodedata.category(c) != 'Mn').lower().strip()
+                                
+                                req_p_norm = normalize_str(requested_poikilia)
+                                requested_ilikia = updates.get('ilikia_dentron')
+                                req_age_norm = normalize_str(requested_ilikia)
+                                
+                                if diff > 0:
+                                    found = False
+                                    for p in target_k.poikilies_details:
+                                        if normalize_str(p.poikilia_onoma) == req_p_norm:
+                                            if req_age_norm and p.ilikia_dentron:
+                                                if normalize_str(p.ilikia_dentron) != req_age_norm:
+                                                    continue
+                                            p.arithmos_dentron += diff
+                                            found = True
+                                            break
+                                    if not found:
+                                        from models import KtimaPoikilia
+                                        ilikia_to_save = requested_ilikia if requested_ilikia else target_k.ilikia_dentron
+                                        vasi.session.add(KtimaPoikilia(ktima_id=target_k.id, poikilia_onoma=requested_poikilia, arithmos_dentron=diff, ilikia_dentron=ilikia_to_save))
+                                        target_k.poikilia = 'Ανάμεικτο'
+                                else:
+                                    ypoloipo = abs(diff)
+                                    for p in list(target_k.poikilies_details):
+                                        if normalize_str(p.poikilia_onoma) == req_p_norm:
+                                            if p.arithmos_dentron > ypoloipo:
+                                                p.arithmos_dentron -= ypoloipo
+                                                ypoloipo = 0
+                                                break
+                                            else:
+                                                ypoloipo -= p.arithmos_dentron
+                                                vasi.session.delete(p)
+                            elif target_k.poikilies_details:
+                                if diff > 0:
+                                    target_k.poikilies_details[0].arithmos_dentron += diff
+                                else:
+                                    ypoloipo = abs(diff)
+                                    for p in list(target_k.poikilies_details):
+                                        if p.arithmos_dentron > ypoloipo:
+                                            p.arithmos_dentron -= ypoloipo
+                                            ypoloipo = 0
+                                            break
+                                        else:
+                                            ypoloipo -= p.arithmos_dentron
+                                            vasi.session.delete(p)
+                    except (ValueError, TypeError): pass
+                if updates.get('typos_edafous'):
+                    target_k.typos_edafous = updates['typos_edafous']
+                    updated_fields.append('Τύπος Εδάφους')
+                if updates.get('poikilia'):
+                    nea_poikilia = updates['poikilia']
+                    # Μόνο αν δεν προστέθηκαν δέντρα παραπάνω
+                    if not tree_count_changed:
+                        target_k.poikilia = nea_poikilia
+                        updated_fields.append(f'Ποικιλία ({nea_poikilia})')
+                        if target_k.poikilies_details and len(target_k.poikilies_details) == 1:
+                            target_k.poikilies_details[0].poikilia_onoma = nea_poikilia
+                if updated_fields:
+                    vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"⚙️ Ενημέρωση Προφίλ από AI: {', '.join(updated_fields)}", imerominia=datetime.now()))
+                    target_k.teleftaia_enimerosi_ergasion = None
+                    target_k.ai_sumvouli_date = None
 
         if action == 'DELETE_TASKS':
             task_name = data.get('task_name', '')
@@ -372,7 +483,6 @@ def ai_secretary():
                     Ergasia.query.filter_by(ktima_id=target_k.id).filter(Ergasia.eidos_ergasias.ilike(f"%{task_name}%")).delete(synchronize_session=False)
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🗑️ AI Γραμματέας: Έγινε διαγραφή εργασιών: {task_name}.", imerominia=datetime.now()))
                 
-                target_k.teleftaia_enimerosi_ergasion = None
                 target_k.ekkremis_erotisi_ai = None
         elif action == 'UPDATE_TASK':
             task_name = data.get('task_name', '')
@@ -395,7 +505,6 @@ def ai_secretary():
                         task_to_edit.katastasi = new_data['status']
                         vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"✏️ AI Γραμματέας: Τροποποιήθηκε η εργασία '{task_name}'.", imerominia=datetime.now()))
                 
-                target_k.teleftaia_enimerosi_ergasion = None
                 target_k.ekkremis_erotisi_ai = None
 
         elif action == 'ADD_EXPENSE':
@@ -447,19 +556,33 @@ def ai_secretary():
                 kila_ladi = float(data.get('kila_ladi', 0) or 0)
                 esoda = float(data.get('esoda', 0) or 0)
                 
+                is_final = data.get('is_final', True)
+                poikilia_sygkomidis = data.get('poikilia_sygkomidis')
+                
                 synoliko_kostos = sum([e.poso for e in target_k.exoda if not e.archived])
+                kostos_eggrafis = synoliko_kostos if is_final else 0.0
                 kila_ana_dentro = kila_karpou / target_k.arithmos_dentron if target_k.arithmos_dentron and target_k.arithmos_dentron > 0 else 0
                 
                 nea_sodeia = ArxeioSygkomidis(
                     ktima_id=target_k.id, tonoi=kila_karpou, kila_ladi=kila_ladi, esoda=esoda,
-                    kila_ana_dentro=kila_ana_dentro, synoliko_kostos=synoliko_kostos, imerominia=datetime.now()
+                    kila_ana_dentro=kila_ana_dentro, synoliko_kostos=kostos_eggrafis, imerominia=datetime.now()
                 )
                 vasi.session.add(nea_sodeia)
                 
-                for e in target_k.ergasies: e.archived = True
-                for ex in target_k.exoda: ex.archived = True
+                desc_ergasias = "Συγκομιδή"
+                if poikilia_sygkomidis: desc_ergasias += f" ({poikilia_sygkomidis})"
+                desc_ergasias += f" - {kila_karpou} κιλά"
+                vasi.session.add(Ergasia(ktima_id=target_k.id, eidos_ergasias=desc_ergasias, katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='AI Γραμματέας'))
                 
-                vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🫒 AI Γραμματέας: Καταγράφηκε η συγκομιδή ({kila_karpou} κιλά ελιές). Η σεζόν έκλεισε.", imerominia=datetime.now()))
+                if is_final:
+                    for e in target_k.ergasies: e.archived = True
+                    for ex in target_k.exoda: ex.archived = True
+                    vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🫒 AI Γραμματέας: Καταγράφηκε η τελική συγκομιδή ({kila_karpou} κιλά). Η σεζόν έκλεισε.", imerominia=datetime.now()))
+                else:
+                    msg = f"🫒 AI Γραμματέας: Καταγράφηκε μερική συγκομιδή ({kila_karpou} κιλά"
+                    if poikilia_sygkomidis: msg += f" - {poikilia_sygkomidis}"
+                    msg += ")."
+                    vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=msg, imerominia=datetime.now()))
         elif action == 'ADD_INVENTORY':
             inv_name = data.get('inv_name')
             inv_amount = data.get('inv_amount')
@@ -507,9 +630,67 @@ def ai_secretary():
                     except (ValueError, TypeError): pass
                 if updates:
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"💧 AI Γραμματέας: Ενημέρωση ({', '.join(updates)}).", imerominia=datetime.now()))
+                    target_k.teleftaia_enimerosi_ergasion = None
+                    target_k.ai_sumvouli_date = None
+        elif action == 'ADD_KTIMA':
+            nk_data = data.get('new_ktima_data')
+            if nk_data and nk_data.get('onoma_ktimatos'):
+                try:
+                    onoma = nk_data.get('onoma_ktimatos')
+                    
+                    neo_ktima = Ktima(
+                        onoma_ktimatos=onoma,
+                        geografiko_mikos=23.7275, # Προεπιλογή: Αθήνα
+                        geografiko_platos=37.9838, # Προεπιλογή: Αθήνα
+                        idioktitis=current_user
+                    )
+                    vasi.session.add(neo_ktima)
+                    vasi.session.flush() # Λήψη του νέου ID
+                    
+                    poikilies_multi = nk_data.get('poikilies_multi')
+                    if poikilies_multi and isinstance(poikilies_multi, list) and len(poikilies_multi) > 0:
+                        total_trees = 0
+                        valid_varieties = []
+                        for p in poikilies_multi:
+                            p_onoma = p.get('onoma')
+                            try: p_arithmos = int(p.get('arithmos') or 0)
+                            except: p_arithmos = 0
+                            if p_onoma and p_arithmos > 0:
+                                from models import KtimaPoikilia
+                                vasi.session.add(KtimaPoikilia(ktima_id=neo_ktima.id, poikilia_onoma=p_onoma, arithmos_dentron=p_arithmos, ilikia_dentron=p.get('ilikia') or 'Άγνωστη'))
+                                total_trees += p_arithmos
+                                valid_varieties.append(p_onoma)
+                        neo_ktima.arithmos_dentron = total_trees
+                        neo_ktima.poikilia = 'Ανάμεικτο' if len(set(valid_varieties)) > 1 else (valid_varieties[0] if valid_varieties else 'Δεν ορίστηκε')
+                    else:
+                        neo_ktima.arithmos_dentron = int(nk_data.get('arithmos_dentron') or 0)
+                        neo_ktima.poikilia = nk_data.get('poikilia') or 'Δεν ορίστηκε'
+                        neo_ktima.ilikia_dentron = nk_data.get('ilikia_dentron') or 'Άγνωστη'
+                        if neo_ktima.arithmos_dentron > 0 and neo_ktima.poikilia != 'Δεν ορίστηκε':
+                            from models import KtimaPoikilia
+                            vasi.session.add(KtimaPoikilia(ktima_id=neo_ktima.id, poikilia_onoma=neo_ktima.poikilia, arithmos_dentron=neo_ktima.arithmos_dentron, ilikia_dentron=neo_ktima.ilikia_dentron))
+                            
+                    vasi.session.add(Diagnosi(ktima_id=neo_ktima.id, apotelesma="🤖 AI Γραμματέας: Το κτήμα δημιουργήθηκε αυτόματα.", imerominia=datetime.now()))
+                    data['new_ktima_id'] = neo_ktima.id
+                except Exception as e: print(f"Σφάλμα δημιουργίας κτήματος AI: {e}")
+        elif action == 'DELETE_KTIMA':
+            import requests
+            target_ktimata = []
+            if str(target_ktima_id).upper() == 'ALL':
+                target_ktimata = energa_ktimata
+            else:
+                if ktima: target_ktimata.append(ktima)
+                
+            for target_k in target_ktimata:
+                if target_k.agromonitoring_poly_id and os.getenv('AGROMONITORING_API_KEY'):
+                    try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{target_k.agromonitoring_poly_id}?appid={os.getenv('AGROMONITORING_API_KEY')}", timeout=5)
+                    except: pass
+                vasi.session.delete(target_k)
         elif (action == 'DIAGNOSIS' or any(img.filename != '' for img in image_files)) and ktima:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"📸 AI Γραμματέας: {reply_text}", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
+            ktima.teleftaia_enimerosi_ergasion = None
+            ktima.ai_sumvouli_date = None
             
         # --- ΕΝΗΜΕΡΩΣΗ ΜΝΗΜΗΣ ΣΤΗ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ ---
         try:
@@ -525,7 +706,7 @@ def ai_secretary():
         current_user.secretary_history = json.dumps(history)
         
         vasi.session.commit()
-        return jsonify({'success': True, 'reply': reply_text, 'action': action})
+        return jsonify({'success': True, 'reply': reply_text, 'action': action, 'new_ktima_data': data.get('new_ktima_data'), 'new_ktima_id': data.get('new_ktima_id')})
     except Exception as e:
         error_msg = str(e)
         if '502' in error_msg or '503' in error_msg or 'Bad Gateway' in error_msg:

@@ -454,3 +454,34 @@ def diagrafi_sodeias(sodeia_id):
     vasi.session.commit()
     flash('Η καταχώρηση της σοδειάς διαγράφηκε επιτυχώς.', 'success')
     return redirect(url_for('core_app.arxeio'))
+
+@ktima_actions_bp.route('/epeksergasia_topothesias/<int:ktima_id>', methods=['POST'])
+@login_required
+def epeksergasia_topothesias(ktima_id):
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return redirect(url_for('core_app.arxikh'))
+        
+    mikos = request.form.get('geografiko_mikos')
+    platos = request.form.get('geografiko_platos')
+    stremmata = request.form.get('stremmata')
+    poly_json = request.form.get('polygon_geojson')
+    
+    if mikos and platos:
+        ktima.geografiko_mikos = float(mikos)
+        ktima.geografiko_platos = float(platos)
+        if stremmata: 
+            ktima.stremmata = float(stremmata.replace(',', '.'))
+        if poly_json: 
+            ktima.polygon_geojson = poly_json
+            api_key = os.getenv('AGROMONITORING_API_KEY')
+            if api_key:
+                try:
+                    headers = {'Content-Type': 'application/json'}
+                    payload = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(poly_json)}
+                    resp = requests.post(f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}", json=payload, headers=headers)
+                    if resp.status_code in [200, 201]: ktima.agromonitoring_poly_id = resp.json().get('id')
+                except Exception as e: print(f"Σφάλμα ενημέρωσης δορυφόρου: {e}")
+        vasi.session.commit()
+        flash('Η τοποθεσία ενημερώθηκε επιτυχώς!', 'success')
+    return redirect(url_for('core_app.arxikh'))

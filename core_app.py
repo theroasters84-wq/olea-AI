@@ -115,7 +115,7 @@ def arxikh():
                 latest_amino = None
                 
                 for t in ktima.ergasies:
-                    if not t.archived:
+                    if not t.archived and t.katastasi == 'Ολοκληρώθηκε':
                         if 'Χαλκ' in t.eidos_ergasias or (t.farmaka_lipasmata and 'Χαλκ' in t.farmaka_lipasmata):
                             if latest_copper is None or t.imerominia > latest_copper.imerominia:
                                 latest_copper = t
@@ -140,7 +140,7 @@ def arxikh():
                 # PHI Logic
                 latest_spray = None
                 for ergasia in ktima.ergasies:
-                    if not ergasia.archived and 'Ψεκασμός' in ergasia.eidos_ergasias:
+                    if not ergasia.archived and ergasia.katastasi == 'Ολοκληρώθηκε' and 'Ψεκασμός' in ergasia.eidos_ergasias:
                         if latest_spray is None or ergasia.imerominia > latest_spray.imerominia:
                             latest_spray = ergasia
                 ktima.meres_apo_psekasmo = (datetime.now() - latest_spray.imerominia).days if latest_spray else None
@@ -446,7 +446,6 @@ def prosthes_ergasia(ktima_id):
         im = datetime.now()
         
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
-    ktima.teleftaia_enimerosi_ergasion = None
     ktima.ekkremis_erotisi_ai = None
     vasi.session.add(nea_ergasia)
     vasi.session.commit()
@@ -510,7 +509,6 @@ def oloklirosi_ergasias(ktima_id):
         except (ValueError, TypeError):
             pass
 
-        ktima.teleftaia_enimerosi_ergasion = None
         ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))

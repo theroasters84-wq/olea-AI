@@ -186,6 +186,11 @@
                         <button type="button" class="btn btn-primary rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalRenameKtima{{ ktima.id }}" title="Μετονομασία Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-pencil-alt"></i>
                         </button>
+                        {% if not ktima.polygon_geojson %}
+                        <button type="button" class="btn btn-warning text-dark rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalEditLocation{{ ktima.id }}" title="Επεξεργασία Τοποθεσίας / Χάρτη" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                        {% endif %}
                         <button type="button" class="btn btn-danger rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalDeleteArchive{{ ktima.id }}" title="Διαχείριση Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-times"></i>
                         </button>
@@ -370,6 +375,44 @@
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Αποθήκευση Αλλαγών</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Επεξεργασίας Τοποθεσίας (Χάρτης) -->
+<div class="modal fade edit-location-modal" id="modalEditLocation{{ ktima.id }}" tabindex="-1" data-ktima-id="{{ ktima.id }}" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="mapEdit{{ ktima.id }}">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-map-marker-alt"></i> Τοποθεσία: {{ ktima.onoma_ktimatos }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                    <i class="fas fa-info-circle fa-lg me-2"></i> Σχεδιάστε το πολύγωνο του κτήματος στον χάρτη για να ενημερώσετε την τοποθεσία και τα στρέμματα.
+                </div>
+                <div id="mapEdit{{ ktima.id }}" style="height: 350px; width: 100%; border-radius: 8px;" class="mb-3 border"></div>
+                <form action="{{ url_for('ktima_actions.epeksergasia_topothesias', ktima_id=ktima.id) }}" method="POST">
+                    <input type="hidden" name="polygon_geojson" id="polyEdit{{ ktima.id }}" value="{{ ktima.polygon_geojson or '' }}">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small">Γεωγραφικό Πλάτος</label>
+                            <input type="text" name="geografiko_platos" id="latEdit{{ ktima.id }}" class="form-control form-control-sm bg-light" value="{{ ktima.geografiko_platos }}" required readonly>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small">Γεωγραφικό Μήκος</label>
+                            <input type="text" name="geografiko_mikos" id="lngEdit{{ ktima.id }}" class="form-control form-control-sm bg-light" value="{{ ktima.geografiko_mikos }}" required readonly>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label small">Στρέμματα (Αυτόματα)</label>
+                            <input type="text" name="stremmata" id="strEdit{{ ktima.id }}" class="form-control form-control-sm" value="{{ ktima.stremmata }}">
+                        </div>
+                    </div>
+                    <div class="d-grid mt-2">
+                        <button type="submit" class="btn btn-warning"><strong><i class="fas fa-save"></i> Αποθήκευση Τοποθεσίας</strong></button>
                     </div>
                 </form>
             </div>

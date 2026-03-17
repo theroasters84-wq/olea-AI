@@ -6,7 +6,10 @@
             setTimeout(() => {
                 const modalEl = document.getElementById(reopenModalId);
                 if (modalEl) {
-                    const myModal = new bootstrap.Modal(modalEl);
+                    let myModal = bootstrap.Modal.getInstance(modalEl);
+                    if (!myModal) {
+                        myModal = new bootstrap.Modal(modalEl);
+                    }
                     myModal.show();
                 }
             }, 150); // Καθυστέρηση 150ms για να προλάβει να φορτώσει το γραφικό περιβάλλον
@@ -62,15 +65,49 @@
                 });
             }
         {% endfor %}
+        
+        // --- Κουμπί GPS / Τρέχουσας Τοποθεσίας ---
+        window.addGpsControl = function(map) {
+            const GpsControl = L.Control.extend({
+                options: { position: 'topleft' },
+                onAdd: function (map) {
+                    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+                    container.style.backgroundColor = 'white';
+                    container.style.width = '34px';
+                    container.style.height = '34px';
+                    container.style.cursor = 'pointer';
+                    container.style.display = 'flex';
+                    container.style.alignItems = 'center';
+                    container.style.justifyContent = 'center';
+                    container.title = 'Εύρεση τρέχουσας τοποθεσίας (GPS)';
+                    container.innerHTML = '<i class="fas fa-crosshairs text-primary" style="font-size: 1.2em;"></i>';
+                    
+                    container.onclick = function(e){
+                        e.preventDefault(); e.stopPropagation();
+                        container.innerHTML = '<i class="fas fa-spinner fa-spin text-primary" style="font-size: 1.2em;"></i>';
+                        map.locate({setView: true, maxZoom: 17, enableHighAccuracy: true});
+                    }
+                    return container;
+                }
+            });
+            map.addControl(new GpsControl());
+            map.on('locationfound', function(e) { const ctrl = map.getContainer().querySelector('.fa-spinner'); if (ctrl) { ctrl.className = 'fas fa-crosshairs text-primary'; } });
+            map.on('locationerror', function(e) { const ctrl = map.getContainer().querySelector('.fa-spinner'); if (ctrl) { ctrl.className = 'fas fa-crosshairs text-primary'; } alert("Δεν ήταν δυνατή η πρόσβαση στο GPS. Ελέγξτε αν έχετε δώσει άδεια τοποθεσίας στον browser σας."); });
+        };
 
         // --- Add Ktima Modal Map & Form Logic ---
         let addKtimaMap; 
         const addKtimaModal = document.getElementById('addKtimaModal');
         if(addKtimaModal) {
             addKtimaModal.addEventListener('shown.bs.modal', function () {
-                if (!addKtimaMap) { 
-                    addKtimaMap = L.map('map', { rotate: true, touchRotate: true }).setView([39.0742, 21.8243], 6);
+                if (!addKtimaMap) {
+                    const defaultLat = this.dataset.defaultLat || 39.0742;
+                    const defaultLng = this.dataset.defaultLng || 21.8243;
+                    const defaultZoom = this.dataset.defaultLat ? 14 : 6; // Zoom in if we have a specific location
+
+                    addKtimaMap = L.map('map', { rotate: true, touchRotate: true }).setView([defaultLat, defaultLng], defaultZoom);
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(addKtimaMap);
+                    window.addGpsControl(addKtimaMap);
                     const drawnItemsAdd = new L.FeatureGroup();
                     addKtimaMap.addLayer(drawnItemsAdd);
                     const drawControlAdd = new L.Control.Draw({ draw: { polygon: { allowIntersection: false, showArea: true }, rectangle: { showArea: true }, polyline: false, circle: false, marker: false, circlemarker: false }, edit: { featureGroup: drawnItemsAdd, remove: true } });
@@ -103,6 +140,59 @@
                 else { e.preventDefault(); }
             });
         }
+        
+        // --- Auto-Open Edit Location Modal after AI Ktima Creation ---
+        const openEditMapId = sessionStorage.getItem('openEditLocationModal');
+        if (openEditMapId) {
+            sessionStorage.removeItem('openEditLocationModal');
+            setTimeout(() => {
+                const modalEl = document.getElementById('modalEditLocation' + openEditMapId);
+                if (modalEl) { 
+                    let editModal = bootstrap.Modal.getInstance(modalEl);
+                    if (!editModal) {
+                        editModal = new bootstrap.Modal(modalEl);
+                    }
+                    editModal.show(); 
+                }
+            }, 300);
+        }
+
+        // --- Edit Location Map Initialization ---
+        const editLocationModals = document.querySelectorAll('.edit-location-modal');
+        editLocationModals.forEach(modal => {
+            modal.addEventListener('shown.bs.modal', function () {
+                const lat = parseFloat(this.getAttribute('data-lat')) || 37.9838; 
+                const lng = parseFloat(this.getAttribute('data-lng')) || 23.7275; 
+                const mapId = this.getAttribute('data-mapid'); 
+                const savedGeoJsonStr = this.getAttribute('data-geojson');
+                const ktimaId = this.getAttribute('data-ktima-id');
+
+                if (!window.initializedMaps[mapId]) {
+                    const map = L.map(mapId, { rotate: true, touchRotate: true }).setView([lat, lng], 15);
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(map);
+                    window.addGpsControl(map);
+                    const drawnItems = new L.FeatureGroup(); map.addLayer(drawnItems);
+                    const drawControl = new L.Control.Draw({ edit: { featureGroup: drawnItems }, draw: { polygon: { allowIntersection: false, showArea: true }, rectangle: false, polyline: false, circle: false, marker: false, circlemarker: false } });
+                    map.addControl(drawControl);
+
+                    if (savedGeoJsonStr && savedGeoJsonStr !== "None" && savedGeoJsonStr !== "") {
+                        try { const geoLayer = L.geoJSON(JSON.parse(savedGeoJsonStr)); geoLayer.eachLayer(function(layer) { drawnItems.addLayer(layer); }); map.fitBounds(drawnItems.getBounds()); } catch (e) {}
+                    }
+
+                    map.on(L.Draw.Event.CREATED, function (e) {
+                        drawnItems.clearLayers(); const layer = e.layer; drawnItems.addLayer(layer);
+                        document.getElementById('polyEdit' + ktimaId).value = JSON.stringify(layer.toGeoJSON());
+                        const center = layer.getBounds().getCenter();
+                        document.getElementById('latEdit' + ktimaId).value = center.lat.toFixed(6);
+                        document.getElementById('lngEdit' + ktimaId).value = center.lng.toFixed(6);
+                        document.getElementById('strEdit' + ktimaId).value = (L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]) / 1000).toFixed(2);
+                    });
+
+                    map.on(L.Draw.Event.DELETED, function(e) { if (drawnItems.getLayers().length === 0) { document.getElementById('polyEdit' + ktimaId).value = ""; } });
+                    window.initializedMaps[mapId] = map;
+                } else { window.initializedMaps[mapId].invalidateSize(); }
+            });
+        });
 
         // --- NDVI Map Initialization Logic ---
         window.initializedMaps = window.initializedMaps || {};
@@ -159,6 +249,8 @@
                     currentGeoJSON = layer.toGeoJSON(); currentBounds = layer.getBounds(); window.ndviMapBounds[mapId] = currentBounds;
                     if (analyzeBtn) analyzeBtn.classList.remove('d-none'); if (redrawBtn) redrawBtn.classList.remove('d-none'); if (errorDiv) errorDiv.classList.add('d-none');
                 });
+                map.on(L.Draw.Event.DRAWSTART, function (e) { map.dragging.disable(); map.touchZoom.disable(); });
+                map.on(L.Draw.Event.DRAWSTOP, function (e) { map.dragging.enable(); map.touchZoom.enable(); });
 
                 if (analyzeBtn) {
                     analyzeBtn.addEventListener('click', function() {
