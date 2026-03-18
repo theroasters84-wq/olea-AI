@@ -81,6 +81,7 @@ h1, h2, h3, h4, h5, h6 {
     min-width: 90vw !important; /* Force: Απαγορεύει τη συμπίεση */
     max-width: 90vw !important; /* Force: Απαγορεύει την επέκταση */
     scroll-snap-align: center; /* Κεντράρισμα μετά το swipe */
+    scroll-snap-stop: always; /* Υποχρεωτικό σταμάτημα σε κάθε κάρτα */
 }
 
 /* Για οθόνες υπολογιστή (Desktop/Tablet) αλλάζουμε σε Πλέγμα */
