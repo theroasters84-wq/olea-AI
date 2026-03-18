@@ -156,6 +156,7 @@ def analysi_egrafou(ktima_id):
                     elif 'πετρ' in typos_lower: ktima.typos_edafous = 'Πετρώδες'
             except Exception: pass
 
+        ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
         flash('Η ανάλυση του εγγράφου ολοκληρώθηκε.', 'success')
     except Exception as e:
@@ -180,6 +181,7 @@ def anagnorisi_stadiou(ktima_id):
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🌿 Αναγνώριση Σταδίου: {ktima.fainologiko_stadio}", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
             
+        ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
         flash(f'Στάδιο: {ktima.fainologiko_stadio}', 'success')
     return redirect(url_for('core_app.arxikh'))

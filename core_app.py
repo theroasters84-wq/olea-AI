@@ -537,6 +537,8 @@ def prosthes_ugrasia(ktima_id):
         pososto = float(request.form.get('pososto', 0))
         nea = KatagrafiUgrasias(ktima_id=ktima_id, pososto=pososto)
         vasi.session.add(nea)
+        ktima = vasi.session.get(Ktima, ktima_id)
+        if ktima: ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
     except ValueError:
         flash('Μη έγκυρη τιμή υγρασίας.', 'danger')
@@ -550,6 +552,7 @@ def enimerosi_nerou(ktima_id):
         ktima.nero_ph = float(request.form.get('nero_ph') or 0)
         ktima.nero_agwgimotita = float(request.form.get('nero_agwgimotita') or 0)
         
+        ktima.ekkremis_erotisi_ai = None
         nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"💧 Ανάλυση Νερού: pH {ktima.nero_ph}, EC {ktima.nero_agwgimotita}", imerominia=datetime.now())
         vasi.session.add(nea_diagnosi)
         vasi.session.commit()

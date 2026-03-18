@@ -493,6 +493,7 @@ def ai_secretary():
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"⚙️ Ενημέρωση Προφίλ από AI: {', '.join(updated_fields)}", imerominia=datetime.now()))
                     target_k.teleftaia_enimerosi_ergasion = None
                     target_k.ai_sumvouli_date = None
+                    target_k.ekkremis_erotisi_ai = None
 
         if action == 'DELETE_TASKS':
             task_name = data.get('task_name', '')
@@ -611,6 +612,7 @@ def ai_secretary():
                     if poikilia_sygkomidis: msg += f" - {poikilia_sygkomidis}"
                     msg += ")."
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=msg, imerominia=datetime.now()))
+                target_k.ekkremis_erotisi_ai = None
         elif action == 'ADD_INVENTORY':
             inv_name = data.get('inv_name')
             inv_amount = data.get('inv_amount')
@@ -660,6 +662,7 @@ def ai_secretary():
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"💧 AI Γραμματέας: Ενημέρωση ({', '.join(updates)}).", imerominia=datetime.now()))
                     target_k.teleftaia_enimerosi_ergasion = None
                     target_k.ai_sumvouli_date = None
+                    target_k.ekkremis_erotisi_ai = None
         elif action == 'ADD_KTIMA':
             nk_data = data.get('new_ktima_data')
             if nk_data and nk_data.get('onoma_ktimatos'):
