@@ -161,45 +161,10 @@ function addVarietyRow(containerId, totalOutputId = null) {
     container.appendChild(newRow);
 }
 
-async function generateAISyntagh(ktimaId, btn) {
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Η AI αναλύει το κτήμα και γράφει τη συνταγή...';
-    try {
-        // Σημείωση: Το route έχει οριστεί στο ai_tools.py χωρίς prefix στο blueprint registration
-        const response = await fetch('/paragogi_syntaghs/' + ktimaId, { method: 'POST' }); 
-        const data = await response.json();
-        if (data.success) {
-            if (data.ergasies && data.ergasies.length > 0) {
-                let msg = "Η συνταγή εκδόθηκε επιτυχώς!\n\nΟ AI Γεωπόνος προτείνει τις εξής εργασίες:\n";
-                data.ergasies.forEach(e => {
-                    msg += `- ${e.eidos} (${e.farmaka || 'Χωρίς υλικά'})\n`;
-                });
-                msg += "\nΘέλετε να αντικαταστήσετε τις τρέχουσες εκκρεμείς εργασίες σας με αυτές;";
-                
-                if (confirm(msg)) {
-                    await fetch('/epivevaiosi_ergasion_ai/' + ktimaId, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ergasies: data.ergasies })
-                    });
-                }
-            } else {
-                alert("Η συνταγή εκδόθηκε επιτυχώς! (Δεν προτάθηκαν νέες εργασίες)");
-            }
-            location.reload(); 
-        } else {
-            alert("Σφάλμα: " + (data.error || 'Άγνωστο σφάλμα'));
-        }
-    } catch (e) { alert("Σφάλμα επικοινωνίας."); }
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-}
-
 // Global function to handle AI task confirmation from other places (like refine)
 window.confirmAIErgasies = async function(ktimaId, ergasies) {
     if (ergasies && ergasies.length > 0) {
-        let msg = "Ο AI Γεωπόνος αναθεώρησε τις προτεινόμενες εργασίες:\n";
+        let msg = "Ο AI Γεωπόνος προτείνει τις εξής εργασίες:\n";
         ergasies.forEach(e => {
             msg += `- ${e.eidos} (${e.farmaka || 'Χωρίς υλικά'})\n`;
         });
@@ -211,7 +176,8 @@ window.confirmAIErgasies = async function(ktimaId, ergasies) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ergasies: ergasies })
             });
-            alert('Οι εκκρεμείς εργασίες ενημερώθηκαν!');
+            sessionStorage.setItem('reopenModal', 'modalAnalytiki' + ktimaId);
+            sessionStorage.setItem('scrollToSyntages', ktimaId);
             location.reload();
         }
     }
@@ -246,40 +212,6 @@ async function toggleKalliergeia(ktimaId, btnEl) {
     }
     btnEl.disabled = false;
 }
-
-// --- FIX: Αυτόματο Scroll στην κορυφή όταν ανανεώνεται η Συνταγή & Επιβεβαίωση Εργασιών ---
-const originalFetchOlea = window.fetch;
-window.fetch = async function(...args) {
-    const response = await originalFetchOlea.apply(this, args);
-    try {
-        const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
-        
-        // Intercept Refine Syntagh response to ask for confirmation
-        if (url.includes('/refine_syntagh/')) {
-            const resClone = response.clone();
-            resClone.json().then(data => {
-                if (data.success && data.ergasies && data.ergasies.length > 0) {
-                    setTimeout(() => {
-                        const ktimaId = url.split('/').pop();
-                        window.confirmAIErgasies(ktimaId, data.ergasies);
-                    }, 600); // Περιμένουμε λίγο να τυπωθεί το κείμενο και να γίνει το scroll
-                }
-            }).catch(e => console.log("Δεν ήταν JSON", e));
-        }
-
-        // Όταν ολοκληρώνεται η κλήση στο AI για νέα συνταγή ή αναθεώρηση (διευκρίνιση)
-        if (url.includes('/refine_syntagh/') || url.includes('/paragogi_syntaghs/')) {
-            setTimeout(() => {
-                // Βρίσκουμε το ανοιχτό παράθυρο (modal) και το σκρολάρουμε ομαλά τέρμα πάνω
-                const openModalBody = document.querySelector('.modal.show .modal-body');
-                if (openModalBody) {
-                    openModalBody.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            }, 400); // 400ms καθυστέρηση για να προλάβει να "τυπωθεί" το νέο κείμενο στο HTML
-        }
-    } catch (e) { console.error("Scroll Fix Error:", e); }
-    return response;
-};
 
 // --- NDVI & Satellite Layer Management ---
 window.setupSatelliteLayers = function(map, bounds, data, mapId) {
@@ -437,3 +369,11 @@ document.addEventListener("DOMContentLoaded", function() {
     leafletTouchFix.innerHTML = ".leaflet-container { touch-action: none !important; -webkit-tap-highlight-color: transparent; }";
     document.head.appendChild(leafletTouchFix);
 });
+
+// --- FIX: Αποτροπή εσωτερικού scroll (Jumping) του χάρτη στην πάνω-αριστερή γωνία κατά τη σχεδίαση (Leaflet.Draw bug) ---
+document.addEventListener('scroll', function(e) {
+    if (e.target && e.target.classList && e.target.classList.contains('leaflet-container')) {
+        e.target.scrollTop = 0;
+        e.target.scrollLeft = 0;
+    }
+}, true);

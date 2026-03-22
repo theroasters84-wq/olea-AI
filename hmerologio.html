@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ημερολόγιο Εργασιών - Olea AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        #calendar { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); }
+        .fc-event { cursor: pointer; border: none; padding: 2px 4px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-calendar-alt text-success"></i> Ημερολόγιο Εργασιών</h2>
+            <a href="{{ url_for('core_app.arxikh') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Πίσω στην Αρχική</a>
+        </div>
+        
+        <div id='calendar'></div>
+    </div>
+
+    <!-- Modal Λεπτομερειών Εργασίας -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="eventModalTitle">Λεπτομέρειες Εργασίας</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong><i class="fas fa-prescription-bottle-alt text-primary"></i> Φάρμακα / Υλικά:</strong> <span id="eventFarmaka"></span></p>
+                    <p><strong><i class="fas fa-info-circle text-info"></i> Κατάσταση:</strong> <span id="eventKatastasi"></span></p>
+                    <p><strong><i class="fas fa-user text-secondary"></i> Προέλευση:</strong> <span id="eventProelevsi"></span></p>
+                    <p><strong><i class="fas fa-calendar-day text-success"></i> Ημερομηνία:</strong> <span id="eventDate"></span></p>
+
+                    <div id="completeTaskSection" class="mt-4 pt-3 border-top d-none">
+                        <h6 class="text-success mb-3"><i class="fas fa-check-circle"></i> Ολοκλήρωση Εργασίας</h6>
+                        <form id="completeTaskForm" method="POST" action="">
+                            <input type="hidden" name="ergasia_id" id="completeErgasiaId">
+                            <input type="hidden" name="eidos_ergasias" id="completeEidos">
+                            
+                            <div class="mb-3">
+                                <label class="form-label text-primary small"><i class="fas fa-warehouse"></i> Χρησιμοποιήσατε υλικό από αποθήκη;</label>
+                                <select name="yliko_id" class="form-select form-select-sm">
+                                    <option value="">-- Όχι / Άλλο υλικό --</option>
+                                    {% if current_user.apothiki_items %}
+                                        {% for item in current_user.apothiki_items %}
+                                            <option value="{{ item.id }}">{{ item.onoma_proiontos }} (Διαθέσιμα: {{ item.posotita }} {{ item.monada_metrisis }})</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Ποσότητα που χρησιμοποιήσατε:</label>
+                                <input type="number" step="0.01" name="posotita_xrisis" class="form-control form-control-sm" placeholder="π.χ. 2.5">
+                                <small class="text-muted d-block mt-1" style="font-size: 0.8em;">Η ποσότητα θα αφαιρεθεί αυτόματα από το απόθεμα.</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-danger small"><i class="fas fa-euro-sign"></i> Επιπλέον Κόστος (€) (Προαιρετικό)</label>
+                                <input type="number" step="0.01" name="kostos" class="form-control form-control-sm" placeholder="0.00">
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Αποθήκευση & Ολοκλήρωση</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger" id="btnDeleteEvent" onclick="deleteCalendarTask()"><i class="fas fa-trash-alt"></i> Διαγραφή</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Προγραμματισμού Εργασιών -->
+    <div class="modal fade" id="scheduleTaskModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-calendar-plus"></i> Προγραμματισμός Εργασιών</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Ημερομηνία: <strong id="scheduleDateDisplay" class="text-primary"></strong></p>
+                    <input type="hidden" id="scheduleDate">
+                    
+                    <ul class="nav nav-tabs mb-3" id="scheduleTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-tab-pane" type="button" role="tab" aria-controls="pending-tab-pane" aria-selected="true">Λίστα Εκκρεμών</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual-tab-pane" type="button" role="tab" aria-controls="manual-tab-pane" aria-selected="false">Νέα Χειροκίνητη</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="scheduleTabContent">
+                        <div class="tab-pane fade show active" id="pending-tab-pane" role="tabpanel" aria-labelledby="pending-tab" tabindex="0">
+                            <p class="small text-muted mb-2">Επιλέξτε από τις προτεινόμενες (AI/Γεωπόνου) για να τις τοποθετήσετε σε αυτή τη μέρα:</p>
+                            <div id="pendingTasksList" class="mb-3 p-3 bg-light border rounded" style="max-height: 250px; overflow-y: auto;">
+                                <!-- Εδώ θα μπαίνουν τα Checkboxes δυναμικά -->
+                            </div>
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary shadow-sm" onclick="submitSchedule()">Αποθήκευση στο Ημερολόγιο</button>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="manual-tab-pane" role="tabpanel" aria-labelledby="manual-tab" tabindex="0">
+                            <form id="manualTaskForm">
+                                <div class="mb-3">
+                                    <label class="form-label small">Κτήμα</label>
+                                    <select id="manualKtimaId" class="form-select form-select-sm" required>
+                                        {% for ktima in current_user.ktimata if ktima.is_active %}
+                                            <option value="{{ ktima.id }}">{{ ktima.onoma_ktimatos }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small">Εργασία</label>
+                                    <input type="text" id="manualEidos" class="form-control form-control-sm" placeholder="π.χ. Ψεκασμός, Κλάδεμα, Πότισμα" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small">Φάρμακα / Λιπάσματα (Προαιρετικό)</label>
+                                    <input type="text" id="manualFarmaka" class="form-control form-control-sm" placeholder="π.χ. Χαλκός, Βόριο">
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-success shadow-sm" onclick="submitManualTask()">Δημιουργία & Προσθήκη</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS (Απαραίτητο για να ανοίγουν τα Modals) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var eventsData = {{ events | tojson | safe }};
+        
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          locale: 'el',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+          },
+          buttonText: {
+            today: 'Σήμερα',
+            month: 'Μήνας',
+            week: 'Εβδομάδα',
+            list: 'Λίστα'
+          },
+          events: eventsData,
+          dateClick: function(info) {
+              document.getElementById('scheduleDate').value = info.dateStr;
+              let dateObj = new Date(info.dateStr);
+              document.getElementById('scheduleDateDisplay').innerText = dateObj.toLocaleDateString('el-GR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+              
+              // Εμφάνιση του Modal ΑΜΕΣΑ για να μην φαίνεται ότι "κολλάει"
+              document.getElementById('pendingTasksList').innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-2 text-muted">Φόρτωση προτεινόμενων εργασιών...</p></div>';
+              var myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('scheduleTaskModal'));
+              myModal.show();
+
+              fetch('/api/pending_tasks')
+                  .then(res => res.json())
+                  .then(tasks => {
+                      let html = '';
+                      if (tasks.length === 0) {
+                          html = '<p class="text-muted fst-italic">Δεν υπάρχουν εκκρεμείς εργασίες στο σύστημα.</p>';
+                      } else {
+                          tasks.forEach(t => {
+                              let valStr = JSON.stringify({id: t.id, type: t.type, ktima_id: t.ktima_id, eidos: t.eidos}).replace(/"/g, '&quot;');
+                              let dateDisplay = t.current_date;
+                              if(t.current_date !== 'Μη Προγραμματισμένη' && t.current_date !== 'Χωρίς Ημ/νία') {
+                                  dateDisplay = new Date(t.current_date).toLocaleDateString('el-GR');
+                              }
+                              
+                              html += `<div class="form-check mb-2">
+                                  <input class="form-check-input task-checkbox" type="checkbox" value="${valStr}" id="task${t.id}" style="transform: scale(1.3); margin-right: 10px;">
+                                  <label class="form-check-label" for="task${t.id}">
+                                      <strong>${t.title}</strong> <br><small class="text-muted"><i class="fas fa-clock"></i> Τρέχουσα Ημ/νία: ${dateDisplay}</small>
+                                  </label>
+                              </div>`;
+                          });
+                      }
+                      document.getElementById('pendingTasksList').innerHTML = html;
+                  });
+          },
+          eventClick: function(info) {
+              // Γέμισμα του Modal με τα δεδομένα
+              document.getElementById('eventModalTitle').innerText = info.event.title;
+              document.getElementById('eventFarmaka').innerText = info.event.extendedProps.farmaka;
+              document.getElementById('eventKatastasi').innerText = info.event.extendedProps.katastasi;
+              document.getElementById('eventProelevsi').innerText = info.event.extendedProps.proelevsi;
+              document.getElementById('completeErgasiaId').value = info.event.extendedProps.ergasia_id;
+              
+              // Μορφοποίηση ημερομηνίας
+              let dateObj = info.event.start;
+              document.getElementById('eventDate').innerText = dateObj.toLocaleDateString('el-GR');
+              
+              if (info.event.extendedProps.katastasi === 'Εκκρεμεί') {
+                  document.getElementById('completeTaskSection').classList.remove('d-none');
+                  document.getElementById('completeEidos').value = info.event.extendedProps.eidos;
+                  document.getElementById('completeTaskForm').action = '/oloklirosi_ergasias/' + info.event.extendedProps.ktima_id;
+                  document.getElementById('completeTaskForm').reset(); // Επαναφορά παλιών τιμών αν είχατε ανοίξει άλλη εργασία
+              } else {
+                  document.getElementById('completeTaskSection').classList.add('d-none');
+              }
+              
+              // Εμφάνιση Modal
+              var myModal = new bootstrap.Modal(document.getElementById('eventModal'));
+              myModal.show();
+          }
+        });
+        calendar.render();
+      });
+      
+      function submitSchedule() {
+          const newDate = document.getElementById('scheduleDate').value;
+          const checkboxes = document.querySelectorAll('.task-checkbox:checked');
+          const taskItems = Array.from(checkboxes).map(cb => JSON.parse(cb.value));
+          
+          if (taskItems.length === 0) {
+              alert('Παρακαλώ επιλέξτε τουλάχιστον μία εργασία.');
+              return;
+          }
+          
+          fetch('/api/schedule_tasks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tasks: taskItems, new_date: newDate })
+          })
+          .then(res => res.json())
+          .then(data => {
+              if (data.success) { location.reload(); } else { alert('Σφάλμα: ' + data.error); }
+          });
+      }
+      
+      function submitManualTask() {
+          const newDate = document.getElementById('scheduleDate').value;
+          const ktimaId = document.getElementById('manualKtimaId').value;
+          const eidos = document.getElementById('manualEidos').value.trim();
+          const farmaka = document.getElementById('manualFarmaka').value.trim();
+          
+          if (!ktimaId || !eidos) {
+              alert('Παρακαλώ συμπληρώστε τα υποχρεωτικά πεδία (Κτήμα, Εργασία).');
+              return;
+          }
+          
+          fetch('/api/add_manual_task', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ktima_id: ktimaId, eidos_ergasias: eidos, imerominia: newDate, farmaka_lipasmata: farmaka })
+          })
+          .then(res => res.json())
+          .then(data => {
+              if (data.success) { location.reload(); } else { alert('Σφάλμα: ' + data.error); }
+          });
+      }
+
+      function deleteCalendarTask() {
+          const ergasiaId = document.getElementById('completeErgasiaId').value;
+          if (!ergasiaId) return;
+          
+          if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε οριστικά αυτή την εργασία;')) { return; }
+          
+          fetch('/api/delete_task/' + ergasiaId, { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+              if (data.success) { location.reload(); } else { alert('Σφάλμα: ' + data.error); }
+          });
+      }
+    </script>
+</body>
+</html>

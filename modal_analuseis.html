@@ -9,13 +9,17 @@
             <div class="modal-body">
                 <!-- Ανάλυση Εδάφους/Φύλλων -->
                 <div class="mb-3">
-                    <form action="{{ url_for('ai.analysi_egrafou', ktima_id=ktima.id) }}" method="POST" enctype="multipart/form-data" class="mb-2" onsubmit="sessionStorage.setItem('reopenModal', 'modalAnaluseis{{ ktima.id }}'); setTimeout(() => { document.getElementById('btnAnalysiEgrafou{{ ktima.id }}').disabled=true; document.getElementById('analysiEgrafouLoading{{ ktima.id }}').classList.remove('d-none'); }, 10);">
+                    <form id="formAnalysiEgrafou{{ ktima.id }}" onsubmit="event.preventDefault(); submitAnalysiEgrafou('{{ ktima.id }}');" class="mb-2">
                         <div class="input-group input-group-sm mb-2">
-                            <input type="file" name="fwtografia_analysis" accept="image/*,.pdf" class="form-control" required>
+                            <input type="file" id="fileInputAnalysi{{ ktima.id }}" accept="image/*,.pdf" multiple class="d-none" onchange="handleAnalysiFilesSelect(this, '{{ ktima.id }}')">
+                            <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('fileInputAnalysi{{ ktima.id }}').click()"><i class="fas fa-plus"></i> Επιλογή Αρχείων</button>
                             <button class="btn btn-secondary" type="submit" id="btnAnalysiEgrafou{{ ktima.id }}"><i class="fas fa-file-medical-alt"></i> Ανάλυση</button>
                         </div>
+                        <div id="analysiPreviewContainer{{ ktima.id }}" class="d-flex flex-wrap gap-2 mb-2 d-none">
+                            <!-- Εδώ μπαίνουν τα badges των αρχείων δυναμικά -->
+                        </div>
                         <div id="analysiEgrafouLoading{{ ktima.id }}" class="d-none text-center text-primary small">
-                            <i class="fas fa-spinner fa-spin me-2"></i> Αναλύεται το έγγραφο... Παρακαλώ περιμένετε.
+                            <i class="fas fa-spinner fa-spin me-2"></i> Αναλύονται τα έγγραφα... Παρακαλώ περιμένετε.
                         </div>
                     </form>
                     <h6 style="color: #555;"><i class="fas fa-chart-bar"></i> Ανάλυση Εδάφους/Φύλλων</h6>

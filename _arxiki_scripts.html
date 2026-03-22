@@ -11,6 +11,28 @@
                         myModal = new bootstrap.Modal(modalEl);
                     }
                     myModal.show();
+                    
+                    // Check if we need to scroll to syntages
+                    const scrollKtimaId = sessionStorage.getItem('scrollToSyntages');
+                    if (scrollKtimaId) {
+                        setTimeout(() => {
+                            const syntagesHeader = document.querySelector('#collapseSyntagesFarmer' + scrollKtimaId);
+                            if (syntagesHeader) {
+                                // Ensure the collapse is open
+                                if (!syntagesHeader.classList.contains('show')) {
+                                    new bootstrap.Collapse(syntagesHeader, { toggle: true });
+                                }
+                                
+                                // Scroll the modal body to this section
+                                const modalBody = modalEl.querySelector('.modal-body');
+                                const targetPos = syntagesHeader.previousElementSibling.offsetTop; // The <h6> element above it
+                                if (modalBody) {
+                                    modalBody.scrollTo({ top: targetPos - 10, behavior: 'smooth' });
+                                }
+                            }
+                            sessionStorage.removeItem('scrollToSyntages');
+                        }, 400); // Wait for modal animation
+                    }
                 }
             }, 150); // Καθυστέρηση 150ms για να προλάβει να φορτώσει το γραφικό περιβάλλον
             sessionStorage.removeItem('reopenModal');
@@ -100,6 +122,49 @@
             });
         };
 
+        // --- Κουμπί Πλήρους Οθόνης (Fullscreen) ---
+        window.addFullscreenControl = function(map) {
+            const FsControl = L.Control.extend({
+                options: { position: 'topleft' },
+                onAdd: function (map) {
+                    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+                    container.style.backgroundColor = 'white';
+                    container.style.width = '34px';
+                    container.style.height = '34px';
+                    container.style.cursor = 'pointer';
+                    container.style.display = 'flex';
+                    container.style.alignItems = 'center';
+                    container.style.justifyContent = 'center';
+                    container.title = 'Πλήρης Οθόνη';
+                    container.innerHTML = '<i class="fas fa-expand text-primary" style="font-size: 1.2em;"></i>';
+                    
+                    container.onclick = function(e){
+                        e.preventDefault(); e.stopPropagation();
+                        const mapElem = map.getContainer();
+                        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                            if (mapElem.requestFullscreen) { mapElem.requestFullscreen(); }
+                            else if (mapElem.webkitRequestFullscreen) { mapElem.webkitRequestFullscreen(); }
+                            else if (mapElem.msRequestFullscreen) { mapElem.msRequestFullscreen(); }
+                        } else {
+                            if (document.exitFullscreen) { document.exitFullscreen(); }
+                            else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+                            else if (document.msExitFullscreen) { document.msExitFullscreen(); }
+                        }
+                    }
+                    
+                    const updateIcon = () => {
+                        if (document.fullscreenElement || document.webkitFullscreenElement) { container.innerHTML = '<i class="fas fa-compress text-primary" style="font-size: 1.2em;"></i>'; } 
+                        else { container.innerHTML = '<i class="fas fa-expand text-primary" style="font-size: 1.2em;"></i>'; }
+                        setTimeout(() => { map.invalidateSize(); }, 200);
+                    };
+                    document.addEventListener('fullscreenchange', updateIcon);
+                    document.addEventListener('webkitfullscreenchange', updateIcon);
+                    return container;
+                }
+            });
+            map.addControl(new FsControl());
+        };
+
         // --- Add Ktima Modal Map & Form Logic ---
         let addKtimaMap; 
         const addKtimaModal = document.getElementById('addKtimaModal');
@@ -112,7 +177,9 @@
 
                     addKtimaMap = L.map('map', { rotate: true, touchRotate: true }).setView([defaultLat, defaultLng], defaultZoom);
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(addKtimaMap);
+                    window.addKtimaMapInstance = addKtimaMap; // Εξαγωγή του χάρτη για την αναζήτηση
                     window.addGpsControl(addKtimaMap);
+                    window.addFullscreenControl(addKtimaMap);
                     const drawnItemsAdd = new L.FeatureGroup();
                     addKtimaMap.addLayer(drawnItemsAdd);
                     const drawControlAdd = new L.Control.Draw({ draw: { polygon: { allowIntersection: false, showArea: true }, rectangle: { showArea: true }, polyline: false, circle: false, marker: false, circlemarker: false }, edit: { featureGroup: drawnItemsAdd, remove: true } });
@@ -176,6 +243,7 @@
                     const map = L.map(mapId, { rotate: true, touchRotate: true }).setView([lat, lng], 15);
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(map);
                     window.addGpsControl(map);
+                    window.addFullscreenControl(map);
                     const drawnItems = new L.FeatureGroup(); map.addLayer(drawnItems);
                     const drawControl = new L.Control.Draw({ edit: { featureGroup: drawnItems }, draw: { polygon: { allowIntersection: false, showArea: true }, rectangle: false, polyline: false, circle: false, marker: false, circlemarker: false } });
                     map.addControl(drawControl);
@@ -211,6 +279,7 @@
             if (!window.initializedMaps[mapId]) {
                 const map = L.map(mapId, { rotate: true, touchRotate: true }).setView([lat, lng], 17);
                 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' }).addTo(map);
+                window.addFullscreenControl(map);
 
                 const drawnItems = new L.FeatureGroup(); map.addLayer(drawnItems);
                 const drawControl = new L.Control.Draw({ edit: { featureGroup: drawnItems }, draw: { polygon: true, polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false } });
@@ -345,15 +414,48 @@
         tasks.forEach(task => { if (proelevsi === 'Όλα') { task.style.display = 'block'; } else { if (task.getAttribute('data-proelevsi') === proelevsi) { task.style.display = 'block'; } else { task.style.display = 'none'; } } });
     }
 
+    window.secretTapCount = 0;
+    window.secretTapTimer = null;
+    window.unlockSecretBrands = function() {
+        window.secretTapCount++;
+        clearTimeout(window.secretTapTimer);
+        window.secretTapTimer = setTimeout(() => { window.secretTapCount = 0; }, 1500);
+        if (window.secretTapCount >= 5) {
+            sessionStorage.setItem('secretBrandMode', 'true');
+            alert("🔓 Μυστική Λειτουργία Ενεργοποιήθηκε!\n\nΟ AI Γεωπόνος πλέον θα ψάχνει στο ίντερνετ και θα σας προτείνει ΣΥΓΚΕΚΡΙΜΕΝΕΣ ΜΑΡΚΕΣ εμπορικών σκευασμάτων (προσαρμοσμένες σε βιολογική ή συμβατική καλλιέργεια)!");
+            window.secretTapCount = 0;
+        }
+    };
+
     window.generateAISyntagh = function(ktimaId, btn) {
         const ktimaName = btn.getAttribute('data-ktima-name') || 'Άγνωστο Κτήμα'; const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Παραγωγή Συνταγής...'; btn.disabled = true;
-        fetch('/paragogi_syntaghs/' + ktimaId, { method: 'POST' }).then(response => response.json()).then(data => {
+        
+        const isSecretMode = sessionStorage.getItem('secretBrandMode') === 'true';
+        
+        fetch('/paragogi_syntaghs/' + ktimaId, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret_brands: isSecretMode })
+        }).then(response => response.json()).then(data => {
             btn.innerHTML = originalText; btn.disabled = false;
             if (data.error) { alert('Σφάλμα: ' + data.error); } else if (data.success) {
                 const containers = document.querySelectorAll('#syntagesContainer' + ktimaId); const now = new Date(); const dateString = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
                 const newCard = `<div class="card border-success mb-2 shadow-sm"><div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center"><span><i class="fas fa-robot"></i> Νέα Συνταγή</span><div><span class="me-2">${dateString}</span><button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="${ktimaName}" data-date="${dateString}" data-proelevsi="Νέα Συνταγή" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button></div></div><div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div><div class="card-footer bg-light p-1 border-top-0" style="animation: pulse 1s 1;"><div class="input-group input-group-sm"><input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI..." id="replyInput${data.syntagh_id}"><button class="btn btn-success" type="button" data-ktima-name="${ktimaName}" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)"><i class="fas fa-paper-plane"></i></button></div></div></div>`;
                 containers.forEach(container => { container.innerHTML = newCard; }); if (window.highlightTimers) window.highlightTimers();
+                
+                setTimeout(() => {
+                    const syntagesHeader = document.querySelector('#collapseSyntagesFarmer' + ktimaId);
+                    if (syntagesHeader) {
+                        const modalBody = syntagesHeader.closest('.modal-body');
+                        const targetPos = syntagesHeader.previousElementSibling.offsetTop;
+                        if (modalBody) { modalBody.scrollTo({ top: targetPos - 10, behavior: 'smooth' }); }
+                    }
+                }, 100);
+                
+                if (data.ergasies && data.ergasies.length > 0) {
+                    setTimeout(() => { window.confirmAIErgasies(ktimaId, data.ergasies); }, 500);
+                }
             }
         }).catch(err => { btn.innerHTML = originalText; btn.disabled = false; alert('Σφάλμα επικοινωνίας. Παρακαλώ προσπαθήστε ξανά.'); });
     };
@@ -362,12 +464,32 @@
         const ktimaName = btn.getAttribute('data-ktima-name') || 'Άγνωστο Κτήμα'; const inputEl = document.getElementById('replyInput' + syntaghId); const userReply = inputEl.value.trim(); if (!userReply) return;
         const card = btn.closest('.card'); const prevText = card.querySelector('.syntagh-content').innerText; const originalHtml = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; inputEl.disabled = true;
-        fetch('/refine_syntagh/' + ktimaId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ previous_recipe: prevText, user_reply: userReply }) }).then(res => res.json()).then(data => {
+        
+        const isSecretMode = sessionStorage.getItem('secretBrandMode') === 'true';
+        
+        fetch('/refine_syntagh/' + ktimaId, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ previous_recipe: prevText, user_reply: userReply, secret_brands: isSecretMode }) 
+        }).then(res => res.json()).then(data => {
             btn.innerHTML = originalHtml; btn.disabled = false; inputEl.disabled = false; inputEl.value = '';
             if (data.error) { alert('Σφάλμα: ' + data.error); } else if (data.success) {
                 const containers = document.querySelectorAll('#syntagesContainer' + ktimaId); const now = new Date(); const dateString = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
                 const newCard = `<div class="card border-success mb-2 shadow-sm" style="animation: pulse 1s 1;"><div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center"><span><i class="fas fa-robot"></i> AI Γεωπόνος (Αναθεωρημένη)</span><div><span class="me-2">${dateString}</span><button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="${ktimaName}" data-date="${dateString}" data-proelevsi="AI Γεωπόνος (Αναθεωρημένη)" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button></div></div><div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div><div class="card-footer bg-light p-1 border-top-0"><div class="input-group input-group-sm"><input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI..." id="replyInput${data.syntagh_id}"><button class="btn btn-success" type="button" data-ktima-name="${ktimaName}" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)"><i class="fas fa-paper-plane"></i></button></div></div></div>`;
                 containers.forEach(container => { container.innerHTML = newCard; }); if (window.highlightTimers) window.highlightTimers();
+                
+                setTimeout(() => {
+                    const syntagesHeader = document.querySelector('#collapseSyntagesFarmer' + ktimaId);
+                    if (syntagesHeader) {
+                        const modalBody = syntagesHeader.closest('.modal-body');
+                        const targetPos = syntagesHeader.previousElementSibling.offsetTop;
+                        if (modalBody) { modalBody.scrollTo({ top: targetPos - 10, behavior: 'smooth' }); }
+                    }
+                }, 100);
+                
+                if (data.ergasies && data.ergasies.length > 0) {
+                    setTimeout(() => { window.confirmAIErgasies(ktimaId, data.ergasies); }, 500);
+                }
             }
         }).catch(err => { btn.innerHTML = originalHtml; btn.disabled = false; inputEl.disabled = false; alert('Σφάλμα επικοινωνίας. Παρακαλώ προσπαθήστε ξανά.'); });
     }
@@ -435,5 +557,103 @@
     window.cancelAiQuestion = function(ktimaId) {
         if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την ερώτηση;')) return;
         fetch('/akyrosi_erotisis_ai/' + ktimaId, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(res => res.json()).then(data => { if (data.success) { location.reload(); } else { alert('Σφάλμα: ' + data.error); } }).catch(err => alert('Σφάλμα.'));
+    };
+
+    // --- Διαχείριση Πολλαπλών Αρχείων στις Αναλύσεις ---
+    window.ktimaAnalysiFiles = {};
+
+    window.handleAnalysiFilesSelect = function(input, ktimaId) {
+        if (!window.ktimaAnalysiFiles[ktimaId]) { window.ktimaAnalysiFiles[ktimaId] = []; }
+        if(input.files && input.files.length > 0) { 
+            for(let i=0; i<input.files.length; i++) {
+                window.ktimaAnalysiFiles[ktimaId].push(input.files[i]);
+            }
+            updateAnalysiPreview(ktimaId);
+        } 
+        input.value = ""; 
+    };
+
+    window.updateAnalysiPreview = function(ktimaId) {
+        const previewDiv = document.getElementById('analysiPreviewContainer' + ktimaId);
+        const files = window.ktimaAnalysiFiles[ktimaId] || [];
+        if (files.length > 0) {
+            let html = '';
+            files.forEach((file, index) => {
+                let icon = file.type.includes('pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-image text-primary';
+                html += `<div class="badge bg-light text-dark border d-flex align-items-center p-2 shadow-sm"><i class="${icon} me-2"></i><span class="text-truncate" style="max-width: 150px;" title="${file.name}">${file.name}</span><i class="fas fa-times-circle text-danger ms-2" style="cursor:pointer; font-size: 1.1em;" onclick="removeAnalysiFile('${ktimaId}', ${index})"></i></div>`;
+            });
+            previewDiv.innerHTML = html; previewDiv.classList.remove('d-none');
+        } else {
+            previewDiv.classList.add('d-none'); previewDiv.innerHTML = '';
+        }
+    };
+
+    window.removeAnalysiFile = function(ktimaId, index) {
+        if (window.ktimaAnalysiFiles[ktimaId]) {
+            window.ktimaAnalysiFiles[ktimaId].splice(index, 1); updateAnalysiPreview(ktimaId);
+        }
+    };
+
+    window.submitAnalysiEgrafou = function(ktimaId) {
+        const files = window.ktimaAnalysiFiles[ktimaId] || [];
+        if (files.length === 0) { alert('Παρακαλώ επιλέξτε τουλάχιστον ένα αρχείο.'); return; }
+        const btn = document.getElementById('btnAnalysiEgrafou' + ktimaId);
+        const loading = document.getElementById('analysiEgrafouLoading' + ktimaId);
+        btn.disabled = true; loading.classList.remove('d-none');
+        const formData = new FormData();
+        files.forEach(file => { formData.append('fwtografia_analysis', file); });
+        fetch('/analysi_egrafou/' + ktimaId, { method: 'POST', body: formData }).then(res => res.json()).then(data => {
+            if (data.success) { sessionStorage.setItem('reopenModal', 'modalAnaluseis' + ktimaId); location.reload(); } else { alert(data.message || 'Σφάλμα επικοινωνίας.'); btn.disabled = false; loading.classList.add('d-none'); }
+        }).catch(err => { alert('Σφάλμα διακομιστή.'); btn.disabled = false; loading.classList.add('d-none'); });
+    };
+
+    // --- Αναζήτηση Τοποθεσίας (Γεωκωδικοποίηση) στο Modal Νέου Κτήματος ---
+    window.searchMapLocationAddKtima = function() {
+        const query = document.getElementById('searchLocationInput').value.trim();
+        if (!query) return;
+        const btn = document.getElementById('btnSearchLocation');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        
+        // Χρήση της έξυπνης μηχανής Photon (Komoot) με όρια αναζήτησης Ελλάδα/Κύπρο
+        fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&bbox=19.0,34.0,30.0,42.0&limit=1`)
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                if (data && data.features && data.features.length > 0) {
+                    const lon = data.features[0].geometry.coordinates[0];
+                    const lat = data.features[0].geometry.coordinates[1];
+                    if (window.addKtimaMapInstance) { window.addKtimaMapInstance.setView([lat, lon], 14); }
+                } else { alert('Δεν βρέθηκε η τοποθεσία. Δοκιμάστε να γράψετε τον νομό ή το κοντινότερο μεγάλο χωριό.'); }
+            }).catch(err => { btn.innerHTML = originalHtml; btn.disabled = false; alert('Σφάλμα κατά την αναζήτηση.'); });
+    };
+
+    // --- Αναζήτηση Τοποθεσίας (Γεωκωδικοποίηση) στο Modal Επεξεργασίας ---
+    window.searchMapLocationEditKtima = function(ktimaId) {
+        const query = document.getElementById('searchLocationInputEdit' + ktimaId).value.trim();
+        if (!query) return;
+        const btn = document.getElementById('btnSearchLocationEdit' + ktimaId);
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        
+        fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&bbox=19.0,34.0,30.0,42.0&limit=1`)
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                if (data && data.features && data.features.length > 0) {
+                    const lon = data.features[0].geometry.coordinates[0];
+                    const lat = data.features[0].geometry.coordinates[1];
+                    const modal = document.getElementById('modalEditLocation' + ktimaId);
+                    if (modal) {
+                        const mapId = modal.getAttribute('data-mapid');
+                        const map = window.initializedMaps[mapId];
+                        if (map) { map.setView([lat, lon], 14); }
+                    }
+                } else { alert('Δεν βρέθηκε η τοποθεσία.'); }
+            }).catch(err => { btn.innerHTML = originalHtml; btn.disabled = false; alert('Σφάλμα κατά την αναζήτηση.'); });
     };
 </script>

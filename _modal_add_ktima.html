@@ -22,6 +22,14 @@
                         <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο (π.χ. δρόμους ή γειτονικά χωράφια) για να μπορέσει να ολοκληρωθεί η ανάλυση!</li>
                     </ul>
                 </div>
+                
+                <!-- Πεδίο Αναζήτησης Τοποθεσίας -->
+                <div class="input-group input-group-sm mb-2 shadow-sm">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="searchLocationInput" class="form-control" placeholder="Γράψτε χωριό ή περιοχή (π.χ. Σπάρτη)" onkeydown="if(event.key === 'Enter') { event.preventDefault(); searchMapLocationAddKtima(); }">
+                    <button class="btn btn-primary" type="button" id="btnSearchLocation" onclick="searchMapLocationAddKtima()">Εύρεση</button>
+                </div>
+
                 <div id="map" class="mb-3"></div>
                 
                 <form action="{{ url_for('ktima_actions.prosthes_ktima') }}" method="POST">

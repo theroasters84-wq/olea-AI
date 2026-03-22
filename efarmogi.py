@@ -37,10 +37,21 @@ def aytomatizomenos_elegxos_ndvi(app_context):
                         img_response = requests.get(ndvi_url)
                         if img_response.status_code == 200:
                             image_file = PIL.Image.open(io.BytesIO(img_response.content))
-                            prompt = (f"Είσαι γεωπόνος. Αυτός είναι ο εβδομαδιαίος δορυφορικός χάρτης NDVI. Κτήμα: Ηλικία={ktima.ilikia_dentron}, Πυκνότητα={ktima.puknotita_dentron}, Έδαφος={ktima.diacheirisi_edafous}. "
-                                      f"ΟΔΗΓΙΕΣ: 1) Αν δεις έντονη πτώση βλάστησης ρώτα αν έγινε κλάδεμα ή καθαρισμός χόρτων. "
-                                      f"2) Αν ο χάρτης είναι ομοιόμορφα σκούρος πράσινος, ρώτα τον αγρότη αν έχουν ψηλώσει τα χόρτα, ΚΑΙ πρόσθεσε ΟΠΩΣΔΗΠΟΤΕ στο τέλος τη λέξη '[ΧΟΡΤΑ_ΥΨΗΛΑ]'. "
-                                      f"3) Σε κάθε απορία ΞΕΚΙΝΑ την απάντησή σου με 'ΕΡΩΤΗΣΗ:'. 4) Αν όλα είναι φυσιολογικά ΞΕΚΙΝΑ με 'ΕΝΗΜΕΡΩΣΗ:' και δώσε αναφορά.")
+                            
+                            recent_weeds = ""
+                            for d in reversed(ktima.diagnoseis):
+                                if "χόρτ" in (d.apotelesma or "").lower() or "ζιζάν" in (d.apotelesma or "").lower() or "έδαφος" in (d.apotelesma or "").lower():
+                                    days_ago = (datetime.now() - d.imerominia).days
+                                    if days_ago <= 15:
+                                        recent_weeds = f"ΓΝΩΣΗ ΑΠΟ ΠΡΟΣΦΑΤΗ ΦΩΤΟΓΡΑΦΙΑ ΕΔΑΦΟΥΣ ({days_ago} ημ. πριν): '{d.apotelesma}'. "
+                                    break
+
+                            prompt = (
+                                f"Είσαι γεωπόνος. Αυτός είναι ο εβδομαδιαίος δορυφορικός χάρτης NDVI. Κτήμα: Ηλικία={ktima.ilikia_dentron}, Πυκνότητα={ktima.puknotita_dentron}, Έδαφος={ktima.diacheirisi_edafous}. {recent_weeds}"
+                                f"ΟΔΗΓΙΕΣ: 1) Αν δεις έντονη πτώση βλάστησης (ξερό χώμα) ρώτα αν έγινε κλάδεμα ή καθαρισμός χόρτων, αλλιώς ζήτα 'Ευρεία Φωτογραφία' εδάφους. "
+                                f"2) Αν ο χάρτης είναι ομοιόμορφα σκούρος πράσινος, ρώτα τον αγρότη αν έχουν ψηλώσει τα χόρτα (ή ζήτα 'Ευρεία Φωτογραφία' εδάφους) ΚΑΙ πρόσθεσε ΟΠΩΣΔΗΠΟΤΕ στο τέλος τη λέξη '[ΧΟΡΤΑ_ΥΨΗΛΑ]'. "
+                                f"3) Σε κάθε απορία ΞΕΚΙΝΑ την απάντησή σου με 'ΕΡΩΤΗΣΗ:'. 4) Αν όλα είναι φυσιολογικά ΞΕΚΙΝΑ με 'ΕΝΗΜΕΡΩΣΗ:' και δώσε αναφορά."
+                            )
                             
                             response = client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                             ai_text = response.text.strip()

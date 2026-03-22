@@ -175,6 +175,7 @@ def arxikh():
                 last_water = None
                 last_stage = None
                 last_disease = None
+                last_weeds = None
                 
                 if ktima.diagnoseis:
                     for d in ktima.diagnoseis:
@@ -186,6 +187,9 @@ def arxikh():
                         elif "🌿 Αναγνώριση Σταδίου" in res:
                             if not last_stage or d.imerominia > last_stage: last_stage = d.imerominia
                         elif not any(k in res for k in ["Δορυφόρος", "Chat", "Answered", "📄", "💧", "🌿"]):
+                            # Γενική Φωτογραφία (Εντοπισμός Χόρτων ή Ασθενειών)
+                            if any(w in res.lower() for w in ["χόρτ", "ζιζάν", "έδαφος"]):
+                                if not last_weeds or d.imerominia > last_weeds: last_weeds = d.imerominia
                             if not last_disease or d.imerominia > last_disease: last_disease = d.imerominia
 
                 # 1. Ανάλυση Εδάφους
@@ -205,12 +209,20 @@ def arxikh():
                 # 4. Στάδιο
                 if ktima.fainologiko_stadio == 'Άγνωστο' or not last_stage: ktima.elleipseis.append("Αναγνώριση Σταδίου (AI Εργαλεία -> Βρες Στάδιο)")
                 elif (now - last_stage).days > 30: ktima.elleipseis.append("Αναγνώριση Σταδίου (Απαιτείται μηνιαία επικαιροποίηση)")
+                elif (now - last_stage).days > 15: ktima.elleipseis.append("Αναγνώριση Σταδίου (Απαιτείται επικαιροποίηση 15ημέρου)")
                 # 5. AI Διάγνωση Ασθενειών
                 if not last_disease: ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Εκκρεμεί - Φωτογραφία)")
                 elif (now - last_disease).days > 30: ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Μηνιαίος προληπτικός έλεγχος)")
+                elif (now - last_disease).days > 15: ktima.elleipseis.append("AI Διάγνωση Ασθενειών (Προληπτικός έλεγχος 15ημέρου)")
                 # 6. Δορυφόρος & Υγρασία
                 if not ktima.ugrasies: ktima.elleipseis.append("Καταγραφή Υγρασίας (Προσθέστε μέτρηση)")
                 if not ktima.polygon_geojson: ktima.elleipseis.append("Δορυφορική Οριοθέτηση (Χάρτης)")
+                # 7. Ευρεία Φωτογραφία (Χόρτα/Ζιζάνια για NDVI)
+                if not last_weeds: ktima.elleipseis.append("Ευρεία Φωτογραφία (Εκκρεμεί - Για έλεγχο χόρτων)")
+                elif (now - last_weeds).days > 30: ktima.elleipseis.append("Ευρεία Φωτογραφία (Μηνιαίος έλεγχος χόρτων/ζιζανίων)")
+                # 8. Τύπος Εδάφους
+                if not ktima.typos_edafous or ktima.typos_edafous in ['Δεν γνωρίζω', 'Άγνωστο', 'Άγνωστη']:
+                    ktima.elleipseis.append("Τύπος Εδάφους (Στείλτε φωτογραφία του χώματος στον AI Γραμματέα)")
 
             except Exception as e_ktima:
                 print(f"Σφάλμα φόρτωσης δεδομένων για το κτήμα '{ktima.onoma_ktimatos}': {e_ktima}")
@@ -243,7 +255,8 @@ def ananeosi_ergasion(ktima_id):
     vasi.session.commit()
     
     try:
-        from logic import syghronismos_ai_ktimatos
+        from logic import syghronismos_ai_ktimatos, evaluate_overdue_tasks
+        evaluate_overdue_tasks(ktima)
         syghronismos_ai_ktimatos(ktima)
         generate_smart_tasks(ktima)
     except Exception as e:
@@ -468,6 +481,7 @@ def prosthes_ergasia(ktima_id):
         
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
     ktima.ekkremis_erotisi_ai = None
+    ktima.teleftaia_enimerosi_ergasion = None
     vasi.session.add(nea_ergasia)
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
@@ -531,6 +545,7 @@ def oloklirosi_ergasias(ktima_id):
             pass
 
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
         
@@ -904,10 +919,19 @@ def trexe_doriforo(ktima_id):
                     try:
                         img_content = requests.get(ndvi_url).content
                         image_file = PIL.Image.open(io.BytesIO(img_content))
+                        
+                        recent_weeds = ""
+                        for d in reversed(ktima.diagnoseis):
+                            if "χόρτ" in (d.apotelesma or "").lower() or "ζιζάν" in (d.apotelesma or "").lower() or "έδαφος" in (d.apotelesma or "").lower():
+                                days_ago = (datetime.now() - d.imerominia).days
+                                if days_ago <= 15:
+                                    recent_weeds = f"ΓΝΩΣΗ ΑΠΟ ΠΡΟΣΦΑΤΗ ΦΩΤΟΓΡΑΦΙΑ ({days_ago} ημ. πριν): Το AI είδε στο έδαφος: '{d.apotelesma}'. Λάβε το υπόψη σου! "
+                                break
+                                
                         prompt = (
-                            "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. "
+                            f"Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. {recent_weeds}"
                             "ΟΔΗΓΙΕΣ: 1. Δώσε σύντομη αναφορά υγείας (2-3 γραμμές). "
-                            "2. Αν δεις ομοιόμορφα σκούρο πράσινο (πιθανά ψηλά χόρτα) Ή απότομη πτώση βλάστησης, κάνε μια ερώτηση στον αγρότη. Ξεκίνα ΑΥΣΤΗΡΑ την ερώτηση με 'ΕΡΩΤΗΣΗ:'. "
+                            "2. Αν δεις ομοιόμορφα σκούρο πράσινο (πιθανά ψηλά χόρτα) Ή απότομη πτώση βλάστησης (ξερό χώμα), κάνε μια ερώτηση στον αγρότη. Ξεκίνα ΑΥΣΤΗΡΑ την ερώτηση με 'ΕΡΩΤΗΣΗ:'. Αν δεν έχεις πρόσφατη εικόνα, ζήτα του να ανεβάσει 'Ευρεία Φωτογραφία εδάφους'. "
                             "3. Αν έχεις σιγουριά για ψηλά ζιζάνια, πρόσθεσε ΟΠΩΣΔΗΠΟΤΕ στο τέλος το tag '[ΧΟΡΤΑ_ΥΨΗΛΑ]'."
                         )
                         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
@@ -1172,6 +1196,146 @@ def metonomasia_ktimatos(ktima_id):
         flash('Το όνομα του κτήματος ενημερώθηκε επιτυχώς!', 'success')
         
     return redirect(request.referrer or url_for('core_app.arxikh'))
+
+@core_bp.route('/hmerologio')
+@login_required
+def hmerologio():
+    events = []
+    for ktima in current_user.ktimata:
+        if ktima.is_active:
+            for ergasia in ktima.ergasies:
+                if not ergasia.archived:
+                    if ergasia.katastasi == 'Ολοκληρώθηκε':
+                        color = '#198754'
+                        text_color = '#fff'
+                    elif ergasia.katastasi == 'Ακυρώθηκε':
+                        color = '#dc3545'
+                        text_color = '#fff'
+                    else:
+                        color = '#ffc107'
+                        text_color = '#000'
+                    events.append({
+                        'title': f"[{ktima.onoma_ktimatos}] {ergasia.eidos_ergasias}",
+                        'start': ergasia.imerominia.strftime('%Y-%m-%d'),
+                        'color': color,
+                        'textColor': text_color,
+                        'extendedProps': {
+                            'farmaka': ergasia.farmaka_lipasmata or 'Κανένα υλικό/φάρμακο',
+                            'katastasi': ergasia.katastasi,
+                            'proelevsi': ergasia.proelevsi or 'Άγνωστη',
+                            'ergasia_id': ergasia.id,
+                            'ktima_id': ktima.id,
+                            'eidos': ergasia.eidos_ergasias
+                        }
+                    })
+    return render_template('hmerologio.html', events=events)
+
+@core_bp.route('/api/pending_tasks')
+@login_required
+def api_pending_tasks():
+    tasks = []
+    for ktima in current_user.ktimata:
+        if ktima.is_active:
+            # 1. Υπάρχουσες εκκρεμείς εργασίες από τη βάση δεδομένων
+            for e in ktima.ergasies:
+                if e.katastasi and e.katastasi.strip() == 'Εκκρεμεί' and not e.archived:
+                    tasks.append({
+                        'id': e.id,
+                        'type': 'db_task',
+                        'title': f"[{ktima.onoma_ktimatos}] {e.eidos_ergasias}",
+                        'current_date': e.imerominia.strftime('%Y-%m-%d') if e.imerominia else 'Χωρίς Ημ/νία'
+                    })
+                    
+            # 2. Προτεινόμενες έξυπνες εργασίες (Από την Cache του AI για να μην κολλάει το σύστημα)
+            ideal_tasks = [t.strip() for t in (ktima.topikes_ergasies or '').split('|') if t.strip()]
+            if ideal_tasks:
+                completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
+                db_pending_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived and e.katastasi and e.katastasi.strip() == 'Εκκρεμεί']
+                pending_ai = [task for task in ideal_tasks if task not in completed_tasks and task not in db_pending_names]
+                for idx, task_name in enumerate(pending_ai):
+                    tasks.append({
+                        'id': f"ai_{ktima.id}_{idx}",
+                        'type': 'ai_task',
+                        'ktima_id': ktima.id,
+                        'eidos': task_name,
+                        'title': f"[{ktima.onoma_ktimatos}] ✨ {task_name} (Πρόταση AI)",
+                        'current_date': 'Μη Προγραμματισμένη'
+                    })
+    return jsonify(tasks)
+
+@core_bp.route('/api/schedule_tasks', methods=['POST'])
+@login_required
+def api_schedule_tasks():
+    data = request.get_json()
+    task_items = data.get('tasks', [])
+    new_date_str = data.get('new_date')
+    try:
+        new_date = datetime.strptime(new_date_str, '%Y-%m-%d')
+        for item in task_items:
+            t_type = item.get('type')
+            if t_type == 'db_task':
+                t_id = int(item.get('id'))
+                e = vasi.session.get(Ergasia, t_id)
+                if e and e.ktima.idioktitis == current_user:
+                    e.imerominia = new_date
+                    e.ktima.teleftaia_enimerosi_ergasion = None
+            elif t_type == 'ai_task':
+                ktima_id = int(item.get('ktima_id'))
+                ktima = vasi.session.get(Ktima, ktima_id)
+                if ktima and ktima.idioktitis == current_user:
+                    nea_ergasia = Ergasia(
+                        ktima_id=ktima.id, eidos_ergasias=item.get('eidos'),
+                        katastasi='Εκκρεμεί', imerominia=new_date, proelevsi='AI Γεωπόνος'
+                    )
+                    vasi.session.add(nea_ergasia)
+                    ktima.teleftaia_enimerosi_ergasion = None
+        vasi.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        vasi.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@core_bp.route('/api/delete_task/<int:ergasia_id>', methods=['POST'])
+@login_required
+def api_delete_task(ergasia_id):
+    ergasia = vasi.session.get(Ergasia, ergasia_id)
+    if not ergasia or ergasia.ktima.idioktitis != current_user:
+        return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
+    ergasia.ktima.teleftaia_enimerosi_ergasion = None
+    vasi.session.delete(ergasia)
+    vasi.session.commit()
+    return jsonify({'success': True})
+
+@core_bp.route('/api/add_manual_task', methods=['POST'])
+@login_required
+def api_add_manual_task():
+    data = request.get_json()
+    try:
+        ktima_id = int(data.get('ktima_id'))
+        eidos = data.get('eidos_ergasias')
+        date_str = data.get('imerominia')
+        farmaka = data.get('farmaka_lipasmata', '')
+        
+        ktima = vasi.session.get(Ktima, ktima_id)
+        if not ktima or ktima.idioktitis != current_user:
+            return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
+            
+        im = datetime.strptime(date_str, '%Y-%m-%d')
+        nea_ergasia = Ergasia(
+            ktima_id=ktima.id,
+            eidos_ergasias=eidos,
+            katastasi='Εκκρεμεί',
+            imerominia=im,
+            farmaka_lipasmata=farmaka,
+            proelevsi='Αγρότης'
+        )
+        vasi.session.add(nea_ergasia)
+        ktima.teleftaia_enimerosi_ergasion = None
+        vasi.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        vasi.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes

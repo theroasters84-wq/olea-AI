@@ -96,7 +96,7 @@ def ai_secretary():
         ΟΔΗΓΙΕΣ ΓΙΑ ΤΟ JSON ΚΑΙ ΤΗ ΣΥΜΠΕΡΙΦΟΡΑ ΣΟΥ: 
         0. ΟΡΑΣΗ/ΑΡΧΕΙΑ (ΚΡΙΣΙΜΟ): Έχεις πλήρη ικανότητα Vision! Μπορείς να διαβάσεις και να αναλύσεις κανονικά τις φωτογραφίες και τα PDF που σου επισυνάπτονται. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να πεις ότι δεν μπορείς να δεις ή να διαβάσεις αρχεία. Αν ο χρήστης έστειλε αρχείο, μελέτησέ το και δώσε του την απάντηση.
         1. Έλεγχος Αποθήκης: Πριν προτείνεις οποιοδήποτε υλικό, φάρμακο ή εργασία, ΕΛΕΓΞΕ ΑΥΣΤΗΡΑ την "ΑΠΟΘΗΚΗ ΥΛΙΚΩΝ" στο προφίλ του κτήματος. Αν το υλικό υπάρχει ήδη διαθέσιμο, πρότεινε να χρησιμοποιήσει αυτό για οικονομία.
-        2. Ανάλυση Φωτογραφίας & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία (π.χ. ζιζάνιο, έντομο, άρρωστο φύλλο ή άνθος), αναγνώρισέ το αμέσως. ΑΝ διακρίνεις το φαινολογικό στάδιο του δέντρου (π.χ. 'Άνθιση', 'Καρπόδεση'), ΒΑΛΕ ΤΟ ΑΜΕΣΑ στο "updates" -> "fainologiko_stadio" για να ενημερωθεί ο Γεωπόνος. Εκτός από αυτό, παρατήρησε περιφερειακά: Το έδαφος, τα χόρτα κλπ. Αν δεις κάτι που διαφέρει, ρώτα τον χρήστη στο "reply". Θέσε action: "DIAGNOSIS". Σημαντικό: Ό,τι διαγνώσεις θα μεταφερθεί αυτόματα στον Γεωπόνο!
+        2. Ανάλυση Φωτογραφίας & Έξυπνες Ερωτήσεις: Αν ο χρήστης στείλει φωτογραφία, αναγνώρισέ το αμέσως. ΑΝ διακρίνεις το φαινολογικό στάδιο, ΒΑΛΕ ΤΟ στο "updates". Αν η φωτογραφία εστιάζει στο χώμα/έδαφος, εκτίμησε οπτικά τον τύπο του. ΕΛΕΓΞΕ τον τρέχοντα 'Έδαφος' στα δεδομένα. ΑΝ διαφέρει (π.χ. δηλωμένο 'Αμμώδες' και βλέπεις 'Αργιλώδες'), ΜΗΝ ΤΟ ΑΛΛΑΞΕΙΣ ΑΥΤΟΜΑΤΑ! Ρώτα τον χρήστη στο "reply" (π.χ. 'Μου φαίνεται Αργιλώδες, να το καταχωρήσω;') με action: "DIAGNOSIS". ΑΝ ο χρήστης απαντήσει 'ναι/καταχώρησέ το' Ή αν το έδαφος ήταν 'Δεν γνωρίζω', ΤΟΤΕ ΒΑΛΕ ΤΟ στο "updates" -> "typos_edafous". Εκτός από το δέντρο, παρατήρησε ΑΥΣΤΗΡΑ και το έδαφος/χόρτα αν φαίνονται. Αν δεις ψηλά χόρτα ή γυμνό έδαφος, ανέφερέ το στην απάντησή σου. Θέσε action: "DIAGNOSIS". Σημαντικό: Ό,τι διαγνώσεις θα μεταφερθεί αυτόματα στον Γεωπόνο!
         3. Επιβεβαίωση Αλλαγής Προφίλ: Αν ο χρήστης επιβεβαιώσει αλλαγή (π.χ. "Είναι αρδευόμενο", "Άλλαξέ το σε βιολογική", "Μετονόμασε σε...", "Το στάδιο είναι άνθιση", "Είναι ορεινό") συμπλήρωσε τις νέες τιμές στο object "updates". Αν ο χρήστης αναφέρει ότι φύτεψε, πρόσθεσε ή αφαίρεσε δέντρα (ακόμα και για ΜΙΑ ποικιλία, π.χ. "έβαλα 10 Αθηνοελιές"), ΧΡΗΣΙΜΟΠΟΙΗΣΕ ΠΑΝΤΑ το "poikilies_multi": [ {"onoma": "Αθηνοελιά", "arithmos": 10, "ilikia": "5 ετών"} ] όπου το "arithmos" είναι η ΔΙΑΦΟΡΑ (+10 για προσθήκη ή -5 για αφαίρεση). Το συνολικό "arithmos_dentron" θα υπολογιστεί αυτόματα, ΜΗΝ το στέλνεις. Αν είναι απλή ενημέρωση προφίλ, βάλε action: "UPDATE_KTIMA". Στο "target_ktima_id" γράψε ΑΥΣΤΗΡΑ το ID του κτήματος.
         4. Προσθήκη Εργασιών (Πολλαπλές & Ημερομηνίες): Αν ο χρήστης λέει ότι έκανε μία ή ΠΟΛΛΑΠΛΕΣ εργασίες (π.χ. "ράντισα και μετά από ένα μήνα κλάδεψα"), βάλε action: "ADD_TASKS".
            - Υπολόγισε την ΗΜΕΡΟΜΗΝΙΑ: Αν λέει "τον Νοέμβριο μετά τη συγκομιδή", υπολόγισε και βάλε μια σχετική ημερομηνία στο "date" (π.χ. "2025-11-15"). Αν είναι ασαφές, ρώτα τον στο "reply" (action: "DIAGNOSIS").
@@ -104,25 +104,26 @@ def ai_secretary():
            - Για κάθε εργασία, φτιάξε ένα αντικείμενο στη λίστα "tasks".
            - Αν ζητάει καταχώρηση σε ΟΛΑ τα κτήματα, βάλε "target_ktima_id": "ALL" στο task.
            - ΣΗΜΑΝΤΙΚΟ: Αν αναφέρει εμπορικό όνομα, βάλε τη δραστική στο "task_materials".
-        5. Διαγραφή ή Τροποποίηση Εργασιών: Αν ζητήσει διαγραφή (π.χ. "διέγραψε την εργασία"), βάλε action: "DELETE_TASKS". Αν ο χρήστης πει "Έκανα τη χειροκίνητη εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK", βρες τη λέξη κλειδί από τις "Εκκρεμείς Εργασίες" και βάλε "new_task_data": {"status": "Ολοκληρώθηκε"}.
-        6. Πληροφορίες Ιστορικού, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο ιστορικό εργασιών, στις "Εκκρεμείς Εργασίες", τον καιρό κλπ (αν υπάρχουν στα 'Δεδομένα Κτήματος' παραπάνω). Αν ο χρήστης σε ρωτήσει "τι εργασίες έχω κάνει;" ή "τι δουλειές πρέπει να γίνουν;", ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ. ΕΙΔΙΚΑ για τις εκκρεμείς εργασίες, ταξινόμησέ τες με βάση το ΠΟΣΟ ΕΠΕΙΓΟΥΝ (προτεραιότητα) λαμβάνοντας υπόψη τον καιρό, τα στάδια του δέντρου ή τις ενδείξεις (π.χ. "άμεσα", "έως"), και τόνισε στον αγρότη ποιες πρέπει να γίνουν πρώτες! ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "περιμένετε να ψάξω" ή "θα σας πω σε λίγο". Αν βλέπεις δεδομένα πολλών κτημάτων, δώσε συγκεντρωτική αναφορά. Γράψε τα δεδομένα κατευθείαν στο "reply" και βάλε action: "ADVICE".
-        7. Οικονομικά (Έξοδα & Έσοδα/Επιδοτήσεις): Αν ο χρήστης ρωτήσει για έξοδα, διάβασέ τα από την ενότητα 'ΟΙΚΟΝΟΜΙΚΑ / ΕΞΟΔΑ'. Αν αναφέρει νέο έξοδο, βάλε action: "ADD_EXPENSE" και συμπλήρωσε "expense_amount" και "expense_desc". Αν αναφέρει ΕΣΟΔΟ (π.χ. "πήρα 500 ευρώ επιδότηση", "αποζημίωση ΕΛΓΑ"), βάλε action: "ADD_INCOME", συμπλήρωσε "income_amount" (θετικός αριθμός) και "income_desc".
-        8. Απλή συμβουλή: Αν ο χρήστης ρωτάει μια γεωπονική συμβουλή, ΚΑΝΕ ΥΠΟΧΡΕΩΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την ορθότητά της πριν απαντήσεις. Δώσε την απάντηση και βάλε action: "ADVICE".
+        5. Διαγραφή ή Τροποποίηση Εργασιών (Αλλαγή Ημερομηνίας): Αν ζητήσει διαγραφή, βάλε action: "DELETE_TASKS". Αν ο χρήστης πει "Έκανα την εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK" και "new_task_data": {"status": "Ολοκληρώθηκε"}. Αν ζητήσει αλλαγή ΗΜΕΡΟΜΗΝΙΑΣ στο ημερολόγιο, υπολόγισε τη νέα ημερομηνία, βάλε action: "UPDATE_TASK" και συμπλήρωσε "new_task_data": {"date": "YYYY-MM-DD"}.
+        6. Πληροφορίες Ημερολογίου, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο 'ΗΜΕΡΟΛΟΓΙΟ (ΕΚΚΡΕΜΕΙΣ ΕΡΓΑΣΙΕΣ)' και στο ιστορικό παραπάνω. Αν ο χρήστης σε ρωτήσει "τι έχω στο ημερολόγιο;" ή "τι δουλειές πρέπει να γίνουν;", διάβασε την ενότητα ΗΜΕΡΟΛΟΓΙΟ και ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τις ημερομηνίες! Ταξινόμησέ τες με βάση το τι επείγει. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "θα ψάξω", δώσε τα δεδομένα κατευθείαν στο "reply" με action: "ADVICE".
+        7. Οικονομικά (Έξοδα/Έσοδα): Αν ο χρήστης αναφέρει νέο έξοδο, βάλε action: "ADD_EXPENSE" ("expense_amount", "expense_desc"). Για ΕΣΟΔΟ, βάλε action: "ADD_INCOME" ("income_amount", "income_desc").
+        8. Γεωπονική Συμβουλή: Αν ζητάει συμβουλή, ΚΑΝΕ ΥΠΟΧΡΕΩΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την ορθότητά της πριν απαντήσεις. Δώσε την απάντηση και βάλε action: "ADVICE".
         9. Καταγραφή Συγκομιδής: Αν ο χρήστης αναφέρει δεδομένα συγκομιδής (π.χ. "μάζεψα 5000 κιλά ελιές", "μάζεψα την Κορωνέικη 1000 κιλά"), βάλε action: "ADD_HARVEST". Στο JSON συμπλήρωσε "tonoi" (κιλά καρπού, 1 τόνος = 1000), "kila_ladi" (κιλά λαδιού) και "esoda" (ευρώ). ΣΗΜΑΝΤΙΚΟ: Βάλε "is_final": true ΑΝ ο χρήστης αναφέρει ότι τελείωσε όλη η συγκομιδή για φέτος (για να κλείσει η σεζόν). Αν είναι μερική συγκομιδή (π.χ. μάζεψε μόνο μία ποικιλία και έπεται συνέχεια), βάλε "is_final": false. Προαιρετικά βάλε "poikilia_sygkomidis": "Όνομα ποικιλίας" αν το αναφέρει.
         10. Ασαφή/Ελλιπή Δεδομένα: Αν ο χρήστης ζητήσει ενέργεια (π.χ. διαγραφή, ενημέρωση) για ένα κτήμα που ΔΕΝ υπάρχει στη λίστα, ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις ψέματα ότι το έκανες. Πες του ότι δεν το βρίσκεις και ζήτα διευκρίνιση (action: "DIAGNOSIS"). Το ίδιο ισχύει για ελλιπή δεδομένα (π.χ. ρωτάει για εργασία και το ιστορικό είναι κενό).
-        11. Προσθήκη στην Αποθήκη: Αν ο χρήστης λέει ότι αγόρασε κάποιο υλικό/φάρμακο/λίπασμα (π.χ. "αγόρασα 10 λίτρα χαλκό με 50 ευρώ"), βάλε action: "ADD_INVENTORY". Συμπλήρωσε τα πεδία "inv_name", "inv_category" ("Φάρμακο", "Λίπασμα" ή "Εξοπλισμός"), "inv_amount" (αριθμός) και "inv_unit" ("Λίτρα", "Κιλά" ή "Τεμάχια"). Αν αναφέρει κόστος, βάλε και το "expense_amount".
+        11. Διαχείριση Αποθήκης: Για αγορά/προσθήκη, βάλε action: "ADD_INVENTORY" (συμπλήρωσε "inv_name", "inv_category", "inv_amount", "inv_unit"). Για διόρθωση υπολοίπου, βάλε action: "UPDATE_INVENTORY" (θέσε το "inv_name" και το "inv_amount" στο νέο νούμερο). Για πέταμα/διαγραφή προϊόντος, βάλε action: "DELETE_INVENTORY" (θέσε το "inv_name").
         12. Διαχείριση Υγρασίας & Νερού: Αν ο χρήστης αναφέρει μέτρηση υγρασίας (π.χ. "η υγρασία του εδάφους είναι 20%") ή ανάλυση νερού ("pH 7.2", "αγωγιμότητα 1.5"), βάλε action: "UPDATE_WATER" και συμπλήρωσε τα "moisture_percentage", "nero_ph", "nero_agwgimotita". Αν ρωτάει πόσο να ποτίσει, διάβασε τις 'Ανάγκες Άρδευσης' από τα δεδομένα και απάντησέ του.
         13. Γενικές / Άσχετες Ερωτήσεις (Internet Access): Είσαι πλέον συνδεδεμένος και στο διαδίκτυο (Google Search). Αν ο χρήστης σε ρωτήσει κάτι εντελώς άσχετο με τα χωράφια (π.χ. συνταγή μαγειρικής, ποιος κέρδισε έναν αγώνα, ειδήσεις, ιστορία), ΑΠΑΝΤΗΣΕ ΤΟΥ ΦΥΣΙΟΛΟΓΙΚΑ, φιλικά και σύντομα. ΜΗΝ προσπαθήσεις να συνδέσεις την ερώτηση με τα κτήματα. Βάλε action: "ADVICE".
         14. Δημιουργία Νέου Κτήματος: Αν ο χρήστης ζητήσει να δημιουργήσεις ένα νέο κτήμα (π.χ. "φτιάξε ένα κτήμα"), βάλε action: "ADD_KTIMA" και συμπλήρωσε το "new_ktima_data". Το "onoma_ktimatos" είναι υποχρεωτικό. Στο "reply" σου πες του ευγενικά: "Το κτήμα δημιουργήθηκε! Σας ανοίγω αυτόματα τον χάρτη για να ορίσετε την ακριβή τοποθεσία.". ΜΗΝ ρωτάς "Σε ποια περιοχή βρίσκεται".
-        15. Διαγραφή Κτήματος: Αν ο χρήστης ζητήσει να ΔΙΑΓΡΑΨΕΙ ένα κτήμα, ΕΛΕΓΞΕ ΠΡΩΤΑ αν υπάρχει. Αν δεν υπάρχει, πες ότι δεν το βρίσκεις. Αν υπάρχει, ΡΩΤΑ ΤΟΝ ΠΡΩΤΑ για επιβεβαίωση (action: "DIAGNOSIS"). Αν επιβεβαιώσει οριστικά ότι θέλει διαγραφή, βάλε action: "DELETE_KTIMA" και "target_ktima_id" το ID του (ή "ALL" για όλα).
+        15. Διαγραφή / Αρχειοθέτηση Κτήματος: Αν θέλει να ΔΙΑΓΡΑΨΕΙ οριστικά ένα κτήμα, βάλε "DELETE_KTIMA" (Ρώτα τον πρώτα για επιβεβαίωση). Αν θέλει να το κρύψει/αρχειοθετήσει, βάλε "ARCHIVE_KTIMA". 
         16. Επιλογή/Αλλαγή/Σύγκριση Κτημάτων: Αν ο χρήστης ζητήσει να μεταβείτε σε ένα συγκεκριμένο κτήμα (π.χ. "Άλλαξε στο...", "Πάμε στο...", "Δες το..."), βρες ΑΥΣΤΗΡΑ τον αριθμό ID του από τη Λίστα Ενεργών Κτημάτων. Βάλε action: "SWITCH_KTIMA" και "target_ktima_id" τον ΑΡΙΘΜΟ ID. 
         ΣΗΜΑΝΤΙΚΟ: Αν ο χρήστης ζητήσει να δει ΠΑΝΩ ΑΠΟ ΕΝΑ κτήματα ταυτόχρονα, ή ζητήσει ΣΥΓΚΡΙΣΗ (π.χ. "σύγκρινε το Α με το Β", "τι διαφορά έχει το Α με το Β"), Ή ζητήσει "όλα τα κτήματα", ΤΟΤΕ βάλε ΑΥΣΤΗΡΑ "target_ktima_id": "ALL" και action: "SWITCH_KTIMA". 
         ΜΗΝ βάλεις ποτέ το όνομα ως target_ktima_id, μόνο το ID ή "ALL"! Στο "reply", εφόσον έχεις πλέον πρόσβαση στα δεδομένα όλων των κτημάτων στο prompt σου, απάντησε απευθείας στο ερώτημά του (π.χ. κάνε τη σύγκριση που ζήτησε ή επιβεβαίωσε την αλλαγή).
+        17. Εργαστηριακή Ανάλυση Εδάφους/Φύλλων: Αν ο χρήστης ανεβάσει ανάλυση, ΔΙΑΒΑΣΕ ΤΑ ΔΕΔΟΜΕΝΑ. ΠΡΟΣΟΧΗ: Αν η εικόνα είναι πολύ θολή/δυσανάγνωστη ή λείπει σελίδα (π.χ. έχει μόνο τη σελ. 1 από 2), ΑΠΑΝΤΗΣΕ ΤΟΥ στο "reply" να την ξανανεβάσει σωστά και βάλε action: "ADVICE". ΑΝ ΕΙΝΑΙ ΚΑΘΑΡΗ, βάλε action: "ADD_ANALYSIS". Στο "new_analysis_data" συμπλήρωσε "ph", "organiki_ousia", "azwto" (N), "fwsforos" (P), "kalio" (K) με αριθμούς. Αν αναφέρει τύπο εδάφους (π.χ. Αργιλώδες), βάλτο στο "typos_edafous". Αν ο χρήστης πει πότε έγινε (π.χ. "είναι περσινή", "τον Οκτώβριο του '24"), υπολόγισε την ημερομηνία και βάλτην στο "date" (YYYY-MM-DD).
         
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "SWITCH_KTIMA",
+            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
             "tasks": [
                 {
                     "target_ktima_id": "Αριθμός ID κτήματος Ή 'ALL'",
@@ -165,6 +166,15 @@ def ai_secretary():
                 "ilikia_dentron": "Παραγωγικά (6-40 ετών) ή ότι αναφέρει",
                 "poikilies_multi": [{"onoma": "Κορωνέικη", "arithmos": 20}]
             },
+            "new_analysis_data": {
+                "date": "YYYY-MM-DD",
+                "ph": 7.2,
+                "organiki_ousia": 2.5,
+                "azwto": 15.0,
+                "fwsforos": 10.0,
+                "kalio": 20.0,
+                "typos_edafous": "Αργιλώδες"
+            },
             "nero_ph": 7.2,
             "nero_agwgimotita": 1.5,
             "updates": {
@@ -193,6 +203,10 @@ def ai_secretary():
                     contents.append(types.Part.from_bytes(data=file_data, mime_type='application/pdf'))
                 else:
                     img = PIL.Image.open(img_file)
+                    # Συμπίεση/Σμίκρυνση εικόνας για αποφυγή 503/Timeout λόγω μεγάλου όγκου
+                    img.thumbnail((1600, 1600), PIL.Image.Resampling.LANCZOS)
+                    if img.mode in ('RGBA', 'P'):
+                        img = img.convert('RGB')
                     contents.append(img)
                 
         # Ενεργοποίηση Google Search (Ζωντανή Πρόσβαση στο Διαδίκτυο)
@@ -209,11 +223,11 @@ def ai_secretary():
             except Exception as e:
                 if attempt == 2:
                     raise e
-                time.sleep(1.5)
+                time.sleep(3 * (attempt + 1)) # Backoff: περιμένει 3s, μετά 6s αν αποτύχει
         
         # Δικλείδα Ασφαλείας: Αν το AI επιστρέψει κενό (π.χ. λόγω safety filters)
         if not response or not getattr(response, 'text', None):
-            return jsonify({'success': True, 'reply': 'Υπήρξε ένα στιγμιαίο πρόβλημα επικοινωνίας ή μπλοκάρισμα από τα φίλτρα ασφαλείας του AI. Μπορείτε να το διατυπώσετε διαφορετικά;', 'action': 'ADVICE'})
+            return jsonify({'success': True, 'reply': '⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία ή το κείμενο. Μπορείτε να ανεβάσετε μια πιο καθαρή λήψη;', 'action': 'ADVICE'})
             
         json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
         data = json.loads(json_text)
@@ -640,6 +654,21 @@ def ai_secretary():
                         vasi.session.add(Exodo(ktima_id=k_id_to_charge, perigrafi=data.get('expense_desc') or f"Αγορά: {inv_name}", poso=float(poso), imerominia=datetime.now()))
                         vasi.session.add(Diagnosi(ktima_id=k_id_to_charge, apotelesma=f"📦 AI Αποθήκη: Αγορά {amount} {data.get('inv_unit', '')} '{inv_name}' ({poso}€).", imerominia=datetime.now()))
                 except (ValueError, TypeError): pass
+        elif action == 'UPDATE_INVENTORY':
+            inv_name = data.get('inv_name')
+            inv_amount = data.get('inv_amount')
+            if inv_name and inv_amount is not None:
+                items = [i for i in current_user.apothiki_items if str(inv_name).lower() in i.onoma_proiontos.lower()]
+                if items:
+                    for item in items: item.posotita = float(inv_amount)
+                    if ktima: vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"📦 AI Αποθήκη: Διορθώθηκε το απόθεμα του '{inv_name}' σε {inv_amount}.", imerominia=datetime.now()))
+        elif action == 'DELETE_INVENTORY':
+            inv_name = data.get('inv_name')
+            if inv_name:
+                items = [i for i in current_user.apothiki_items if str(inv_name).lower() in i.onoma_proiontos.lower()]
+                for item in items:
+                    vasi.session.delete(item)
+                if ktima: vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"📦 AI Αποθήκη: Διαγράφηκε το '{inv_name}'.", imerominia=datetime.now()))
         elif action == 'UPDATE_WATER':
             moisture = data.get('moisture_percentage')
             ph = data.get('nero_ph')
@@ -731,6 +760,40 @@ def ai_secretary():
                     try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{target_k.agromonitoring_poly_id}?appid={os.getenv('AGROMONITORING_API_KEY')}", timeout=5)
                     except: pass
                 vasi.session.delete(target_k)
+        elif action == 'ARCHIVE_KTIMA':
+            target_ktimata = []
+            if str(target_ktima_id).upper() == 'ALL': target_ktimata = energa_ktimata
+            else:
+                if ktima: target_ktimata.append(ktima)
+            for target_k in target_ktimata:
+                target_k.is_active = False
+                vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🗂️ AI Γραμματέας: Το κτήμα αρχειοθετήθηκε.", imerominia=datetime.now()))
+        elif action == 'ADD_ANALYSIS':
+            analysis_data = data.get('new_analysis_data') or {}
+            target_ktimata = energa_ktimata if str(target_ktima_id).upper() == 'ALL' else ([ktima] if ktima else [])
+            
+            for target_k in target_ktimata:
+                date_str = analysis_data.get('date')
+                im = datetime.now()
+                if date_str:
+                    try: im = datetime.strptime(date_str, '%Y-%m-%d')
+                    except: pass
+                    
+                def get_float(val):
+                    try: return float(val) if val is not None else None
+                    except: return None
+                    
+                n, p, k = get_float(analysis_data.get('azwto')), get_float(analysis_data.get('fwsforos')), get_float(analysis_data.get('kalio'))
+                ph_val = get_float(analysis_data.get('ph'))
+                org = get_float(analysis_data.get('organiki_ousia'))
+                typos = analysis_data.get('typos_edafous')
+                
+                vasi.session.add(AnalysiEdafous(ktima_id=target_k.id, ph=ph_val, organiki_ousia=org, azwto=n, fwsforos=p, kalio=k, imerominia=im))
+                if typos: target_k.typos_edafous = typos
+                
+                vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"📄 AI Γραμματέας: Καταγράφηκε Ανάλυση Εδάφους (N:{n}, P:{p}, K:{k}, pH:{ph_val})", imerominia=datetime.now()))
+                target_k.ekkremis_erotisi_ai = None
+                
         elif (action == 'DIAGNOSIS' or any(img.filename != '' for img in image_files)) and ktima:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"📸 AI Γραμματέας: {reply_text}", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
@@ -763,5 +826,9 @@ def ai_secretary():
         error_msg = str(e)
         if '502' in error_msg or '503' in error_msg or 'Bad Gateway' in error_msg:
             return jsonify({'success': True, 'reply': '⚠️ Οι διακομιστές της Google (Gemini AI) αντιμετωπίζουν προσωρινό φόρτο. Παρακαλώ προσπαθήστε ξανά σε λίγο!', 'action': 'ADVICE'})
+        elif '429' in error_msg or 'quota' in error_msg.lower() or '413' in error_msg or 'too large' in error_msg.lower():
+            return jsonify({'success': True, 'reply': '⚠️ Οι φωτογραφίες είναι πολλές ή πολύ μεγάλες και δεν μπορώ να τις δω όλες μαζί. Δοκιμάστε να στείλετε λιγότερες.', 'action': 'ADVICE'})
+        elif 'finish_reason' in error_msg.lower() or 'safety' in error_msg.lower():
+            return jsonify({'success': True, 'reply': '⚠️ Δεν μπόρεσα να διακρίνω τη φωτογραφία γιατί είναι θολή ή μπλοκαρίστηκε. Δοκιμάστε με μια πιο καθαρή λήψη.', 'action': 'ADVICE'})
             
         return jsonify({'error': "Προέκυψε ένα σφάλμα: " + error_msg[:100] + "..."}), 500

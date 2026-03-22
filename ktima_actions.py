@@ -178,7 +178,9 @@ def prosthes_ergasia(ktima_id):
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=request.form.get('eidos_ergasias'), katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
     vasi.session.add(nea_ergasia)
     ktima = vasi.session.get(Ktima, ktima_id)
-    if ktima: ktima.ekkremis_erotisi_ai = None
+    if ktima: 
+        ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
 
@@ -232,6 +234,7 @@ def oloklirosi_ergasias(ktima_id):
                 flash('Το σύστημα πρόσθεσε αυτόματα χρονόμετρο αναμονής 7 ημερών για τα Αμινοξέα, ώστε να μην καούν τα δέντρα από τον Χαλκό!', 'info')
 
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
     except Exception as e:
@@ -500,3 +503,22 @@ def epeksergasia_topothesias(ktima_id):
         vasi.session.commit()
         flash('Η τοποθεσία ενημερώθηκε επιτυχώς!', 'success')
     return redirect(url_for('core_app.arxikh'))
+
+@ktima_actions_bp.route('/allagi_katastasis_ergasias/<int:ergasia_id>', methods=['POST'])
+@login_required
+def allagi_katastasis_ergasias(ergasia_id):
+    ergasia = vasi.session.get(Ergasia, ergasia_id)
+    if not ergasia or ergasia.ktima.idioktitis != current_user:
+        return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
+
+    try:
+        if ergasia.katastasi == 'Εκκρεμεί':
+            ergasia.katastasi = 'Ολοκληρώθηκε'
+        else:
+            ergasia.katastasi = 'Εκκρεμεί'
+        ergasia.ktima.teleftaia_enimerosi_ergasion = None
+        vasi.session.commit()
+        return jsonify({'success': True, 'nea_katastasi': ergasia.katastasi})
+    except Exception as e:
+        vasi.session.rollback()
+        return jsonify({'error': str(e)}), 500

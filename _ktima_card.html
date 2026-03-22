@@ -135,9 +135,13 @@
             </h6>
             <div class="collapse" id="collapseNdvi{{ ktima.id }}">
                 <div class="ndvi-inline-container" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="ndviMapGeo{{ ktima.id }}" data-ktima-id="{{ ktima.id }}">
-                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
-                    <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
-                    <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
+                <div class="collapse mb-2" id="instructionsMapNdviGeo{{ ktima.id }}">
+                    <div class="card card-body bg-light border-info small py-2 px-3">
+                        <ul class="mb-0 ps-3">
+                            <li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li>
+                            <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο!</li>
+                        </ul>
+                    </div>
                 </div>
                 <div id="ndviDatendviMapGeo{{ ktima.id }}" class="text-end mb-1 d-none small fw-bold text-success"></div>
                 <div id="ndviMapGeo{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;"></div>
@@ -274,15 +278,16 @@
             {% set current_ai_question = ktima.ekkremis_erotisi_ai if ktima.ekkremis_erotisi_ai else (default_onb if completed_tasks_count == 0 else None) %}
 
             {% if current_ai_question and not is_geoponos_view %}
-            <div class="alert alert-warning p-3 mt-2 mb-2 border-warning shadow-sm" style="animation: pulse 2s infinite; display: block;">
-                <div class="d-flex align-items-center mb-2 text-dark">
-                    <i class="fas fa-robot text-danger fa-bounce fa-lg me-2"></i> <strong>Το AI ρωτάει:</strong>
-                </div>
-                <div class="text-dark mb-3 text-break" style="font-size: 0.95em; line-height: 1.5;">
-                    {{ current_ai_question }}
-                </div>
-                <div class="text-end border-top border-warning pt-2 mt-2">
-                    <button type="button" class="btn btn-sm btn-danger px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση <i class="fas fa-arrow-right ms-1"></i></button>
+            <div class="mb-2 mt-2">
+                <button class="btn btn-outline-warning text-dark w-100 text-start shadow-sm d-flex justify-content-between align-items-center collapsed" style="font-weight: 600; background-color: #fff3cd; border-color: #ffecb5;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAiQuestion{{ ktima.id }}" aria-expanded="false">
+                    <span><i class="fas fa-robot text-danger fa-bounce me-2"></i> <strong>Το AI ρωτάει...</strong> <span class="badge bg-danger rounded-circle ms-1 border border-light shadow-sm"><i class="fas fa-exclamation"></i></span></span>
+                    <i class="fas fa-chevron-down transition-icon text-muted"></i>
+                </button>
+                <div class="collapse" id="collapseAiQuestion{{ ktima.id }}">
+                    <div class="card card-body mt-1 p-3 border-warning shadow-sm" style="background-color: #fffaf0;">
+                        <div class="text-dark mb-3 text-break" style="font-size: 0.95em; line-height: 1.5;">{{ current_ai_question }}</div>
+                        <div class="text-end border-top border-warning pt-2 mt-2"><button type="button" class="btn btn-sm btn-danger px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση <i class="fas fa-arrow-right ms-1"></i></button></div>
+                    </div>
                 </div>
             </div>
             
@@ -320,16 +325,18 @@
 
             <!-- Οδηγός Βελτιστοποίησης (Setup Wizard) -->
             {% if ktima.elleipseis %}
-            <div class="alert alert-info border-info shadow-sm p-2 mb-2" style="font-size: 0.9em; background-color: #f0f8ff;">
-                <div class="d-flex align-items-center mb-1">
-                    <i class="fas fa-info-circle fa-lg me-2 text-primary"></i>
-                    <strong class="text-primary">Για μέγιστη ακρίβεια AI:</strong>
+            <div class="mb-2 mt-2">
+                <button class="btn btn-outline-info text-dark w-100 text-start shadow-sm d-flex justify-content-between align-items-center collapsed" style="font-weight: 600; background-color: #e0f7fa; border-color: #b8daff;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSetupWizard{{ ktima.id }}" aria-expanded="false">
+                    <span><i class="fas fa-info-circle text-primary me-2"></i> <strong>Για μέγιστη ακρίβεια AI</strong> <span class="badge bg-danger rounded-circle ms-1 border border-light shadow-sm"><i class="fas fa-exclamation"></i></span></span>
+                    <i class="fas fa-chevron-down transition-icon text-muted"></i>
+                </button>
+                <div class="collapse" id="collapseSetupWizard{{ ktima.id }}">
+                    <div class="card card-body mt-1 border-info shadow-sm p-2" style="font-size: 0.9em; background-color: #f0f8ff;">
+                        <ul class="mb-0 ps-3 text-muted small">
+                            {% for elleipsi in ktima.elleipseis %}<li>Προσθέστε: <strong>{{ elleipsi }}</strong></li>{% endfor %}
+                        </ul>
+                    </div>
                 </div>
-                <ul class="mb-0 ps-3 text-muted small">
-                    {% for elleipsi in ktima.elleipseis %}
-                        <li>Προσθέστε: <strong>{{ elleipsi }}</strong></li>
-                    {% endfor %}
-                </ul>
             </div>
             {% endif %}
 

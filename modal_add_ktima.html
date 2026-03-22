@@ -7,16 +7,26 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
-                    <div class="d-flex align-items-center mb-1">
-                        <i class="fas fa-info-circle fa-lg me-2 text-info"></i>
-                        <strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong>
-                    </div>
-                    <ul class="mb-1 ps-3">
-                        <li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li>
-                        <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο (π.χ. δρόμους ή γειτονικά χωράφια) για να μπορέσει να ολοκληρωθεί η ανάλυση!</li>
-                    </ul>
+                <!-- Διακριτικές Οδηγίες Χάρτη -->
+                <div class="text-end mb-2">
+                    <a class="text-info small text-decoration-none fw-bold" data-bs-toggle="collapse" href="#instructionsMapAdd" role="button" aria-expanded="false"><i class="fas fa-info-circle"></i> Οδηγίες Σχεδίασης Δορυφόρου</a>
                 </div>
+                <div class="collapse mb-2" id="instructionsMapAdd">
+                    <div class="card card-body bg-light border-info small py-2 px-3">
+                        <ul class="mb-0 ps-3">
+                            <li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li>
+                            <li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>. Αν το κτήμα σας είναι μικρότερο, παρακαλούμε συμπεριλάβετε λίγο από τον περιβάλλοντα χώρο (π.χ. δρόμους ή γειτονικά χωράφια) για να μπορέσει να ολοκληρωθεί η ανάλυση!</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Πεδίο Αναζήτησης Τοποθεσίας -->
+                <div class="input-group input-group-sm mb-2 shadow-sm">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="searchLocationInput" class="form-control" placeholder="Γράψτε χωριό ή περιοχή (π.χ. Σπάρτη)" onkeydown="if(event.key === 'Enter') { event.preventDefault(); searchMapLocationAddKtima(); }">
+                    <button class="btn btn-primary" type="button" id="btnSearchLocation" onclick="searchMapLocationAddKtima()">Εύρεση</button>
+                </div>
+                
                 <div id="map" class="mb-3"></div>
                 
                 <form action="{{ url_for('ktima_actions.prosthes_ktima') }}" method="POST">

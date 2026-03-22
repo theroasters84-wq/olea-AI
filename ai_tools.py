@@ -76,7 +76,7 @@ def diagnosi_fwtografias(ktima_id):
     if file:
         try:
             img = PIL.Image.open(file)
-            prompt = "Είσαι γεωπόνος. Ανάλυσε αυτή τη φωτογραφία ελαιόδεντρου (φύλλα, καρπός, κορμός). Εντόπισε πιθανές ασθένειες, τροφοπενίες ή προβλήματα. Δώσε σύντομη και ξεκάθαρη διάγνωση 1-2 προτάσεων."
+            prompt = "Είσαι γεωπόνος. Ανάλυσε αυτή τη φωτογραφία (φύλλα, καρπός, κορμός Ή ευρεία λήψη εδάφους). Εντόπισε πιθανές ασθένειες ή τροφοπενίες στα δέντρα. ΑΝ η φωτογραφία είναι ευρεία ή εστιάζει στο χώμα, αξιολόγησε οπωσδήποτε την κάλυψη χόρτων/ζιζανίων ΚΑΙ προσπάθησε να εκτιμήσεις τον τύπο/σύσταση του εδάφους (π.χ. Αμμώδες, Αργιλώδες, Πηλώδες, Πετρώδες, Κοκκινόχωμα). Δώσε σύντομη και ξεκάθαρη διάγνωση 1-3 προτάσεων."
             
             response = None
             for attempt in range(3):
@@ -86,145 +86,207 @@ def diagnosi_fwtografias(ktima_id):
                 except Exception:
                     time.sleep(2)
             
-            apotelesma_text = response.text if response else "Αδυναμία ανάλυσης εικόνας λόγω φόρτου συστήματος."
+            apotelesma_text = response.text if response else "⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία. Δοκιμάστε μια πιο καθαρή λήψη."
             nea_diagnosi = Diagnosi(ktima_id=ktima_id, apotelesma=apotelesma_text, imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
             vasi.session.commit()
             flash('Η διάγνωση ολοκληρώθηκε επιτυχώς!', 'success')
         except Exception as e:
-            print(f"Σφάλμα Vision AI: {e}")
-            flash('Προέκυψε σφάλμα κατά την ανάλυση της φωτογραφίας.', 'danger')
+            error_msg = str(e).lower()
+            if '429' in error_msg or 'quota' in error_msg or '413' in error_msg or 'too large' in error_msg:
+                flash('⚠️ Η φωτογραφία είναι πολύ μεγάλη ή στείλατε πολλές. Δοκιμάστε με μικρότερο αρχείο.', 'warning')
+            else:
+                flash('⚠️ Δεν κατάφερα να διακρίνω τη φωτογραφία. Δοκιμάστε ξανά.', 'danger')
             
     return redirect(url_for('core_app.arxikh'))
 
 @ai_bp.route('/analysi_egrafou/<int:ktima_id>', methods=['POST'])
 @login_required
 def analysi_egrafou(ktima_id):
-    # ... (code similar to original logic, shortened for brevity but functional logic assumed copied)
     if not api_key_ai:
-        flash("Η λειτουργία AI είναι απενεργοποιημένη.", "danger")
-        return redirect(url_for('core_app.arxikh'))
+        return jsonify({'success': False, 'message': 'Η λειτουργία AI είναι απενεργοποιημένη.'})
 
     ktima = vasi.session.get(Ktima, ktima_id)
     if not ktima or ktima.idioktitis != current_user:
-        return "403", 403
+        return jsonify({'success': False, 'message': 'Μη εξουσιοδοτημένη πρόσβαση.'}), 403
 
-    file = request.files.get('fwtografia_analysis')
-    if not file or file.filename == '':
-        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
-        return redirect(url_for('core_app.arxikh'))
+    files = request.files.getlist('fwtografia_analysis')
+    valid_files = [f for f in files if f.filename != '']
+    
+    if not valid_files:
+        return jsonify({'success': False, 'message': 'Δεν επιλέχθηκε αρχείο.'})
 
     try:
-        prompt = "Είσαι γεωπόνος. Διάβασε αυτό το έγγραφο ανάλυσης εδάφους/φύλλων..."
+        prompt = "Είσαι γεωπόνος. Διάβασε αυτά τα έγγραφα ανάλυσης εδάφους/φύλλων. Συνδύασε τις πληροφορίες τους και δώσε ένα συνοπτικό συμπέρασμα για την κατάσταση του εδάφους/φυτού."
+        contents = [prompt]
         
-        mime_type = file.mimetype
-        file_data = file.read()
-        
-        if 'pdf' in mime_type:
-            content_part = types.Part.from_bytes(data=file_data, mime_type='application/pdf')
-        else:
-            content_part = PIL.Image.open(io.BytesIO(file_data))
+        for file in valid_files:
+            mime_type = file.mimetype
+            file_data = file.read()
             
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, content_part])
+            if 'pdf' in mime_type:
+                contents.append(types.Part.from_bytes(data=file_data, mime_type='application/pdf'))
+            else:
+                img = PIL.Image.open(io.BytesIO(file_data))
+                # Συμπίεση εικόνας για να μην "μπουκώνει" το Gemini API με πολλαπλά μεγάλα αρχεία
+                img.thumbnail((1600, 1600), PIL.Image.Resampling.LANCZOS)
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                contents.append(img)
+                
+        response = None
+        for attempt in range(3):
+            try:
+                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=contents)
+                break
+            except Exception as e:
+                if attempt == 2: raise e
+                time.sleep(3 * (attempt + 1))
         
-        ktima.analysi_dedomena = response.text if response else "Αδυναμία ανάλυσης κειμένου."
-        
-        # Καταγραφή στο ημερολόγιο διαγνώσεων
-        if response:
-            nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma="📄 Έγγραφο Ανάλυσης: Ολοκληρώθηκε", imerominia=datetime.now())
-            vasi.session.add(nea_diagnosi)
+        analysi_text = response.text if response else "⚠️ Δεν μπόρεσα να διαβάσω το έγγραφο. Ανεβάστε πιο καθαρή φωτογραφία."
         
         extraction_prompt = """Διάβασε την ανάλυση και εξήγαγε τα δεδομένα σε μορφή JSON. Επίστρεψε ΜΟΝΟ το JSON χωρίς άλλο κείμενο (ούτε markdown).
 Περίλαβε τα εξής κλειδιά (με αριθμητικές τιμές) αν υπάρχουν: ph, organiki_ousia, azwto, fwsforos, kalio.
-Επιπλέον, αν η ανάλυση αναφέρει τη μηχανική σύσταση / τύπο εδάφους (π.χ. Αργιλώδες, Αμμώδες, Πηλώδες, κτλ), πρόσθεσε και το κλειδί "typos_edafous" με την αντίστοιχη λέξη."""
-        ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt, content_part])
+Επιπλέον, αν η ανάλυση αναφέρει τη μηχανική σύσταση / τύπο εδάφους (π.χ. Αργιλώδες, Αμμώδες, Πηλώδες, κτλ), πρόσθεσε και το κλειδί "typos_edafous" με την αντίστοιχη λέξη.
+ΠΡΟΣΟΧΗ: Αν η εικόνα είναι πολύ θολή/δυσανάγνωστη, ή αν λείπουν βασικές σελίδες (π.χ. βλέπεις μόνο τη σελίδα 1 από 2), πρόσθεσε στο JSON ένα κλειδί "provlima" με ένα σύντομο μήνυμα προς τον χρήστη (π.χ. "Η φωτογραφία είναι πολύ θολή, παρακαλώ ανεβάστε την ξανά." ή "Φαίνεται να λείπει η δεύτερη σελίδα.")."""
+        
+        ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt] + contents[1:])
         
         if ext_response:
             try:
-                import json
-                data = json.loads(ext_response.text.strip().replace('```json', '').replace('```', ''))
+                json_text = ext_response.text.strip()
+                start_idx = json_text.find('{')
+                end_idx = json_text.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    json_text = json_text[start_idx:end_idx+1]
+                
+                data = json.loads(json_text)
+                
+                if data.get('provlima'):
+                    return jsonify({'success': False, 'message': data.get('provlima')})
+                    
                 nea_analysi = AnalysiEdafous(ktima_id=ktima_id, **{k: v for k, v in data.items() if k in ['ph', 'organiki_ousia', 'azwto', 'fwsforos', 'kalio']})
                 vasi.session.add(nea_analysi)
                 
-                # Αυτόματη ενημέρωση του τύπου εδάφους του κτήματος
                 typos = data.get('typos_edafous')
                 if typos:
-                    typos_lower = str(typos).lower()
+                    typos_lower = typos.lower()
                     if 'αργιλ' in typos_lower: ktima.typos_edafous = 'Αργιλώδες'
                     elif 'αμμ' in typos_lower: ktima.typos_edafous = 'Αμμώδες'
                     elif 'πηλ' in typos_lower: ktima.typos_edafous = 'Πηλώδες'
-                    elif 'πετρ' in typos_lower: ktima.typos_edafous = 'Πετρώδες'
-            except Exception: pass
+                    
+                ktima.analysi_dedomena = analysi_text
+                nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"📄 Έγγραφο Ανάλυσης ({len(valid_files)} αρχεία): Ολοκληρώθηκε", imerominia=datetime.now())
+                vasi.session.add(nea_diagnosi)
+            except Exception as e:
+                print(f"Σφάλμα JSON: {e}")
 
         ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
-        flash('Η ανάλυση του εγγράφου ολοκληρώθηκε.', 'success')
+        return jsonify({'success': True, 'message': 'Η ανάλυση των εγγράφων ολοκληρώθηκε!'})
     except Exception as e:
-        flash(f'Σφάλμα OCR: {e}', 'danger')
-
-    return redirect(url_for('core_app.arxikh'))
+        error_msg = str(e).lower()
+        if '429' in error_msg or 'quota' in error_msg or '413' in error_msg or 'too large' in error_msg:
+            return jsonify({'success': False, 'message': '⚠️ Ο όγκος των αρχείων είναι πολύ μεγάλος. Ανεβάστε λιγότερες ή μικρότερες σελίδες.'})
+        return jsonify({'success': False, 'message': '⚠️ Δεν κατάφερα να διαβάσω την ανάλυση. Δοκιμάστε ξανά με πιο καθαρή φωτογραφία.'})
 
 @ai_bp.route('/anagnorisi_stadiou/<int:ktima_id>', methods=['POST'])
 @login_required
 def anagnorisi_stadiou(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "403", 403
+    
     file = request.files.get('fwtografia_stadiou')
-    if file:
+    if not file or file.filename == '':
+        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
+        return redirect(url_for('core_app.arxikh'))
+
+    try:
         img = PIL.Image.open(file)
-        prompt = "Είσαι κορυφαίος γεωπόνος... Σε ποιο φαινολογικό στάδιο βρίσκεται;..."
+        prompt = "Είσαι κορυφαίος γεωπόνος. Σε ποιο φαινολογικό στάδιο βρίσκεται η ελιά; Απάντησε ΜΟΝΟ με το όνομα του σταδίου (π.χ. Λήθαργος, Σχηματισμός Ταξιανθιών, Άνθιση, Καρπόδεση)."
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
         ktima.fainologiko_stadio = response.text.strip().replace('.', '') if response else "Άγνωστο"
         
-        flash(f'Το AI αναγνώρισε το στάδιο: {ktima.fainologiko_stadio}', 'success')
-        # Καταγραφή της ημερομηνίας που βρέθηκε το στάδιο
         if response:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🌿 Αναγνώριση Σταδίου: {ktima.fainologiko_stadio}", imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
             
         ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
-        flash(f'Στάδιο: {ktima.fainologiko_stadio}', 'success')
+        flash(f'Το AI αναγνώρισε το στάδιο: {ktima.fainologiko_stadio}', 'success')
+    except Exception as e:
+        error_msg = str(e).lower()
+        if '429' in error_msg or 'quota' in error_msg or '413' in error_msg or 'too large' in error_msg:
+            flash('⚠️ Η φωτογραφία είναι πολύ μεγάλη. Δοκιμάστε με μικρότερο αρχείο.', 'warning')
+        else:
+            flash('⚠️ Δεν κατάφερα να διακρίνω τη φωτογραφία. Ανεβάστε μια πιο καθαρή.', 'danger')
+        
     return redirect(url_for('core_app.arxikh'))
 
 @ai_bp.route('/ektimisi_paragogis/<int:ktima_id>', methods=['POST'])
 @login_required
 def ektimisi_paragogis(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima or ktima.idioktitis != current_user:
+        return "403", 403
+        
     file = request.files.get('fwtografia_paragogis')
-    if file:
+    if not file or file.filename == '':
+        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
+        return redirect(url_for('core_app.arxikh'))
+
+    try:
         img = PIL.Image.open(file)
-        poikilies = ", ".join([f"{p.poikilia_onoma}" for p in ktima.poikilies_details]) or ktima.poikilia
-        # Ensure ktima.arithmos_dentron is an integer for the prompt
-        prompt = f"Είσαι ειδικός γεωπόνος... Εκτίμηση παραγωγής για {ktima.arithmos_dentron} δέντρα ({poikilies})..."
+        poikilies = ", ".join([f"{p.poikilia_onoma}" for p in ktima.poikilies_details]) if ktima.poikilies_details else ktima.poikilia
+        prompt = f"Είσαι ειδικός γεωπόνος. Εκτίμησε την παραγωγή για {ktima.arithmos_dentron} δέντρα ({poikilies}) βάσει αυτής της εικόνας καρποφορίας. Δώσε 1-2 προτάσεις."
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
         flash(f'Εκτίμηση: {response.text}', 'info')
+    except Exception as e:
+        error_msg = str(e).lower()
+        if '429' in error_msg or 'quota' in error_msg or '413' in error_msg or 'too large' in error_msg:
+            flash('⚠️ Η φωτογραφία είναι πολύ μεγάλη.', 'warning')
+        else:
+            flash('⚠️ Δεν κατάφερα να διακρίνω τους καρπούς. Δοκιμάστε μια καλύτερη λήψη.', 'danger')
+        
     return redirect(url_for('core_app.arxikh'))
 
 @ai_bp.route('/ai_input_scan/<int:ktima_id>', methods=['POST'])
 @login_required
-# Moved from core_app.py to ai_tools.py
 def ai_input_scan(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
-    file = request.files.get('fwtografia_input')
-    if file:
-        prompt = "Extract Product Name, Active Ingredient, Dosage..."
+    if not ktima or ktima.idioktitis != current_user:
+        return "403", 403
         
+    file = request.files.get('fwtografia_etiketas')
+    if not file or file.filename == '':
+        flash('Δεν επιλέχθηκε αρχείο.', 'danger')
+        return redirect(url_for('core_app.arxikh'))
+
+    try:
         mime_type = file.mimetype
         file_data = file.read()
+        prompt = "Είσαι γεωπόνος. Διάβασε την ετικέτα αυτού του φαρμάκου/λιπάσματος. Ποιο είναι το προϊόν, η δραστική ουσία και η δοσολογία;"
+        
         if 'pdf' in mime_type:
             content_part = types.Part.from_bytes(data=file_data, mime_type='application/pdf')
         else:
             content_part = PIL.Image.open(io.BytesIO(file_data))
             
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, content_part])
-        ai_summary = response.text.strip() if response else "Αδυναμία ανάγνωσης."
+        ai_summary = response.text.strip() if response else "⚠️ Δεν κατάφερα να διαβάσω την ετικέτα."
         
         nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός/Λίπανση (AI)', katastasi='Ολοκληρώθηκε', farmaka_lipasmata=ai_summary, imerominia=datetime.now())
         vasi.session.add(nea_ergasia)
-        # Auto-remove pending tasks logic here (omitted for brevity but implied same as original)
-        flash('Η ετικέτα σαρώθηκε και η εργασία καταγράφηκε!', 'success')
         vasi.session.commit()
-        flash('Καταγράφηκε!', 'success')
+        flash('Η ετικέτα σαρώθηκε και η εργασία καταγράφηκε!', 'success')
+    except Exception as e:
+        error_msg = str(e).lower()
+        if '429' in error_msg or 'quota' in error_msg or '413' in error_msg or 'too large' in error_msg:
+            flash('⚠️ Το αρχείο είναι πολύ μεγάλο.', 'warning')
+        else:
+            flash('⚠️ Δεν μπόρεσα να διαβάσω την ετικέτα. Βγάλτε πιο καθαρή φωτογραφία.', 'danger')
+        
     return redirect(url_for('core_app.arxikh'))
 
 @ai_bp.route('/ai_vision', methods=['POST'])
@@ -406,7 +468,7 @@ def paragogi_syntaghs(ktima_id):
             f"1. FULL STACK ΠΡΟΣΕΓΓΙΣΗ: Πρότεινε ΟΛΕΣ τις αναγκαίες εργασίες χωρίς περιορισμό. Αν το ιστορικό του κτήματος είναι κενό, φτιάξε ένα πλήρες, ολοκληρωμένο πρόγραμμα για τη βέλτιστη υποστήριξη της καλλιέργειας. Αν ο αγρότης έχει καταχωρήσει εργασίες (π.χ. έγινε βασική λίπανση), αφαίρεσέ τες θεωρώντας ότι το φυτό έχει καλυφθεί στις αντίστοιχες ανάγκες του.\n"
             f"1α. ΒΑΣΙΚΗ ΠΡΟΛΗΨΗ: Την Άνοιξη (Μάρτιο/Απρίλιο) και το Φθινόπωρο, ο προληπτικός ψεκασμός με Χαλκό ή Μυκητοκτόνα είναι απαραίτητος. ΠΡΟΣΟΧΗ ΓΙΑ ΤΗΝ ΑΝΟΙΞΗ (ΚΡΙΣΙΜΟ): Απαγορεύεται αυστηρά η πρόταση για 'Βορδιγάλειο Πολτό' ή 'βαριά' καυστικά χαλκούχα σκευάσματα, καθώς καίνε τη νέα τρυφερή βλάστηση! Πρότεινε αποκλειστικά ήπιες μορφές (π.χ. Υδροξείδιο χαλκού, Γλυκονικό χαλκό, Dodine κ.λπ.) ή μη καυστικά μυκητοκτόνα. Επίσης, αν το δέντρο βρίσκεται στο στάδιο της πλήρους άνθισης ή πολύ κοντά σε αυτήν, ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ ΚΑΘΕ ΨΕΚΑΣΜΟΣ.\n"
             f"1β. Στο 'keimeno_syntaghs', ΕΝΗΜΕΡΩΣΕ ΞΕΚΑΘΑΡΑ τον αγρότη για τα χρονικά περιθώρια! Εξήγησέ του ΠΟΤΕ ακριβώς πρέπει να έχει γίνει η κάθε εργασία και γιατί (π.χ. 'Αυτός ο ψεκασμός πρέπει να γίνει το αργότερο έως τις 15/04 για να προλάβουμε το άνοιγμα του άνθους').\n"
-            f"1γ. ΣΥΓΧΩΝΕΥΣΗ ΨΕΚΑΣΜΩΝ (TANK MIX): Αν προτείνεις πολλαπλά σκευάσματα (π.χ. Κάλιο, Αμινοξέα, Εντομοκτόνο), ΣΥΓΧΩΝΕΥΣΕ τα ΑΥΣΤΗΡΑ σε ΕΝΑΝ (1) κοινό ψεκασμό/εργασία, ΕΦΟΣΟΝ είναι επιστημονικά συμβατά. Σκοπός είναι ο αγρότης να ραντίσει 1 φορά και όχι 2-3 φορές την ίδια εβδομάδα. Π.χ. γράψε 'Ψεκασμός με Κάλιο & Αμινοξέα'. Αν είναι ΑΣΥΜΒΑΤΑ (π.χ. Χαλκός + Αμινοξέα), εξήγησε την ασυμβατότητα στο κείμενο και σπάσε τα σε ξεχωριστές εργασίες με χρονική απόσταση.\n"
+            f"1γ. ΕΤΟΙΜΑ ΣΥΝΔΥΑΣΤΙΚΑ ΣΚΕΥΑΣΜΑΤΑ & TANK MIX (ΚΡΙΣΙΜΟ ΓΙΑ ΟΙΚΟΝΟΜΙΑ): Όταν το δέντρο έχει πολλαπλές ελλείψεις ιχνοστοιχείων/θρεπτικών (π.χ. Βόριο, Ψευδάργυρος, Μαγνήσιο, Άζωτο κλπ.), ΠΡΙΝ προτείνεις ξεχωριστά σκευάσματα, ΚΑΝΕ ΑΝΑΖΗΤΗΣΗ ΣΤΟ ΔΙΑΔΙΚΤΥΟ για να δεις αν υπάρχουν έτοιμα, εμπορικά 'πολυδύναμα' σκευάσματα που τα περιέχουν ΟΛΑ ΜΑΖΙ σε μία συσκευασία (π.χ. σύνθετα διαφυλλικά λιπάσματα ιχνοστοιχείων). Αν υπάρχουν, ενημέρωσε τον αγρότη στο κείμενο: 'Αυτά τα στοιχεία θα τα βρείτε συνδυασμένα σε ένα έτοιμο σκεύασμα του εμπορίου'. Αν δεν υπάρχει έτοιμο και πρέπει να γίνουν μίξεις (tank mix) διαφορετικών σκευασμάτων, ΣΥΓΧΩΝΕΥΣΕ τα ΑΥΣΤΗΡΑ σε ΕΝΑΝ κοινό ψεκασμό ΜΟΝΟ ΕΦΟΣΟΝ είναι επιστημονικά συμβατά. Αν είναι ασύμβατα, σπάσε τα σε ξεχωριστές εργασίες.\n"
             f"1δ. ΥΔΡΟΛΙΠΑΝΣΗ: Αν στα δεδομένα αναφέρεται ότι το κτήμα είναι 'Αρδευόμενο', ΠΡΟΤΙΜΗΣΕ ΞΕΚΑΘΑΡΑ την Υδρολίπανση ως μέθοδο θρέψης έναντι της κοκκώδους λίπανσης στο έδαφος, διότι είναι πιο άμεση, οικονομική και αποδοτική.\n"
             f"1ε. Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ του κτήματος και αν απαιτείται διαφορετική μεταχείριση, ανέφερέ το στο κείμενο (π.χ. ιδιαίτερες ευαισθησίες μιας ποικιλίας σε ασθένειες ή ελλείψεις).\n"
             f"1στ. ΥΠΟΛΟΓΙΣΜΟΣ ΔΟΣΟΛΟΓΙΑΣ ΒΑΣΕΙ ΗΛΙΚΙΑΣ & ΔΕΝΤΡΩΝ (ΚΡΙΣΙΜΟ): Προσάρμοσε τις προτεινόμενες δόσεις φαρμάκων/λιπασμάτων και τον όγκο του ψεκαστικού υγρού ΑΥΣΤΗΡΑ με βάση την ΗΛΙΚΙΑ των δέντρων και τον αριθμό τους! Χρησιμοποίησε το internet για να βρεις τις σωστές επιστημονικές αναλογίες φαρμάκου/νερού ανάλογα με την ηλικία της ελιάς (π.χ. τα νεαρά δέντρα 1-5 ετών θέλουν πολύ μικρότερο όγκο νερού και πιο προσεκτικές συγκεντρώσεις για αποφυγή τοξικότητας). Παρουσίασε αναλυτικά τους υπολογισμούς της συνολικής δοσολογίας στο κείμενο.\n"
@@ -418,6 +480,7 @@ def paragogi_syntaghs(ktima_id):
             f"1λ. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να ζητάς από τον αγρότη πληροφορίες για τον καιρό ή προβλέψεις (λαμβάνεις ήδη την Πρόγνωση 4 ημερών από τα δεδομένα σου).\n"
             f"1μ. ΕΛΛΕΙΨΗ ΑΝΑΛΥΣΗΣ: Αν στα δεδομένα δεις ότι ΔΕΝ ΥΠΑΡΧΕΙ ανάλυση εδάφους, δώσε κανονικά μια 'τυπική/στάνταρ' πρόταση λίπανσης για την εποχή, ΑΛΛΑ τόνισε στο 'keimeno_syntaghs' ότι: 'Λόγω έλλειψης ανάλυσης, η πρόταση είναι τυπική. Για μέγιστη ακρίβεια και οικονομία συνιστάται εδαφολογική ανάλυση'. Επίσης πρόσθεσε στο 'eidos' της συγκεκριμένης εργασίας το tag '[⚠️ Τυπική Πρόταση]'.\n"
             f"1ν. ΒΙΟΛΟΓΙΚΗ ΓΕΩΡΓΙΑ: Αν στο προφίλ αναφέρεται 'Βιολογική', ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ η χρήση χημικών ζιζανιοκτόνων ή φαρμάκων.\n"
+            f"1ξ. ΟΙΚΟΝΟΜΙΚΗ & ΧΡΟΝΙΚΗ ΚΑΤΑΝΟΜΗ ΕΡΓΑΣΙΩΝ (ΚΡΙΣΙΜΟ): ΜΗΝ φορτώνεις τον αγρότη με όλα τα έξοδα και όλες τις δουλειές ταυτόχρονα! Αν η ανάλυση εδάφους/φύλλων ή το στάδιο δείχνουν πολλαπλές ελλείψεις, ΙΕΡΑΡΧΗΣΕ ΤΕΣ. Πρότεινε για ΑΜΕΣΗ εφαρμογή ΜΟΝΟ τα απολύτως απαραίτητα για την επιβίωση/καρπόδεση του δέντρου. Για τα υπόλοιπα (π.χ. δευτερεύοντα ιχνοστοιχεία ή μελλοντικές ανάγκες), μετάθεσέ τα χρονικά. Στο πεδίο 'farmaka' αυτών των μελλοντικών εργασιών, βάλε υποχρεωτικά στην αρχή το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]' (υπολόγισε μια ημερομηνία σε 20, 30 ή 40 μέρες από σήμερα). Έτσι το κόστος αγοράς και ο κόπος θα σπάσει σε δόσεις.\n"
             f"2. ΔΙΑΧΕΙΡΙΣΗ ΥΓΡΑΣΙΑΣ & ΨΕΚΑΣΜΩΝ: Αν βλέπεις χαμηλή υγρασία (<20%) ΜΟΝΟ από τον 'Δορυφόρο', ΜΗΝ είσαι απόλυτος και ΜΗΝ απαγορεύεις τις εργασίες. Πρότεινε κανονικά τις επόμενες αναγκαίες ενέργειες (π.χ. τον επόμενο ψεκασμό βάσει σταδίου), αλλά δώσε την ενέργεια ως *πρόταση*, υπενθυμίζοντας στον αγρότη να επιβεβαιώσει πρώτα την υγρασία στο χωράφι και να ποτίσει αν χρειάζεται πριν ψεκάσει, για να μην κάψει τα δέντρα.\n"
             f"3. ΜΟΝΟ αν η 'Χειροκίνητη Μέτρηση Υγρασίας' είναι <20% ή το UVI είναι επικίνδυνα υψηλό (>8), εφάρμοσε αυστηρούς περιορισμούς στους ψεκασμούς.\n"
             f"4. Δώσε ΠΡΟΤΕΡΑΙΟΤΗΤΑ στα υλικά της Αποθήκης.\n"
@@ -429,10 +492,9 @@ def paragogi_syntaghs(ktima_id):
             f"Μην γράψεις markdown κώδικα (όπως ```json), επέστρεψε απευθείας το καθαρό JSON object."
         )
         
-        # Ενεργοποίηση Google Search (Ζωντανή Πρόσβαση στο Διαδίκτυο) και FORCE JSON
+        # Ενεργοποίηση Google Search (Σημείωση: Το response_mime_type δεν υποστηρίζεται ταυτόχρονα με tools)
         config = types.GenerateContentConfig(
-            tools=[{"google_search": {}}],
-            response_mime_type="application/json"
+            tools=[{"google_search": {}}]
         )
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
         
@@ -450,10 +512,12 @@ def paragogi_syntaghs(ktima_id):
             
         data = json.loads(json_text)
         
+        keimeno = data.get('keimeno_syntaghs', 'Προτεινόμενη Συνταγή από το AI')
+        
         # 1. Αποθήκευση της Συνταγής
         nea_syntagh = Syntagh(
             ktima_id=ktima.id, 
-            keimeno=data['keimeno_syntaghs'], 
+            keimeno=keimeno, 
             proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
             geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
         )
@@ -464,7 +528,7 @@ def paragogi_syntaghs(ktima_id):
         # αντί να τις αποθηκεύσουμε κατευθείαν, ώστε να μην διαγράψουμε τυχόν χειροκίνητες εργασίες.
         return jsonify({
             'success': True, 
-            'syntagh': data['keimeno_syntaghs'], 
+            'syntagh': keimeno, 
             'syntagh_id': nea_syntagh.id,
             'ergasies': data.get('ergasies', [])
         })
@@ -495,8 +559,9 @@ def refine_syntagh(ktima_id):
             f"Είσαι Κορυφαίος Επαγγελματίας Γεωπόνος & Ερευνητής. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
             f"--- ΠΡΟΗΓΟΥΜΕΝΗ ΣΥΝΤΑΓΗ ΣΟΥ ---\n{previous_recipe}\n\n"
             f"--- ΣΧΟΛΙΟ / ΔΙΕΥΚΡΙΝΙΣΗ ΑΓΡΟΤΗ ---\n{user_reply}\n\n"
-            f"ΟΔΗΓΙΑ: Αναπροσάρμοσε την προηγούμενη συνταγή σου με βάση το σχόλιο του αγρότη. Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ, τον ΑΡΙΘΜΟ και την ΗΛΙΚΙΑ των δέντρων, καθώς και τα ΠΕΡΣΙΝΑ ΠΡΟΒΛΗΜΑΤΑ (π.χ. δάκος) για να αυξομειώσεις τις δόσεις. Αναζήτησε στο ίντερνετ την ιδανική δοσολογία φαρμάκου και όγκου νερού ΕΙΔΙΚΑ για την ηλικία των δέντρων. ΑΝ ΕΙΝΑΙ ΑΝΟΙΞΗ, απαγορεύεται ΑΥΣΤΗΡΑ να προτείνεις βορδιγάλειο πολτό (καίει τα νέα βλαστάρια). Πρότεινε μόνο ήπιους χαλκούς (π.χ. υδροξείδιο) ή μυκητοκτόνα. Αν ο αγρότης απάντησε με ποιο ΜΕΣΟ ΨΕΚΑΣΜΟΥ θα ψεκάσει, ΠΡΟΣΑΡΜΟΣΕ τον όγκο του υγρού. Αν ο αγρότης ζητήσει να αναμείξει στο βυτίο ουσίες που είναι ασύμβατες (π.χ. Χαλκός με Αμινοξέα), ΑΠΑΓΟΡΕΥΣΕ το έντονα στο κείμενο. ΣΥΓΧΩΝΕΥΣΗ ΨΕΚΑΣΜΩΝ (TANK MIX): Αν η αναθεωρημένη συνταγή απαιτεί πολλαπλά σκευάσματα, συγχώνευσέ τα σε 1 εργασία εφόσον είναι συμβατά (π.χ. Κάλιο + Αμινοξέα) για να ραντίσει μόνο 1 φορά. Αν βάλεις εργασίες με αναμονή, βάλε το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]'. Αν η συνταγή περιλαμβάνει μίγμα, ΕΞΗΓΗΣΕ τη σωστή σειρά ανάμειξης. Φρόντισε κάθε νέα εργασία να έχει ξεκάθαρο χρονικό περιθώριο. ΜΗΝ ρωτάς για τον καιρό ή για προβλέψεις.\n"
+            f"ΟΔΗΓΙΑ: Αναπροσάρμοσε την προηγούμενη συνταγή σου με βάση το σχόλιο του αγρότη. Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ, τον ΑΡΙΘΜΟ και την ΗΛΙΚΙΑ των δέντρων, καθώς και τα ΠΕΡΣΙΝΑ ΠΡΟΒΛΗΜΑΤΑ (π.χ. δάκο) για να αυξομειώσεις τις δόσεις. Αναζήτησε στο ίντερνετ την ιδανική δοσολογία φαρμάκου και όγκου νερού ΕΙΔΙΚΑ για την ηλικία των δέντρων. ΑΝ ΕΙΝΑΙ ΑΝΟΙΞΗ, απαγορεύεται ΑΥΣΤΗΡΑ να προτείνεις βορδιγάλειο πολτό. Πρότεινε μόνο ήπιους χαλκούς ή μυκητοκτόνα. ΕΤΟΙΜΑ ΣΥΝΔΥΑΣΤΙΚΑ ΣΚΕΥΑΣΜΑΤΑ & TANK MIX: Ψάξε στο διαδίκτυο αν οι πολλαπλές ελλείψεις (π.χ. ιχνοστοιχεία) καλύπτονται από ΕΝΑ έτοιμο, εμπορικό πολυδύναμο σκεύασμα της αγοράς και πρότεινέ το στο κείμενο ('θα τα βρείτε όλα μαζί σε ένα έτοιμο σκεύασμα εμπορίου'). Αν απαιτούνται ξεχωριστά προϊόντα, συγχώνευσέ τα σε 1 εργασία (tank mix) ΜΟΝΟ εφόσον είναι συμβατά (π.χ. Κάλιο + Αμινοξέα), αλλιώς σπάσε τα σε διαφορετικές ημερομηνίες με το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]'. Αν η συνταγή περιλαμβάνει μίγμα, ΕΞΗΓΗΣΕ τη σωστή σειρά ανάμειξης. Φρόντισε κάθε νέα εργασία να έχει ξεκάθαρο χρονικό περιθώριο. ΜΗΝ ρωτάς για τον καιρό ή για προβλέψεις.\n"
             f"ΒΙΟΛΟΓΙΚΗ ΓΕΩΡΓΙΑ: Αν στο προφίλ αναφέρεται 'Βιολογική', ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ η χρήση χημικών ζιζανιοκτόνων ή φαρμάκων.\n"
+            f"ΟΙΚΟΝΟΜΙΚΗ & ΧΡΟΝΙΚΗ ΚΑΤΑΝΟΜΗ: Σπάσε τις εργασίες χρονικά για να μην επιβαρυνθεί οικονομικά μονομιάς ο παραγωγός. Βάλε άμεσα ΜΟΝΟ τα επείγοντα για τη σεζόν και προγραμμάτισε τα υπόλοιπα για αργότερα με το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]' μέσα στο 'farmaka'.\n"
             f"ΑΠΟΛΥΤΗ ΕΠΙΣΤΗΜΟΝΙΚΗ ΟΡΘΟΤΗΤΑ (ΚΡΙΣΙΜΟ): ΠΡΙΝ απαντήσεις, ΕΙΣΑΙ ΥΠΟΧΡΕΩΜΕΝΟΣ να ψάξεις στο internet για να επιβεβαιώσεις 100% τις δοσολογίες και τα φάρμακα. Απαγορεύεται αυστηρά να κάνεις λάθος που μπορεί να προκαλέσει ζημιά στην καλλιέργεια.\n"
             f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
             f"{{\"keimeno_syntaghs\": \"Εδώ γράψε τη νέα, αναθεωρημένη συνταγή απαντώντας και στο σχόλιο του αγρότη.\", "
@@ -505,8 +570,7 @@ def refine_syntagh(ktima_id):
         )
         
         config = types.GenerateContentConfig(
-            tools=[{"google_search": {}}],
-            response_mime_type="application/json"
+            tools=[{"google_search": {}}]
         )
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
         
@@ -522,9 +586,21 @@ def refine_syntagh(ktima_id):
             
         data = json.loads(json_text)
         
+        keimeno = data.get('keimeno_syntaghs', 'Αναθεωρημένη Συνταγή από το AI')
+        
+        # Φιλτράρισμα διπλότυπων εργασιών
+        raw_ergasies = data.get('ergasies', [])
+        unique_ergasies = []
+        seen = set()
+        for erg in raw_ergasies:
+            ident = (str(erg.get('eidos', '')).strip(), str(erg.get('farmaka', '')).strip())
+            if ident not in seen:
+                seen.add(ident)
+                unique_ergasies.append(erg)
+
         nea_syntagh = Syntagh(
             ktima_id=ktima.id, 
-            keimeno=data['keimeno_syntaghs'], 
+            keimeno=keimeno, 
             proelevsi='AI Γεωπόνος (Αναθεωρημένη)' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
             geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
         )
@@ -535,9 +611,9 @@ def refine_syntagh(ktima_id):
         # Επιστρέφουμε τις εργασίες στο frontend για να ζητήσουμε επιβεβαίωση
         return jsonify({
             'success': True, 
-            'syntagh': data['keimeno_syntaghs'], 
+            'syntagh': keimeno, 
             'syntagh_id': nea_syntagh.id,
-            'ergasies': data.get('ergasies', [])
+            'ergasies': unique_ergasies
         })
 
     except Exception as e:
@@ -557,16 +633,24 @@ def epivevaiosi_ergasion_ai(ktima_id):
     ergasies_list = data.get('ergasies', [])
 
     try:
-        # Διαγραφή παλιών εκκρεμών
+        # Διαγραφή παλιών εκκρεμών (Προστέθηκε και ο "AI Γραμματέας" για 100% καθαρισμό)
         Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(
-            Ergasia.proelevsi.in_(['AI Γεωπόνος', 'Γεωπόνος', 'AI Σύστημα Ασφαλείας', 'AI Δορυφόρος', 'AI Ιστορικό'])
+            Ergasia.proelevsi.in_(['AI Γεωπόνος', 'Γεωπόνος', 'AI Σύστημα Ασφαλείας', 'AI Δορυφόρος', 'AI Ιστορικό', 'AI Γραμματέας'])
         ).delete(synchronize_session=False)
 
+        seen = set()
         for erg in ergasies_list:
+            eidos = str(erg.get('eidos', 'Άλλη Εργασία'))[:100].strip()
+            farmaka = str(erg.get('farmaka', ''))[:255].strip()
+            
+            if (eidos, farmaka) in seen:
+                continue
+            seen.add((eidos, farmaka))
+
             nea_ergasia = Ergasia(
                 ktima_id=ktima.id,
-                eidos_ergasias=str(erg.get('eidos', 'Άλλη Εργασία'))[:100],
-                farmaka_lipasmata=str(erg.get('farmaka', ''))[:255],
+                eidos_ergasias=eidos,
+                farmaka_lipasmata=farmaka,
                 katastasi='Εκκρεμεί',
                 proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
                 imerominia=datetime.now()
@@ -630,11 +714,21 @@ def xeirokiniti_syntagh(ktima_id):
                 
             ai_data = json.loads(json_text)
             
-            # Διαγραφή παλιών εκκρεμών εργασιών που είχε βγάλει ο Γεωπόνος
-            Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί', proelevsi='Γεωπόνος').delete(synchronize_session=False)
+            # Διαγραφή ΟΛΩΝ των παλιών εκκρεμών εργασιών (για να μην υπάρχουν διπλότυπα με παλιές συνταγές)
+            Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(
+                Ergasia.proelevsi.in_(['AI Γεωπόνος', 'Γεωπόνος', 'AI Σύστημα Ασφαλείας', 'AI Δορυφόρος', 'AI Ιστορικό', 'AI Γραμματέας'])
+            ).delete(synchronize_session=False)
 
+            seen = set()
             for erg in ai_data.get('ergasies', []):
-                vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=str(erg.get('eidos', 'Άλλη Εργασία'))[:100], farmaka_lipasmata=str(erg.get('farmaka', ''))[:255], katastasi='Εκκρεμεί', proelevsi='Γεωπόνος', imerominia=datetime.now()))
+                eidos = str(erg.get('eidos', 'Άλλη Εργασία'))[:100].strip()
+                farmaka = str(erg.get('farmaka', ''))[:255].strip()
+                
+                if (eidos, farmaka) in seen:
+                    continue
+                seen.add((eidos, farmaka))
+                
+                vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=eidos, farmaka_lipasmata=farmaka, katastasi='Εκκρεμεί', proelevsi='Γεωπόνος', imerominia=datetime.now()))
             
             vasi.session.commit()
 
@@ -683,16 +777,6 @@ def delete_diagnosi(diagnosi_id):
 
 @ai_bp.route('/delete_analysi_edafous/<int:analysi_id>', methods=['POST'])
 @login_required
-def delete_analysi_edafous(analysi_id):
-    analysi = vasi.session.get(AnalysiEdafous, analysi_id)
-    if not analysi or analysi.ktima.idioktitis != current_user:
-        flash('Δεν βρέθηκε η ανάλυση ή δεν έχετε δικαίωμα διαγραφής.', 'danger')
-        return redirect(request.referrer or url_for('core_app.arxikh'))
-    
-    vasi.session.delete(analysi)
-    vasi.session.commit()
-    flash('Η ανάλυση εδάφους διαγράφηκε επιτυχώς.', 'success')
-    return redirect(request.referrer or url_for('core_app.arxikh'))
 def delete_analysi_edafous(analysi_id):
     analysi = vasi.session.get(AnalysiEdafous, analysi_id)
     if not analysi or analysi.ktima.idioktitis != current_user:
