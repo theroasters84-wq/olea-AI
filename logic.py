@@ -652,6 +652,23 @@ def aytomatizomenos_elegxos():
     with efarmogi.app_context():
         print("🔄 Εκτέλεση αυτοματοποιημένου ελέγχου πρόγνωσης...")
         import requests # Εισαγωγή για τον έλεγχο GDD
+        
+        # --- ΚΑΘΗΜΕΡΙΝΟΣ ΚΑΘΑΡΙΣΜΟΣ ΜΝΗΜΗΣ CHAT (ΓΡΑΜΜΑΤΕΑΣ & ΓΕΩΠΟΝΟΣ) ---
+        try:
+            xrhstes_all = Xrhsths.query.all()
+            now_time = datetime.now()
+            for u in xrhstes_all:
+                u.secretary_history = '[]'  # Καθαρισμός Γραμματέα
+                for k in u.ktimata:
+                    for s in k.syntages:
+                        if (now_time - s.imerominia).total_seconds() > 86400: # Πάνω από 24 ώρες
+                            s.chat_history = '[]' # Καθαρισμός Chat Συνταγής
+            vasi.session.commit()
+            print("🧹 Η μνήμη συζητήσεων του AI (Γραμματέας & Γεωπόνος) καθαρίστηκε επιτυχώς.")
+        except Exception as e:
+            vasi.session.rollback()
+            print(f"⚠️ Σφάλμα στον καθαρισμό μνήμης AI: {e}")
+
         xrhstes = Xrhsths.query.all()
         for xrhsths in xrhstes:
             for ktima in xrhsths.ktimata:

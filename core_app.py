@@ -30,6 +30,14 @@ def get_cached_api_data(key, fetch_func, ttl_seconds=600): # Προεπιλογ�
 def inject_datetime():
     return {'datetime': datetime}
 
+@core_bp.app_template_filter('from_json')
+def from_json_filter(s):
+    import json
+    try:
+        return json.loads(s)
+    except:
+        return []
+
 @core_bp.route('/')
 @login_required
 def arxikh():

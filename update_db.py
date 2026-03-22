@@ -189,6 +189,14 @@ def update_db():
             except Exception as e:
                 conn.rollback()
 
+            # Προσθήκη στήλης chat_history στο syntages
+            try:
+                conn.execute(text("ALTER TABLE syntages ADD COLUMN chat_history TEXT DEFAULT '[]'"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'chat_history' στο syntages")
+            except Exception as e:
+                conn.rollback()
+
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")
 

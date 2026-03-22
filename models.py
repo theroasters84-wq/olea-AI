@@ -185,4 +185,5 @@ class Syntagh(vasi.Model):
     geoponos_id = vasi.Column(vasi.Integer, vasi.ForeignKey('xrhstes.id'), nullable=True) # Ποιος γεωπόνος την έδωσε
     imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
     keimeno = vasi.Column(vasi.Text, nullable=False)
+    chat_history = vasi.Column(vasi.Text, default='[]')
     proelevsi = vasi.Column(vasi.String(50), default='AI Γεωπόνος') # AI Γεωπόνος ή Γεωπόνος

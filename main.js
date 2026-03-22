@@ -377,3 +377,68 @@ document.addEventListener('scroll', function(e) {
         e.target.scrollLeft = 0;
     }
 }, true);
+
+// --- Έξυπνη Αναζήτηση Skroutz με Επιλογή Κειμένου ---
+document.addEventListener('DOMContentLoaded', function() {
+    // Δημιουργία του αιωρούμενου κουμπιού Skroutz
+    const skroutzBtn = document.createElement('div');
+    skroutzBtn.id = 'skroutzFloatBtn';
+    skroutzBtn.className = 'shadow-sm';
+    skroutzBtn.style.cssText = 'display: none; position: absolute; z-index: 10000; background: #ff5e00; color: white; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.9em; font-weight: bold; align-items: center; gap: 6px; border: 1px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2);';
+    skroutzBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> Skroutz';
+    document.body.appendChild(skroutzBtn);
+
+    let selectedText = '';
+
+    document.addEventListener('selectionchange', () => {
+        // Έλεγχος αν η μυστική λειτουργία είναι ενεργή
+        const secretTime = sessionStorage.getItem('secretBrandModeTime');
+        const isSecretActive = secretTime && (Date.now() - parseInt(secretTime)) < 10 * 60 * 1000;
+        if (!isSecretActive) {
+            skroutzBtn.style.display = 'none';
+            return;
+        }
+
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+            skroutzBtn.style.display = 'none';
+            return;
+        }
+
+        const text = selection.toString().trim();
+        
+        let isInsideAi = false;
+        let container = selection.getRangeAt(0).commonAncestorContainer;
+        if(container.nodeType === 3) container = container.parentNode; // Αν είναι text node, παίρνουμε τον γονιό
+        
+        // Το κουμπί εμφανίζεται ΜΟΝΟ αν μαρκάρουμε κείμενο του AI (Συνταγή ή Γραμματέα)
+        if(container && container.closest && (container.closest('.syntagh-content') || container.closest('#secretaryChatHistory') || container.closest('[id^="syntaghChatHistory"]'))) {
+            isInsideAi = true;
+        }
+
+        // Εμφάνιση του κουμπιού μόνο αν επιλεγεί λέξη (3 έως 60 χαρακτήρες)
+        if (isInsideAi && text.length > 2 && text.length < 60) {
+            selectedText = text;
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            // Εμφάνιση ελαφρώς κάτω από το κείμενο για να μην κρύβει το native μενού των κινητών (Copy/Paste)
+            skroutzBtn.style.top = (rect.bottom + window.scrollY + 10) + 'px';
+            skroutzBtn.style.left = Math.max(10, (rect.left + window.scrollX + (rect.width / 2) - 50)) + 'px';
+            skroutzBtn.style.display = 'flex';
+        } else {
+            skroutzBtn.style.display = 'none';
+            selectedText = '';
+        }
+    });
+
+    skroutzBtn.addEventListener('mousedown', function(e) { e.preventDefault(); }); // Αποτροπή αποεπιλογής
+    skroutzBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (selectedText) {
+            window.open('https://www.skroutz.gr/search?keyphrase=' + encodeURIComponent(selectedText), '_blank');
+            skroutzBtn.style.display = 'none';
+            window.getSelection().removeAllRanges();
+        }
+    });
+});

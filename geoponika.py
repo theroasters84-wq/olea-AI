@@ -6,6 +6,18 @@ from datetime import datetime
 import time
 from google.genai import types
 
+# --- Έξυπνη Μνήμη (Cache) για τις κλήσεις στο Internet ---
+_api_cache = {}
+def _cached_get(url, ttl_seconds=1800):
+    now = time.time()
+    if url in _api_cache and (now - _api_cache[url][1]) < ttl_seconds:
+        return _api_cache[url][0]
+    res = requests.get(url, timeout=5)
+    if res.status_code == 200:
+        _api_cache[url] = (res.json(), now)
+        return res.json()
+    return None
+
 # Βοηθητική συνάρτηση για τον καιρό
 def pare_kairo(lat, lng):
     api_key = os.getenv('WEATHER_API_KEY')
@@ -16,9 +28,8 @@ def pare_kairo(lat, lng):
 
     try:
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
-        response = requests.get(url, timeout=5)
-        data = response.json()
-        if response.status_code == 200:
+        data = _cached_get(url, ttl_seconds=600) # Κρατάει τον καιρό έτοιμο για 10 λεπτά
+        if data:
             wind_speed = data.get('wind', {}).get('speed', 0)
             wind_deg = data.get('wind', {}).get('deg', 0)
             
@@ -46,7 +57,7 @@ def pare_kairo(lat, lng):
                 'anemos_mpofor': bf
             }
         else:
-            print(f"⚠️ Σφάλμα από το OpenWeatherMap: {response.status_code} - {data.get('message')}")
+            print(f"⚠️ Σφάλμα από το OpenWeatherMap (pare_kairo)")
     except Exception as e:
         print(f"Σφάλμα λήψης καιρού: {e}")
     return None
@@ -60,12 +71,11 @@ def pare_prognosi_kairou(lat, lng):
 
     try:
         url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=el"
-        response = requests.get(url, timeout=5)
-        data = response.json()
-        if response.status_code == 200:
+        data = _cached_get(url, ttl_seconds=10800) # Κρατάει την πρόγνωση έτοιμη για 3 ώρες
+        if data:
             return data['list']
         else:
-            print(f"⚠️ Σφάλμα από το OpenWeatherMap Forecast: {response.status_code} - {data.get('message')}")
+            print(f"⚠️ Σφάλμα από το OpenWeatherMap Forecast")
     except Exception as e:
         print(f"Σφάλμα λήψης πρόγνωσης: {e}")
     return None
@@ -93,7 +103,7 @@ def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
         prompt = (
             f"Είσαι ένας ειδικός γεωπόνος. Λάβε υπόψη τα εξής δεδομένα:\n"
             f"{perigrafi}\n\n"
-            f"ΠΡΙΝ απαντήσεις, ΚΑΝΕ ΥΠΟΧΡΕΩΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την επιστημονική ορθότητα της συμβουλής σου. Απαγορεύεται να δώσεις λανθασμένη ή επικίνδυνη οδηγία. Δώσε μια στοχευμένη, σύντομη και ΑΠΟΛΥΤΑ ΑΣΦΑΛΗ επιστημονική συμβουλή (2-3 προτάσεις) για τις άμεσες ενέργειες στο κτήμα."
+            f"ΠΡΙΝ απαντήσεις, ΚΑΝΕ ΥΠΟΧΡΕΩΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την επιστημονική ορθότητα της συμβουλής σου. Απαγορεύεται να δώσεις λανθασμένη ή επικίνδυνη οδηγία. Δώσε μια στοχευμένη, σύντομη και ΑΠΟΛΥΤΑ ΑΣΦΑΛΗ επιστημονική συμβουλή (2-3 προτάσεις) για τις άμεσες ενέργειες στο κτήμα. Αν η ερώτηση/περιγραφή του χρήστη είναι εντελώς ακατανόητη, απάντησε ΜΟΝΟ με τη φράση: 'Συγγνώμη, δεν σας κατάλαβα.'"
         )
         
         config = types.GenerateContentConfig(tools=[{"google_search": {}}])
@@ -170,8 +180,7 @@ def get_agro_soil_data(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
     try:
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/soil?polyid={poly_id}&appid={api_key}", timeout=5)
-        if res.status_code == 200: return res.json()
+        return _cached_get(f"http://api.agromonitoring.com/agro/1.0/soil?polyid={poly_id}&appid={api_key}", ttl_seconds=21600) # 6 ώρες cache
     except Exception as e: print(f"Soil Data Error: {e}")
     return None
 
@@ -179,8 +188,7 @@ def get_agro_uvi(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
     try:
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/uvi?polyid={poly_id}&appid={api_key}", timeout=5)
-        if res.status_code == 200: return res.json()
+        return _cached_get(f"http://api.agromonitoring.com/agro/1.0/uvi?polyid={poly_id}&appid={api_key}", ttl_seconds=7200) # 2 ώρες cache
     except Exception as e: print(f"UVI Error: {e}")
     return None
 
@@ -188,8 +196,7 @@ def get_agro_forecast(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
     try:
-        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid={poly_id}&appid={api_key}", timeout=5)
-        if res.status_code == 200: return res.json()
+        return _cached_get(f"http://api.agromonitoring.com/agro/1.0/weather/forecast?polyid={poly_id}&appid={api_key}", ttl_seconds=10800)
     except Exception as e: print(f"Agro Forecast Error: {e}")
     return None
 

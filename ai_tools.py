@@ -333,7 +333,7 @@ def apantisi_sto_ai(ktima_id):
     client = genai.Client(api_key=api_key_ai)
     prompt = (
         f"Ο γεωπόνος (AI) ρώτησε τον αγρότη: '{ktima.ekkremis_erotisi_ai}'.\nΟ αγρότης απάντησε: '{user_reply}'.\n"
-        f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου.\n"
+        f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου. Αν ο αγρότης γράψει κάτι εντελώς ακατανόητο, απάντησε 'Συγγνώμη, δεν σας κατάλαβα.'.\n"
         f"ΟΔΗΓΙΑ 2: Αν ο αγρότης αναφέρει ότι ΕΧΕΙ ΗΔΗ ΚΑΝΕΙ εργασίες (π.χ. 'έριξα χαλκό', 'κλάδεψα'), γράψε στο τέλος τη φράση 'ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:' και δίπλα τις εργασίες χωρισμένες με κόμμα.\n"
         f"ΟΔΗΓΙΑ 3: Αν ο αγρότης περιγράφει το φαινολογικό στάδιο (π.χ. 'μούρο', 'μπουμπούκια', 'ανθοταξίες'), γράψε στο τέλος τη φράση 'ΝΕΟ ΣΤΑΔΙΟ:' και δίπλα μια σύντομη ονομασία του σταδίου."
     )
@@ -394,7 +394,7 @@ def apantisi_sto_ai_ajax(ktima_id):
     client = genai.Client(api_key=api_key_ai)
     prompt = (
         f"Ο γεωπόνος (AI) ρώτησε τον αγρότη: '{current_question}'.\nΟ αγρότης απάντησε: '{user_reply}'.\n"
-        f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου.\n"
+        f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου. Αν ο αγρότης γράψει κάτι εντελώς ακατανόητο, απάντησε 'Συγγνώμη, δεν σας κατάλαβα.'.\n"
         f"ΟΔΗΓΙΑ 2: Αν ο αγρότης αναφέρει ότι ΕΧΕΙ ΗΔΗ ΚΑΝΕΙ εργασίες (π.χ. 'έριξα χαλκό', 'κλάδεψα'), γράψε στο τέλος τη φράση 'ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:' και δίπλα τις εργασίες χωρισμένες με κόμμα.\n"
         f"ΟΔΗΓΙΑ 3: Αν ο αγρότης περιγράφει το φαινολογικό στάδιο (π.χ. 'μούρο', 'μπουμπούκια', 'ανθοταξίες'), γράψε στο τέλος τη φράση 'ΝΕΟ ΣΤΑΔΙΟ:' και δίπλα μια σύντομη ονομασία του σταδίου."
     )
@@ -486,9 +486,16 @@ def paragogi_syntaghs(ktima_id):
             f"4. Δώσε ΠΡΟΤΕΡΑΙΟΤΗΤΑ στα υλικά της Αποθήκης.\n"
             f"5. Στο πεδίο 'eidos' κάθε εργασίας, ΠΡΟΣΘΕΣΕ ΥΠΟΧΡΕΩΤΙΚΑ το χρονικό περιθώριο ή την προϋπόθεση (π.χ. 'Ψεκασμός - Έως 20/04' ή 'Λίπανση - Πριν την άνθιση'). Αν το ιδανικό στάδιο/εποχή έχει περάσει, μην περιλάβεις την εργασία καθόλου.\n"
             f"6. ΑΠΟΛΥΤΗ ΕΠΙΣΤΗΜΟΝΙΚΗ ΟΡΘΟΤΗΤΑ (ΚΡΙΣΙΜΟ): Έχεις ζωντανή πρόσβαση στο διαδίκτυο. ΠΡΙΝ γράψεις την οποιαδήποτε συμβουλή, δοσολογία ή προτείνεις φάρμακο, ΕΙΣΑΙ ΥΠΟΧΡΕΩΜΕΝΟΣ να ψάξεις στο internet για να επιβεβαιώσεις 100% ότι η πρακτική είναι σωστή και ασφαλής. Απαγορεύεται αυστηρά να κάνεις λάθος που μπορεί να καταστρέψει την παραγωγή.\n"
-            f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
-            f"{{\"keimeno_syntaghs\": \"Εδώ γράψε την επίσημη συνταγή και τις οδηγίες.\", "
-            f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα\", \"farmaka\": \"Ονόματα φαρμάκων/λιπασμάτων\"}}]}} "
+            f"--- ΔΙΑΧΩΡΙΣΜΟΣ ΑΠΑΝΤΗΣΗΣ ΣΕ 2 ΚΟΥΤΙΑ (ΚΡΙΣΙΜΟ) ---\n"
+            f"ΠΡΕΠΕΙ να μοιράσεις το κείμενο σε 2 μέρη για να εμφανιστεί σωστά στην οθόνη του χρήστη:\n"
+            f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή:\n"
+            f"{{\n"
+            f"  \"apantisi_chat\": \"ΚΟΥΤΙ 1: Εδώ θα μπει η φιλική συζήτηση (Χαιρετισμός, ανάλυση καιρού/εδάφους και γενικές εξηγήσεις). (ΧΩΡΙΣ ΔΙΠΛΑ ΕΙΣΑΓΩΓΙΚΑ)\",\n"
+            f"  \"keimeno_syntaghs\": \"ΚΟΥΤΙ 2: Εδώ θα μπει ΑΥΣΤΗΡΑ ΜΟΝΟ η λίστα με τις πρακτικές εργασίες (π.χ. 1. Ψεκασμός με...). ΜΗΝ βάλεις χαιρετισμούς ή αναλύσεις εδώ! (ΧΩΡΙΣ ΔΙΠΛΑ ΕΙΣΑΓΩΓΙΚΑ)\",\n"
+            f"  \"ergasies\": [\n"
+            f"    {{\"eidos\": \"Ψεκασμός/Λίπανση...\", \"farmaka\": \"...\"}}\n"
+            f"  ]\n"
+            f"}}\n"
             f"Μην γράψεις markdown κώδικα (όπως ```json), επέστρεψε απευθείας το καθαρό JSON object."
         )
         
@@ -510,14 +517,22 @@ def paragogi_syntaghs(ktima_id):
         if start_idx != -1 and end_idx != -1:
             json_text = json_text[start_idx:end_idx+1]
             
-        data = json.loads(json_text, strict=False)
+        try:
+            data = json.loads(json_text, strict=False)
+        except json.JSONDecodeError as je:
+            print(f"JSON Parse Error: {je}\nRaw: {json_text}")
+            return jsonify({'error': 'Το AI χρησιμοποίησε μη επιτρεπτούς χαρακτήρες. Παρακαλώ πατήστε ξανά "Έκδοση Νέας Συνταγής"!'}), 500
         
+        apantisi_chat = data.get('apantisi_chat', 'Γεια σας! Έχω αναλύσει τα δεδομένα και σας ετοίμασα το παρακάτω πρόγραμμα.')
         keimeno = data.get('keimeno_syntaghs', 'Προτεινόμενη Συνταγή από το AI')
+        
+        chat_arr = [{"role": "model", "content": apantisi_chat}]
         
         # 1. Αποθήκευση της Συνταγής
         nea_syntagh = Syntagh(
             ktima_id=ktima.id, 
             keimeno=keimeno, 
+            chat_history=json.dumps(chat_arr, ensure_ascii=False),
             proelevsi='AI Γεωπόνος' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
             geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
         )
@@ -528,6 +543,7 @@ def paragogi_syntaghs(ktima_id):
         # αντί να τις αποθηκεύσουμε κατευθείαν, ώστε να μην διαγράψουμε τυχόν χειροκίνητες εργασίες.
         return jsonify({
             'success': True, 
+            'apantisi_chat': apantisi_chat,
             'syntagh': keimeno, 
             'syntagh_id': nea_syntagh.id,
             'ergasies': data.get('ergasies', [])
@@ -550,22 +566,51 @@ def refine_syntagh(ktima_id):
     req_data = request.get_json()
     previous_recipe = req_data.get('previous_recipe', '')
     user_reply = req_data.get('user_reply', '')
+    secret_brands = req_data.get('secret_brands', False)
+    syntagh_id_apo_js = req_data.get('syntagh_id')
+    
+    old_syntagh = vasi.session.get(Syntagh, int(syntagh_id_apo_js)) if syntagh_id_apo_js else None
+    try:
+        # Άδειασμα μνήμης συζήτησης αν έχουν περάσει 24 ώρες
+        if old_syntagh and (datetime.now() - old_syntagh.imerominia).total_seconds() > 86400:
+            history = []
+            old_syntagh.chat_history = '[]'
+            vasi.session.commit()
+        else:
+            history = json.loads(old_syntagh.chat_history) if old_syntagh and old_syntagh.chat_history else []
+    except:
+        history = []
 
     try:
         from logic import xtise_plires_context
         dedomena = xtise_plires_context(ktima)
             
+        secret_prompt = ""
+        if secret_brands:
+            secret_prompt = f"ΜΥΣΤΙΚΗ ΛΕΙΤΟΥΡΓΙΑ ΕΜΠΟΡΙΚΩΝ ΣΚΕΥΑΣΜΑΤΩΝ (ΚΡΙΣΙΜΟ): Ψάξε στο διαδίκτυο και πρότεινε ΣΥΓΚΕΚΡΙΜΕΝΕΣ ΥΠΑΡΚΤΕΣ ΜΑΡΚΕΣ της αγοράς (brands) για τα φάρμακα/λιπάσματα που θα προτείνεις. Αν είναι βιολογική, πρότεινε εγκεκριμένα βιολογικά προϊόντα. Βάλε τα εμπορικά ονόματα ΞΕΚΑΘΑΡΑ στο κείμενο και στο πεδίο 'farmaka' της κάθε εργασίας. "
+            
         prompt = (
             f"Είσαι Κορυφαίος Επαγγελματίας Γεωπόνος & Ερευνητής. Μελέτησε σχολαστικά τα δεδομένα του κτήματος:\n{dedomena}\n\n"
             f"--- ΠΡΟΗΓΟΥΜΕΝΗ ΣΥΝΤΑΓΗ ΣΟΥ ---\n{previous_recipe}\n\n"
-            f"--- ΣΧΟΛΙΟ / ΔΙΕΥΚΡΙΝΙΣΗ ΑΓΡΟΤΗ ---\n{user_reply}\n\n"
-            f"ΟΔΗΓΙΑ: Αναπροσάρμοσε την προηγούμενη συνταγή σου με βάση το σχόλιο του αγρότη. Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ, τον ΑΡΙΘΜΟ και την ΗΛΙΚΙΑ των δέντρων, καθώς και τα ΠΕΡΣΙΝΑ ΠΡΟΒΛΗΜΑΤΑ (π.χ. δάκο) για να αυξομειώσεις τις δόσεις. Αναζήτησε στο ίντερνετ την ιδανική δοσολογία φαρμάκου και όγκου νερού ΕΙΔΙΚΑ για την ηλικία των δέντρων. ΑΝ ΕΙΝΑΙ ΑΝΟΙΞΗ, απαγορεύεται ΑΥΣΤΗΡΑ να προτείνεις βορδιγάλειο πολτό. Πρότεινε μόνο ήπιους χαλκούς ή μυκητοκτόνα. ΕΤΟΙΜΑ ΣΥΝΔΥΑΣΤΙΚΑ ΣΚΕΥΑΣΜΑΤΑ & TANK MIX: Ψάξε στο διαδίκτυο αν οι πολλαπλές ελλείψεις (π.χ. ιχνοστοιχεία) καλύπτονται από ΕΝΑ έτοιμο, εμπορικό πολυδύναμο σκεύασμα της αγοράς και πρότεινέ το στο κείμενο ('θα τα βρείτε όλα μαζί σε ένα έτοιμο σκεύασμα εμπορίου'). Αν απαιτούνται ξεχωριστά προϊόντα, συγχώνευσέ τα σε 1 εργασία (tank mix) ΜΟΝΟ εφόσον είναι συμβατά (π.χ. Κάλιο + Αμινοξέα), αλλιώς σπάσε τα σε διαφορετικές ημερομηνίες με το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]'. Αν η συνταγή περιλαμβάνει μίγμα, ΕΞΗΓΗΣΕ τη σωστή σειρά ανάμειξης. Φρόντισε κάθε νέα εργασία να έχει ξεκάθαρο χρονικό περιθώριο. ΜΗΝ ρωτάς για τον καιρό ή για προβλέψεις.\n"
+            f"--- ΣΧΟΛΙΟ / ΕΡΩΤΗΣΗ ΑΓΡΟΤΗ ---\n{user_reply}\n\n"
+            f"--- ΟΔΗΓΙΑ (ΑΥΣΤΗΡΟΣ ΔΙΑΧΩΡΙΣΜΟΣ CHAT & ΣΥΝΤΑΓΗΣ) ---\n"
+            f"Στην οθόνη υπάρχουν 2 ξεχωριστά 'Κουτιά': Ένα για το Chat (συζήτηση) και ένα για τη Συνταγή (το επίσημο πρόγραμμα).\n"
+            f"ΠΡΕΠΕΙ ΝΑ ΤΑ ΔΙΑΧΩΡΙΣΕΙΣ ΣΩΣΤΑ (ΣΗΜΑΝΤΙΚΟ: Απαγορεύεται να γράψεις διπλά εισαγωγικά \" μέσα στα κείμενα):\n"
+            f"1. Πεδίο 'apantisi_chat': ΕΔΩ ΘΑ ΓΡΑΦΕΙΣ ΠΑΝΤΑ! Γράψε τη φιλική σου απάντηση, λύσε την απορία του. ΑΝ Ο ΧΡΗΣΤΗΣ ΓΡΑΦΕΙ ΑΣΧΕΤΑ ΠΡΑΓΜΑΤΑ ή σε τεστάρει, απάντησέ του φιλικά. Αν γράψει κάτι εντελώς ακατανόητο, γράψε 'Συγγνώμη, δεν σας κατάλαβα.'.\n"
+            f"2. Πεδίο 'keimeno_syntaghs': ΕΔΩ ΜΠΑΙΝΕΙ ΜΟΝΟ ΤΟ ΚΑΘΑΡΟ ΠΡΟΓΡΑΜΜΑ (Δοσολογίες/Φάρμακα).\n"
+            f"   - ΚΡΙΣΙΜΟΣ ΚΑΝΟΝΑΣ: ΑΝ Ο ΧΡΗΣΤΗΣ ΑΠΛΩΣ ΣΕ ΡΩΤΑΕΙ ΚΑΤΙ (π.χ. 'Τι είναι το Βόριο;', 'Είσαι εδώ;'), ΑΠΑΓΟΡΕΥΕΤΑΙ ΝΑ ΑΛΛΑΞΕΙΣ ΤΗ ΣΥΝΤΑΓΗ! Βάλε την τιμή false (χωρίς εισαγωγικά) στο \"allakse_h_suntagh\" και άσε το \"keimeno_syntaghs\" κενό.\n"
+            f"   - Θα θέσεις την τιμή true στο \"allakse_h_suntagh\" ΜΟΝΟ ΑΝ ΣΟΥ ΖΗΤΗΣΕΙ ΞΕΚΑΘΑΡΑ ΝΑ ΑΛΛΑΞΕΙΣ ΤΙΣ ΕΡΓΑΣΙΕΣ Ή ΤΙΣ ΔΟΣΟΛΟΓΙΕΣ.\n\n"
+            f"ΕΙΔΙΚΟΙ ΚΑΝΟΝΕΣ: Είσαι στο διαδίκτυο. Ψάξε ΠΡΩΤΑ στο ίντερνετ. {secret_prompt}Λάβε υπόψη τις ΠΟΙΚΙΛΙΕΣ και την ΗΛΙΚΙΑ. ΑΝ ΕΙΝΑΙ ΑΝΟΙΞΗ, απαγορεύεται ο βορδιγάλειος πολτός. ΕΤΟΙΜΑ ΣΥΝΔΥΑΣΤΙΚΑ: Ψάξε στο διαδίκτυο αν οι ελλείψεις καλύπτονται από ΕΝΑ πολυδύναμο εμπορικό σκεύασμα και πρότεινέ το. Συγχώνευσε σε 1 εργασία (tank mix) ΜΟΝΟ όσα είναι συμβατά. ΒΙΟΛΟΓΙΚΗ ΓΕΩΡΓΙΑ: Απαγορεύονται τα χημικά.\n"
             f"ΒΙΟΛΟΓΙΚΗ ΓΕΩΡΓΙΑ: Αν στο προφίλ αναφέρεται 'Βιολογική', ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ η χρήση χημικών ζιζανιοκτόνων ή φαρμάκων.\n"
             f"ΟΙΚΟΝΟΜΙΚΗ & ΧΡΟΝΙΚΗ ΚΑΤΑΝΟΜΗ: Σπάσε τις εργασίες χρονικά για να μην επιβαρυνθεί οικονομικά μονομιάς ο παραγωγός. Βάλε άμεσα ΜΟΝΟ τα επείγοντα για τη σεζόν και προγραμμάτισε τα υπόλοιπα για αργότερα με το tag '[ΧΡΟΝΟΜΕΤΡΟ:YYYY-MM-DD]' μέσα στο 'farmaka'.\n"
             f"ΑΠΟΛΥΤΗ ΕΠΙΣΤΗΜΟΝΙΚΗ ΟΡΘΟΤΗΤΑ (ΚΡΙΣΙΜΟ): ΠΡΙΝ απαντήσεις, ΕΙΣΑΙ ΥΠΟΧΡΕΩΜΕΝΟΣ να ψάξεις στο internet για να επιβεβαιώσεις 100% τις δοσολογίες και τα φάρμακα. Απαγορεύεται αυστηρά να κάνεις λάθος που μπορεί να προκαλέσει ζημιά στην καλλιέργεια.\n"
-            f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή: "
-            f"{{\"keimeno_syntaghs\": \"Εδώ γράψε τη νέα, αναθεωρημένη συνταγή απαντώντας και στο σχόλιο του αγρότη.\", "
-            f"\"ergasies\": [{{\"eidos\": \"Ψεκασμός ή Λίπανση ή Κλάδεμα ή Άρδευση\", \"farmaka\": \"Ονόματα φαρμάκων/ενεργειών\"}}]}} "
+            f"Επίστρεψε ΑΥΣΤΗΡΑ ΚΑΙ ΜΟΝΟ ένα έγκυρο JSON με αυτή την ακριβή δομή:\n"
+            f"{{\n"
+            f"  \"apantisi_chat\": \"Η φιλική απάντηση-συζήτηση (ΧΩΡΙΣ ΔΙΠΛΑ ΕΙΣΑΓΩΓΙΚΑ).\",\n"
+            f"  \"allakse_h_suntagh\": false,\n"
+            f"  \"keimeno_syntaghs\": \"Το καθαρό νέο πρόγραμμα (ΜΟΝΟ αν allakse_h_suntagh=true). (ΧΩΡΙΣ ΔΙΠΛΑ ΕΙΣΑΓΩΓΙΚΑ)\",\n"
+            f"  \"ergasies\": []\n"
+            f"}}\n"
             f"Μην γράψεις markdown κώδικα, επέστρεψε απευθείας το καθαρό JSON object."
         )
         
@@ -584,35 +629,61 @@ def refine_syntagh(ktima_id):
         if start_idx != -1 and end_idx != -1:
             json_text = json_text[start_idx:end_idx+1]
             
-        data = json.loads(json_text, strict=False)
+        try:
+            data = json.loads(json_text, strict=False)
+        except json.JSONDecodeError as je:
+            print(f"JSON Parse Error (refine): {je}\nRaw: {json_text}")
+            return jsonify({'error': 'Το AI μπερδεύτηκε με τη σύνταξη του κειμένου. Μπορείτε να διατυπώσετε διαφορετικά το σχόλιό σας;'}), 500
+            
+        apantisi_chat = data.get('apantisi_chat', 'Συγγνώμη, δεν σας κατάλαβα.')
+        allakse_raw = data.get('allakse_h_suntagh', False)
+        allakse = True if str(allakse_raw).lower() == 'true' or allakse_raw is True else False
+        keimeno = data.get('keimeno_syntaghs', '')
         
-        keimeno = data.get('keimeno_syntaghs', 'Αναθεωρημένη Συνταγή από το AI')
+        history.append({"role": "user", "content": user_reply})
+        history.append({"role": "model", "content": apantisi_chat})
         
-        # Φιλτράρισμα διπλότυπων εργασιών
-        raw_ergasies = data.get('ergasies', [])
-        unique_ergasies = []
-        seen = set()
-        for erg in raw_ergasies:
-            ident = (str(erg.get('eidos', '')).strip(), str(erg.get('farmaka', '')).strip())
-            if ident not in seen:
-                seen.add(ident)
-                unique_ergasies.append(erg)
+        if allakse and keimeno:
+            raw_ergasies = data.get('ergasies', [])
+            unique_ergasies = []
+            seen = set()
+            for erg in raw_ergasies:
+                ident = (str(erg.get('eidos', '')).strip(), str(erg.get('farmaka', '')).strip())
+                if ident not in seen:
+                    seen.add(ident)
+                    unique_ergasies.append(erg)
 
-        nea_syntagh = Syntagh(
-            ktima_id=ktima.id, 
-            keimeno=keimeno, 
-            proelevsi='AI Γεωπόνος (Αναθεωρημένη)' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
-            geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
-        )
-        vasi.session.add(nea_syntagh)
+            if old_syntagh:
+                old_syntagh.keimeno = keimeno
+                old_syntagh.chat_history = json.dumps(history, ensure_ascii=False)
+                old_syntagh.imerominia = datetime.now()
+                vasi.session.commit()
+                teliko_syntagh_id = old_syntagh.id
+            else:
+                nea_syntagh = Syntagh(
+                    ktima_id=ktima.id, 
+                    keimeno=keimeno, 
+                    chat_history=json.dumps(history, ensure_ascii=False),
+                    proelevsi='AI Γεωπόνος (Αναθεωρημένη)' if getattr(current_user, 'rolos', 'agroths') != 'geoponos' else 'Γεωπόνος',
+                    geoponos_id=current_user.id if getattr(current_user, 'rolos', '') == 'geoponos' else None
+                )
+                vasi.session.add(nea_syntagh)
+                vasi.session.commit()
+                teliko_syntagh_id = nea_syntagh.id
+        else:
+            if old_syntagh:
+                old_syntagh.chat_history = json.dumps(history, ensure_ascii=False)
+                vasi.session.commit()
+            teliko_syntagh_id = syntagh_id_apo_js
+            keimeno = previous_recipe
+            unique_ergasies = []
         
-        vasi.session.commit()
-        
-        # Επιστρέφουμε τις εργασίες στο frontend για να ζητήσουμε επιβεβαίωση
         return jsonify({
             'success': True, 
+            'apantisi_chat': apantisi_chat,
+            'allakse': allakse,
             'syntagh': keimeno, 
-            'syntagh_id': nea_syntagh.id,
+            'syntagh_id': teliko_syntagh_id,
             'ergasies': unique_ergasies
         })
 

@@ -414,6 +414,20 @@
         tasks.forEach(task => { if (proelevsi === 'Όλα') { task.style.display = 'block'; } else { if (task.getAttribute('data-proelevsi') === proelevsi) { task.style.display = 'block'; } else { task.style.display = 'none'; } } });
     }
 
+    window.checkSecretMode = function() {
+        const secretTime = sessionStorage.getItem('secretBrandModeTime');
+        if (secretTime && (Date.now() - parseInt(secretTime)) < 10 * 60 * 1000) { // 10 λεπτά (σε χιλιοστά του δευτερολέπτου)
+            return true;
+        }
+        return false;
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.checkSecretMode()) {
+            document.querySelectorAll('.secret-skroutz-btn').forEach(el => el.classList.remove('d-none'));
+        }
+    });
+
     window.secretTapCount = 0;
     window.secretTapTimer = null;
     window.unlockSecretBrands = function() {
@@ -421,9 +435,10 @@
         clearTimeout(window.secretTapTimer);
         window.secretTapTimer = setTimeout(() => { window.secretTapCount = 0; }, 1500);
         if (window.secretTapCount >= 5) {
-            sessionStorage.setItem('secretBrandMode', 'true');
-            alert("🔓 Μυστική Λειτουργία Ενεργοποιήθηκε!\n\nΟ AI Γεωπόνος πλέον θα ψάχνει στο ίντερνετ και θα σας προτείνει ΣΥΓΚΕΚΡΙΜΕΝΕΣ ΜΑΡΚΕΣ εμπορικών σκευασμάτων (προσαρμοσμένες σε βιολογική ή συμβατική καλλιέργεια)!");
+            sessionStorage.setItem('secretBrandModeTime', Date.now().toString());
+            alert("🔓 Μυστική Λειτουργία Ενεργοποιήθηκε (για 10 λεπτά)!\n\nΟ AI Γεωπόνος πλέον θα σας προτείνει ΣΥΓΚΕΚΡΙΜΕΝΕΣ ΜΑΡΚΕΣ εμπορικών σκευασμάτων.\nΕπίσης, εμφανίστηκαν τα κουμπιά αναζήτησης στο Skroutz!");
             window.secretTapCount = 0;
+            document.querySelectorAll('.secret-skroutz-btn').forEach(el => el.classList.remove('d-none'));
         }
     };
 
@@ -431,7 +446,7 @@
         const ktimaName = btn.getAttribute('data-ktima-name') || 'Άγνωστο Κτήμα'; const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Παραγωγή Συνταγής...'; btn.disabled = true;
         
-        const isSecretMode = sessionStorage.getItem('secretBrandMode') === 'true';
+        const isSecretMode = window.checkSecretMode();
         
         fetch('/paragogi_syntaghs/' + ktimaId, { 
             method: 'POST',
@@ -441,7 +456,8 @@
             btn.innerHTML = originalText; btn.disabled = false;
             if (data.error) { alert('Σφάλμα: ' + data.error); } else if (data.success) {
                 const containers = document.querySelectorAll('#syntagesContainer' + ktimaId); const now = new Date(); const dateString = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-                const newCard = `<div class="card border-success mb-2 shadow-sm"><div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center"><span><i class="fas fa-robot"></i> Νέα Συνταγή</span><div><span class="me-2">${dateString}</span><button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="${ktimaName}" data-date="${dateString}" data-proelevsi="Νέα Συνταγή" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button></div></div><div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div><div class="card-footer bg-light p-1 border-top-0" style="animation: pulse 1s 1;"><div class="input-group input-group-sm"><input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI..." id="replyInput${data.syntagh_id}"><button class="btn btn-success" type="button" data-ktima-name="${ktimaName}" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)"><i class="fas fa-paper-plane"></i></button></div></div></div>`;
+                const skroutzClass = isSecretMode ? 'secret-skroutz-btn' : 'secret-skroutz-btn d-none';
+                const newCard = `<div class="card border-success mb-2 shadow-sm"><div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center"><span><i class="fas fa-robot"></i> Νέα Συνταγή</span><div><span class="me-2">${dateString}</span><button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="${ktimaName}" data-date="${dateString}" data-proelevsi="Νέα Συνταγή" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button></div></div><div class="card-body p-3 syntagh-content bg-white" style="white-space: pre-wrap; font-size: 0.95em; border-bottom: 2px dashed #28a745;"><strong class="text-success mb-2 d-block"><i class="fas fa-clipboard-check"></i> Επίσημο Πρόγραμμα Εργασιών:</strong>${data.syntagh}</div><div class="card-body p-3 bg-light" id="syntaghChatHistory${data.syntagh_id}" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column;"><div class="p-2 mb-2 bg-white text-dark border-success border shadow-sm w-85 align-self-start small mt-2" style="border-radius: 18px 18px 18px 0px;"><strong><i class="fas fa-robot text-success"></i> Γεωπόνος:</strong><br>${data.apantisi_chat}</div></div><div class="card-footer bg-light p-1 border-top-0" style="animation: pulse 1s 1;"><div class="input-group input-group-sm"><input type="text" class="form-control border-success" placeholder="Έχετε απορία; Ρωτήστε τον Γεωπόνο..." id="replyInput${data.syntagh_id}" onkeydown="if(event.key === 'Enter') { document.getElementById('btnReply${data.syntagh_id}').click(); }"><button class="btn ${skroutzClass}" style="background-color: #ff5e00; color: white; border-color: #ff5e00;" type="button" title="Αναζήτηση φαρμάκου στο Skroutz" onclick="let val = document.getElementById('replyInput${data.syntagh_id}').value.trim(); if(val) { window.open('https://www.skroutz.gr/search?keyphrase=' + encodeURIComponent(val), '_blank'); document.getElementById('replyInput${data.syntagh_id}').value=''; } else { alert('Γράψτε το όνομα του φαρμάκου/λιπάσματος για να το ψάξετε στο Skroutz!'); }"><i class="fas fa-shopping-cart"></i></button><button class="btn btn-success" type="button" id="btnReply${data.syntagh_id}" data-ktima-name="${ktimaName}" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)"><i class="fas fa-paper-plane"></i></button></div></div></div>`;
                 containers.forEach(container => { container.innerHTML = newCard; }); if (window.highlightTimers) window.highlightTimers();
                 
                 setTimeout(() => {
@@ -463,32 +479,42 @@
     window.refineSyntagh = function(ktimaId, syntaghId, btn) {
         const ktimaName = btn.getAttribute('data-ktima-name') || 'Άγνωστο Κτήμα'; const inputEl = document.getElementById('replyInput' + syntaghId); const userReply = inputEl.value.trim(); if (!userReply) return;
         const card = btn.closest('.card'); const prevText = card.querySelector('.syntagh-content').innerText; const originalHtml = btn.innerHTML;
+        
+        let chatHistoryDiv = document.getElementById('syntaghChatHistory' + syntaghId);
+        if (chatHistoryDiv) {
+            chatHistoryDiv.style.display = 'flex';
+            chatHistoryDiv.innerHTML += `<div class="p-2 mb-2 bg-primary text-white shadow-sm w-85 align-self-end ms-auto small" style="border-radius: 18px 18px 0px 18px;">${userReply}</div>`;
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+        }
+        
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; inputEl.disabled = true;
         
-        const isSecretMode = sessionStorage.getItem('secretBrandMode') === 'true';
+        const isSecretMode = window.checkSecretMode();
         
         fetch('/refine_syntagh/' + ktimaId, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ previous_recipe: prevText, user_reply: userReply, secret_brands: isSecretMode }) 
+            body: JSON.stringify({ previous_recipe: prevText, user_reply: userReply, secret_brands: isSecretMode, syntagh_id: syntaghId }) 
         }).then(res => res.json()).then(data => {
             btn.innerHTML = originalHtml; btn.disabled = false; inputEl.disabled = false; inputEl.value = '';
             if (data.error) { alert('Σφάλμα: ' + data.error); } else if (data.success) {
-                const containers = document.querySelectorAll('#syntagesContainer' + ktimaId); const now = new Date(); const dateString = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-                const newCard = `<div class="card border-success mb-2 shadow-sm" style="animation: pulse 1s 1;"><div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center"><span><i class="fas fa-robot"></i> AI Γεωπόνος (Αναθεωρημένη)</span><div><span class="me-2">${dateString}</span><button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="${ktimaName}" data-date="${dateString}" data-proelevsi="AI Γεωπόνος (Αναθεωρημένη)" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button></div></div><div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">${data.syntagh}</div><div class="card-footer bg-light p-1 border-top-0"><div class="input-group input-group-sm"><input type="text" class="form-control border-success" placeholder="Διευκρίνιση στο AI..." id="replyInput${data.syntagh_id}"><button class="btn btn-success" type="button" data-ktima-name="${ktimaName}" onclick="refineSyntagh('${ktimaId}', '${data.syntagh_id}', this)"><i class="fas fa-paper-plane"></i></button></div></div></div>`;
-                containers.forEach(container => { container.innerHTML = newCard; }); if (window.highlightTimers) window.highlightTimers();
+                if (data.apantisi_chat && chatHistoryDiv) {
+                    chatHistoryDiv.innerHTML += `<div class="p-2 mb-2 bg-white text-dark border-success border shadow-sm w-85 align-self-start small mt-2" style="border-radius: 18px 18px 18px 0px;"><strong><i class="fas fa-robot text-success"></i> Γεωπόνος:</strong><br>${data.apantisi_chat}</div>`;
+                    chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+                }
                 
-                setTimeout(() => {
-                    const syntagesHeader = document.querySelector('#collapseSyntagesFarmer' + ktimaId);
-                    if (syntagesHeader) {
-                        const modalBody = syntagesHeader.closest('.modal-body');
-                        const targetPos = syntagesHeader.previousElementSibling.offsetTop;
-                        if (modalBody) { modalBody.scrollTo({ top: targetPos - 10, behavior: 'smooth' }); }
+                if (data.allakse) {
+                    const contentDiv = card.querySelector('.syntagh-content');
+                    contentDiv.innerHTML = '<strong class="text-success mb-2 d-block"><i class="fas fa-clipboard-check"></i> Επίσημο Πρόγραμμα Εργασιών:</strong>';
+                    contentDiv.appendChild(document.createTextNode(data.syntagh));
+                    const dateSpan = card.querySelector('.card-header span.me-2');
+                    if (dateSpan) {
+                        const now = new Date(); 
+                        dateSpan.innerText = now.toLocaleDateString('el-GR') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
                     }
-                }, 100);
-                
-                if (data.ergasies && data.ergasies.length > 0) {
-                    setTimeout(() => { window.confirmAIErgasies(ktimaId, data.ergasies); }, 500);
+                    if (data.ergasies && data.ergasies.length > 0) {
+                        setTimeout(() => { window.confirmAIErgasies(ktimaId, data.ergasies); }, 800);
+                    }
                 }
             }
         }).catch(err => { btn.innerHTML = originalHtml; btn.disabled = false; inputEl.disabled = false; alert('Σφάλμα επικοινωνίας. Παρακαλώ προσπαθήστε ξανά.'); });
