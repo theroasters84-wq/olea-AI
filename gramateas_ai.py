@@ -230,7 +230,7 @@ def ai_secretary():
             return jsonify({'success': True, 'reply': '⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία ή το κείμενο. Μπορείτε να ανεβάσετε μια πιο καθαρή λήψη;', 'action': 'ADVICE'})
             
         json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
-        data = json.loads(json_text)
+        data = json.loads(json_text, strict=False)
         
         action = data.get('action', 'ADVICE')
         reply_text = data.get('reply', 'Δεν κατάλαβα ακριβώς τι ζητάς.')

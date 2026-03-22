@@ -303,6 +303,9 @@ def xtise_plires_context(ktima):
     if ktima.analuseis_edafous:
         last_an = sorted(ktima.analuseis_edafous, key=lambda x: x.imerominia)[-1]
         analysi_str = f"Υπάρχει (Τελευταία: {last_an.imerominia.strftime('%d/%m/%Y')} - N:{last_an.azwto}, P:{last_an.fwsforos}, K:{last_an.kalio}, pH:{last_an.ph})"
+        if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None':
+            clean_dedomena = ktima.analysi_dedomena.replace('\n', ' ')
+            analysi_str += f" | Αναλυτικά Συμπεράσματα Εργαστηρίου: {clean_dedomena}"
 
     kalliergeia_str = getattr(ktima, 'kalliergeia_typos', 'Συμβατική')
     if kalliergeia_str == 'Βιολογική':
@@ -468,11 +471,11 @@ def evaluate_overdue_tasks(ktima):
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
         
         if response and getattr(response, 'text', None):
-            json_text = response.text.strip()
+            json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
             start_idx = json_text.find('{')
             end_idx = json_text.rfind('}')
             if start_idx != -1 and end_idx != -1:
-                data = json.loads(json_text[start_idx:end_idx+1])
+                data = json.loads(json_text[start_idx:end_idx+1], strict=False)
                 for item in data.get('results', []):
                     task = next((t for t in overdue_tasks if t.id == item.get('id')), None)
                     if task:

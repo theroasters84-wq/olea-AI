@@ -154,13 +154,13 @@ def analysi_egrafou(ktima_id):
         
         if ext_response:
             try:
-                json_text = ext_response.text.strip()
+                json_text = ext_response.text.strip().replace('```json', '').replace('```', '').strip()
                 start_idx = json_text.find('{')
                 end_idx = json_text.rfind('}')
                 if start_idx != -1 and end_idx != -1:
                     json_text = json_text[start_idx:end_idx+1]
                 
-                data = json.loads(json_text)
+                data = json.loads(json_text, strict=False)
                 
                 if data.get('provlima'):
                     return jsonify({'success': False, 'message': data.get('provlima')})
@@ -502,7 +502,7 @@ def paragogi_syntaghs(ktima_id):
             return jsonify({'error': 'Το AI δεν επέστρεψε δεδομένα. Δοκιμάστε ξανά.'}), 500
 
         # Καθαρισμός του JSON
-        json_text = response.text.strip()
+        json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
         
         # Απομόνωση του JSON block σε περίπτωση που το AI προσθέσει τυχαίο κείμενο
         start_idx = json_text.find('{')
@@ -510,7 +510,7 @@ def paragogi_syntaghs(ktima_id):
         if start_idx != -1 and end_idx != -1:
             json_text = json_text[start_idx:end_idx+1]
             
-        data = json.loads(json_text)
+        data = json.loads(json_text, strict=False)
         
         keimeno = data.get('keimeno_syntaghs', 'Προτεινόμενη Συνταγή από το AI')
         
@@ -577,14 +577,14 @@ def refine_syntagh(ktima_id):
         if not response or not getattr(response, 'text', None):
             return jsonify({'error': 'Το AI δεν επέστρεψε δεδομένα.'}), 500
             
-        json_text = response.text.strip()
+        json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
         
         start_idx = json_text.find('{')
         end_idx = json_text.rfind('}')
         if start_idx != -1 and end_idx != -1:
             json_text = json_text[start_idx:end_idx+1]
             
-        data = json.loads(json_text)
+        data = json.loads(json_text, strict=False)
         
         keimeno = data.get('keimeno_syntaghs', 'Αναθεωρημένη Συνταγή από το AI')
         
@@ -706,13 +706,13 @@ def xeirokiniti_syntagh(ktima_id):
             if not response or not getattr(response, 'text', None):
                 return jsonify({'success': True}) # Προστασία να μην σκάσει η διαδικασία
                 
-            json_text = response.text.strip()
+            json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
             start_idx = json_text.find('{')
             end_idx = json_text.rfind('}')
             if start_idx != -1 and end_idx != -1:
                 json_text = json_text[start_idx:end_idx+1]
                 
-            ai_data = json.loads(json_text)
+            ai_data = json.loads(json_text, strict=False)
             
             # Διαγραφή ΟΛΩΝ των παλιών εκκρεμών εργασιών (για να μην υπάρχουν διπλότυπα με παλιές συνταγές)
             Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(
