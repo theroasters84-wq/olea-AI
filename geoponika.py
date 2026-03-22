@@ -130,6 +130,8 @@ def steile_email(paraliptis, thema, keimeno, raise_exception=False):
     
     if not sender_email or not sender_password:
         print("⚠️ Λείπουν τα στοιχεία email από το .env")
+        if raise_exception:
+            raise ValueError("Λείπουν τα στοιχεία EMAIL_ADDRESS ή EMAIL_PASSWORD από τα Environment Variables του server.")
         return False
 
     msg = MIMEText(keimeno, 'plain', 'utf-8')
