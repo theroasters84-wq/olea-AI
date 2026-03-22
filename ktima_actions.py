@@ -162,6 +162,11 @@ def toggle_kalliergeia(ktima_id):
         ktima.kalliergeia_typos = 'Βιολογική' if current_type == 'Συμβατική' else 'Συμβατική'
         ktima.ekkremis_erotisi_ai = None
         vasi.session.commit()
+        
+        # Επιστροφή JSON αν η κλήση έγινε μέσω AJAX (ώστε να μην ανοίξει web view στο PWA)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({'success': True, 'neos_typos': ktima.kalliergeia_typos})
+            
         flash(f'Ο τύπος καλλιέργειας άλλαξε σε: {ktima.kalliergeia_typos}', 'success')
     return redirect(request.referrer or url_for('core_app.arxikh'))
 

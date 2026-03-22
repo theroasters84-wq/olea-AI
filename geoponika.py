@@ -4,6 +4,7 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
 import time
+from google.genai import types
 
 # Βοηθητική συνάρτηση για τον καιρό
 def pare_kairo(lat, lng):
@@ -92,14 +93,15 @@ def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
         prompt = (
             f"Είσαι ένας ειδικός γεωπόνος. Λάβε υπόψη τα εξής δεδομένα:\n"
             f"{perigrafi}\n\n"
-            f"Δώσε μια στοχευμένη, σύντομη συμβουλή (2-3 προτάσεις) για τις άμεσες ενέργειες στο κτήμα."
+            f"Βασίσου σε σύγχρονες γεωπονικές μελέτες και βέλτιστες πρακτικές. Δώσε μια στοχευμένη, σύντομη επιστημονική συμβουλή (2-3 προτάσεις) για τις άμεσες ενέργειες στο κτήμα."
         )
         
+        config = types.GenerateContentConfig(tools=[{"google_search": {}}])
         # Simple Retry Logic for Rate Limiting
         for attempt in range(3):
             try:
                 print(f"🔄 Προσπάθεια AI {attempt+1}/3...")
-                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
                 
                 if response and response.text:
                     print("✅ Το AI απάντησε επιτυχώς!")
@@ -232,4 +234,31 @@ def pare_ypsometro(lat, lng):
                 return float(data['elevation'][0])
     except Exception as e:
         print(f"Σφάλμα λήψης υψομέτρου: {e}")
+    return None
+
+def pare_istoriko_kairou(lat, lng, past_days=5):
+    try:
+        # Χρήση του Open-Meteo για δωρεάν δεδομένα παρελθόντος (χωρίς API key)
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&past_days={past_days}&forecast_days=1&timezone=auto"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            daily = data.get('daily', {})
+            if daily and 'time' in daily:
+                history = []
+                # Εξαιρούμε τη σημερινή μέρα (κρατάμε μόνο το παρελθόν)
+                for i in range(len(daily['time']) - 1):
+                    date_str = daily['time'][i]
+                    rain = daily.get('precipitation_sum', [])[i]
+                    t_max = daily.get('temperature_2m_max', [])[i]
+                    t_min = daily.get('temperature_2m_min', [])[i]
+                    history.append({
+                        'date': date_str,
+                        'rain_mm': rain if rain is not None else 0,
+                        't_max': t_max if t_max is not None else "-",
+                        't_min': t_min if t_min is not None else "-"
+                    })
+                return history
+    except Exception as e:
+        print(f"Σφάλμα λήψης ιστορικού καιρού: {e}")
     return None

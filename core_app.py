@@ -111,6 +111,16 @@ def arxikh():
                 ktima.symvouli = None
                 ktima.protaseis = []
                 
+                # --- ΗΜΕΡΗΣΙΑ ΑΝΑΝΕΩΣΗ AI ---
+                # Διασφάλιση ότι η Άμεση Συμβουλή (AI) ανανεώνεται ΚΑΘΕ ΜΕΡΑ με βάση τα σημερινά δεδομένα
+                now_dt = datetime.now()
+                if not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date():
+                    try:
+                        from logic import syghronismos_ai_ktimatos
+                        syghronismos_ai_ktimatos(ktima)
+                    except Exception as e:
+                        print(f"Σφάλμα αυτόματης ημερήσιας ανανέωσης AI για το κτήμα '{ktima.onoma_ktimatos}': {e}")
+
                 ideal_tasks = generate_smart_tasks(ktima)
                 if isinstance(ideal_tasks, list):
                      ideal_tasks = [t.strip() for t in ideal_tasks if t.strip()]

@@ -220,11 +220,10 @@
                     </button>
 
                     <!-- Toggle Καλλιέργειας (Συμβατική / Βιολογική) -->
-                    <form action="{{ url_for('ktima_actions.toggle_kalliergeia', ktima_id=ktima.id) }}" method="POST" class="d-inline m-0 p-0">
-                        <button type="submit" class="badge border-0 {% if ktima.kalliergeia_typos == 'Βιολογική' %}bg-success{% else %}bg-primary{% endif %} shadow-sm" style="cursor: pointer;" title="Αλλαγή σε {% if ktima.kalliergeia_typos == 'Βιολογική' %}Συμβατική{% else %}Βιολογική{% endif %}">
-                            <i class="fas {% if ktima.kalliergeia_typos == 'Βιολογική' %}fa-leaf{% else %}fa-tractor{% endif %}"></i> {{ ktima.kalliergeia_typos|default('Συμβατική') }}
-                        </button>
-                    </form>
+                    <button type="button" onclick="toggleKalliergeia('{{ ktima.id }}', this)" class="badge border-0 {% if ktima.kalliergeia_typos == 'Βιολογική' %}bg-success{% else %}bg-primary{% endif %} shadow-sm" style="cursor: pointer;" title="Αλλαγή Τύπου Καλλιέργειας">
+                        <i class="fas {% if ktima.kalliergeia_typos == 'Βιολογική' %}fa-leaf{% else %}fa-tractor{% endif %}"></i> 
+                        <span class="text-label">{{ ktima.kalliergeia_typos|default('Συμβατική') }}</span>
+                    </button>
 
                     {% if ktima.ardefsi %}<span class="badge bg-info text-dark"><i class="fas fa-tint"></i> {{ ktima.ardefsi }}</span>{% endif %}
                     {% if ktima.klisi %}<span class="badge bg-warning text-dark"><i class="fas fa-mountain"></i> {{ ktima.klisi }}</span>{% endif %}
