@@ -329,7 +329,7 @@ def xtise_plires_context(ktima):
         f"Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
         f"Τοποθεσία (Lat, Lng): {ktima.geografiko_platos}, {ktima.geografiko_mikos} (ΟΔΗΓΙΑ: Αξιολόγησε τον χάρτη. Αν είναι παραθαλάσσιο με χαμηλό υψόμετρο, προειδοποίησε για κίνδυνο αλατονέφωσης/εγκαυμάτων από νοτιάδες αν ο καιρός είναι κακός.)\n"
         f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
-        f"Ηλικία: {ktima.ilikia_dentron}, Πυκνότητα: {ktima.puknotita_dentron}\n"
+        f"Ηλικία: {ktima.ilikia_dentron} (ΟΔΗΓΙΑ: Προσάρμοσε ΑΥΣΤΗΡΑ τις ποσότητες φαρμάκων, λιπασμάτων και νερού βάσει αυτής της ηλικίας! Αναζήτησε στο internet τις δοσολογίες. Τα νεαρά δέντρα απαιτούν μικρότερο ψεκαστικό υγρό και προσοχή στην τοξικότητα σε σχέση με τα γηραιά.), Πυκνότητα: {ktima.puknotita_dentron}\n"
         f"Έδαφος: {ktima.typos_edafous}, Κλίση: {klisi_str}\n"
         f"Ανάλυση Εδάφους: {analysi_str}\n"
         f"Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ardefsi_str}\n"
