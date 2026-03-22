@@ -429,16 +429,24 @@ def paragogi_syntaghs(ktima_id):
             f"Μην γράψεις markdown κώδικα (όπως ```json), επέστρεψε απευθείας το καθαρό JSON object."
         )
         
-        # Ενεργοποίηση Google Search (Ζωντανή Πρόσβαση στο Διαδίκτυο)
-        config = types.GenerateContentConfig(tools=[{"google_search": {}}])
+        # Ενεργοποίηση Google Search (Ζωντανή Πρόσβαση στο Διαδίκτυο) και FORCE JSON
+        config = types.GenerateContentConfig(
+            tools=[{"google_search": {}}],
+            response_mime_type="application/json"
+        )
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
         
+        if not response or not getattr(response, 'text', None):
+            return jsonify({'error': 'Το AI δεν επέστρεψε δεδομένα. Δοκιμάστε ξανά.'}), 500
+
         # Καθαρισμός του JSON
         json_text = response.text.strip()
-        if json_text.startswith('```json'): 
-            json_text = json_text[7:-3].strip()
-        elif json_text.startswith('```'): 
-            json_text = json_text[3:-3].strip()
+        
+        # Απομόνωση του JSON block σε περίπτωση που το AI προσθέσει τυχαίο κείμενο
+        start_idx = json_text.find('{')
+        end_idx = json_text.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            json_text = json_text[start_idx:end_idx+1]
             
         data = json.loads(json_text)
         
@@ -496,14 +504,21 @@ def refine_syntagh(ktima_id):
             f"Μην γράψεις markdown κώδικα, επέστρεψε απευθείας το καθαρό JSON object."
         )
         
-        config = types.GenerateContentConfig(tools=[{"google_search": {}}])
+        config = types.GenerateContentConfig(
+            tools=[{"google_search": {}}],
+            response_mime_type="application/json"
+        )
         response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
         
+        if not response or not getattr(response, 'text', None):
+            return jsonify({'error': 'Το AI δεν επέστρεψε δεδομένα.'}), 500
+            
         json_text = response.text.strip()
-        if json_text.startswith('```json'): 
-            json_text = json_text[7:-3].strip()
-        elif json_text.startswith('```'): 
-            json_text = json_text[3:-3].strip()
+        
+        start_idx = json_text.find('{')
+        end_idx = json_text.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            json_text = json_text[start_idx:end_idx+1]
             
         data = json.loads(json_text)
         
@@ -601,8 +616,18 @@ def xeirokiniti_syntagh(ktima_id):
                 f"Μην γράψεις markdown κώδικα, επέστρεψε απευθείας το καθαρό JSON object."
             )
             
-            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-            json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
+            config = types.GenerateContentConfig(response_mime_type="application/json")
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+            
+            if not response or not getattr(response, 'text', None):
+                return jsonify({'success': True}) # Προστασία να μην σκάσει η διαδικασία
+                
+            json_text = response.text.strip()
+            start_idx = json_text.find('{')
+            end_idx = json_text.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_text = json_text[start_idx:end_idx+1]
+                
             ai_data = json.loads(json_text)
             
             # Διαγραφή παλιών εκκρεμών εργασιών που είχε βγάλει ο Γεωπόνος

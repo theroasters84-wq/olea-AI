@@ -1,3 +1,11 @@
+<style>
+    [data-bs-toggle="collapse"] .transition-icon {
+        transition: transform 0.3s ease;
+    }
+    [data-bs-toggle="collapse"].collapsed .transition-icon {
+        transform: rotate(-90deg);
+    }
+</style>
 <div class="card ktima-responsive-card shadow border-0" {% if is_geoponos_view %}style="width: 100%; margin-bottom: 30px;"{% endif %}>
     <div class="card-body position-relative d-flex flex-column flex-grow-1 p-2" style="overflow: hidden;">
         {% if is_geoponos_view %}
@@ -109,15 +117,24 @@
                 </table>
             </div>
 
-            <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark"><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</h6>
-            <div class="bg-white p-2 border rounded small mb-4">
-                <strong>Συμπεράσματα Ανάλυσης:</strong><br>
-                {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+            <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseAnaluseis{{ ktima.id }}" aria-expanded="false">
+                <span><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</span>
+                <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+            </h6>
+            <div class="collapse" id="collapseAnaluseis{{ ktima.id }}">
+                <div class="bg-white p-2 border rounded small mb-4">
+                    <strong>Συμπεράσματα Ανάλυσης:</strong><br>
+                    {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                </div>
             </div>
 
             <!-- Χάρτης NDVI για Γεωπόνο -->
-            <h6 class="mt-3 text-success border-bottom border-success pb-1"><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI</h6>
-            <div class="ndvi-inline-container" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="ndviMapGeo{{ ktima.id }}" data-ktima-id="{{ ktima.id }}">
+            <h6 class="mt-3 text-success border-bottom border-success pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseNdvi{{ ktima.id }}" aria-expanded="false">
+                <span><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI</span>
+                <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+            </h6>
+            <div class="collapse" id="collapseNdvi{{ ktima.id }}">
+                <div class="ndvi-inline-container" data-lat="{{ ktima.geografiko_platos }}" data-lng="{{ ktima.geografiko_mikos }}" data-geojson='{{ ktima.polygon_geojson if ktima.polygon_geojson else "" }}' data-mapid="ndviMapGeo{{ ktima.id }}" data-ktima-id="{{ ktima.id }}">
                 <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
                     <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
                     <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
@@ -146,6 +163,7 @@
                     <div id="ndviRefinedResultndviMapGeo{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
                 </div>
             </div>
+            </div>
             
             <!-- ΠΑΝΕΛ ΓΕΩΠΟΝΟΥ ΓΙΑ ΧΕΙΡΟΚΙΝΗΤΗ ΣΥΝΤΑΓΗ -->
             <h6 class="mt-4 text-primary border-bottom border-primary pb-1"><i class="fas fa-edit"></i> Έκδοση Συνταγής Γεωπόνου</h6>
@@ -160,22 +178,27 @@
             </div>
             
             <!-- Εμφάνιση του Ιστορικού Συνταγών για τον Γεωπόνο -->
-            <h6 class="mt-3 text-secondary border-bottom border-secondary pb-1"><i class="fas fa-history"></i> Ιστορικό Εκδοθέντων Συνταγών</h6>
-            <div id="syntagesContainerGeoponos{{ ktima.id }}" style="max-height: 250px; overflow-y: auto;">
-                {% for syntagh in ktima.syntages|sort(attribute='imerominia', reverse=True) %}
-                    <div class="card border-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} mb-2 shadow-sm">
-                        <div class="card-header bg-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} text-white py-1 small d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-{{ 'user-md' if syntagh.proelevsi == 'Γεωπόνος' else 'robot' }}"></i> {{ syntagh.proelevsi }}</span>
-                            <div>
-                                <span class="me-2">{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
-                                <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }}"></i></button>
+            <h6 class="mt-3 text-secondary border-bottom border-secondary pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseSyntages{{ ktima.id }}" aria-expanded="false">
+                <span><i class="fas fa-history"></i> Ιστορικό Εκδοθέντων Συνταγών</span>
+                <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+            </h6>
+            <div class="collapse" id="collapseSyntages{{ ktima.id }}">
+                <div id="syntagesContainerGeoponos{{ ktima.id }}" style="max-height: 250px; overflow-y: auto;">
+                    {% for syntagh in ktima.syntages|sort(attribute='imerominia', reverse=True) %}
+                        <div class="card border-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} mb-2 shadow-sm">
+                            <div class="card-header bg-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} text-white py-1 small d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-{{ 'user-md' if syntagh.proelevsi == 'Γεωπόνος' else 'robot' }}"></i> {{ syntagh.proelevsi }}</span>
+                                <div>
+                                    <span class="me-2">{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
+                                    <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }}"></i></button>
+                                </div>
                             </div>
+                            <div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">{{ syntagh.keimeno }}</div>
                         </div>
-                        <div class="card-body p-2 syntagh-content" style="white-space: pre-wrap; font-size: 0.9em;">{{ syntagh.keimeno }}</div>
-                    </div>
-                {% else %}
-                    <p class="small text-muted fst-italic">Δεν υπάρχουν παλαιότερες συνταγές.</p>
-                {% endfor %}
+                    {% else %}
+                        <p class="small text-muted fst-italic">Δεν υπάρχουν παλαιότερες συνταγές.</p>
+                    {% endfor %}
+                </div>
             </div>
         {% else %}
             <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός) -->

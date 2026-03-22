@@ -153,9 +153,12 @@
                                 </div>
 
                                 <!-- Ιστορικό Εφαρμογών & Εργασιών -->
-                                <h6 class="mt-3 text-primary border-bottom border-primary pb-1"><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</h6>
-                                <div class="table-responsive mb-3" style="max-height: 200px; overflow-y: auto;">
-                                    <table class="table table-sm table-hover bg-white small border">
+                                <h6 class="mt-3 text-primary border-bottom border-primary pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseErgasiesFarmer{{ ktima.id }}" aria-expanded="false">
+                                    <span><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</span>
+                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+                                </h6>
+                                <div class="collapse" id="collapseErgasiesFarmer{{ ktima.id }}">
+                                    <div class="table-responsive mb-3" style="max-height: 200px; overflow-y: auto;">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Ημ/νία</th>
@@ -187,44 +190,59 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                </div>
 
                                 <!-- Ιστορικό Αναλύσεων -->
-                                <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark"><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</h6>
-                                <div class="bg-white p-2 border rounded small mb-4">
-                                    <strong>Συμπεράσματα Ανάλυσης:</strong><br>
-                                    {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                                <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseAnaluseisFarmer{{ ktima.id }}" aria-expanded="false">
+                                    <span><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</span>
+                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+                                </h6>
+                                <div class="collapse" id="collapseAnaluseisFarmer{{ ktima.id }}">
+                                    <div class="bg-white p-2 border rounded small mb-4">
+                                        <strong>Συμπεράσματα Ανάλυσης:</strong><br>
+                                        {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
+                                    </div>
                                 </div>
 
                                 <!-- Χάρτης NDVI για Αγρότη -->
-                                <h6 class="mt-3 text-success border-bottom border-success pb-1"><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI (Live)</h6>
-                                <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
-                                    <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
-                                    <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
-                                </div>
-                                <div id="ndviMapFarmer{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;"></div>
-                                <div id="layerControlsndviMapFarmer{{ ktima.id }}" class="d-none mt-2 mb-2 text-center"></div>
-                                <div class="text-center mt-3 mb-3">
-                                    <div class="btn-group">
-                                        <button id="btnAnalyzendviMapFarmer{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
-                                        <button id="btnRunAnalysisNowndviMapFarmer{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapFarmer{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
+                                <h6 class="mt-3 text-success border-bottom border-success pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseNdviFarmer{{ ktima.id }}" aria-expanded="false">
+                                    <span><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI (Live)</span>
+                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+                                </h6>
+                                <div class="collapse" id="collapseNdviFarmer{{ ktima.id }}">
+                                    <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
+                                        <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
+                                        <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
                                     </div>
-                                    <div id="ndviLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
-                                    <div id="ndviErrorndviMapFarmer{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
-                                </div>
-                                <div id="ndviResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
-                                <div id="ndviChatContainerndviMapFarmer{{ ktima.id }}" class="d-none mt-3 p-3 bg-light border border-primary rounded mb-4">
-                                    <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
-                                    <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
-                                    <div class="input-group">
-                                        <input type="text" id="ndviUserInputndviMapFarmer{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
-                                        <button class="btn btn-primary" id="btnNdviChatndviMapFarmer{{ ktima.id }}">Αποστολή</button>
+                                    <div id="ndviMapFarmer{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+                                    <div id="layerControlsndviMapFarmer{{ ktima.id }}" class="d-none mt-2 mb-2 text-center"></div>
+                                    <div class="text-center mt-3 mb-3">
+                                        <div class="btn-group">
+                                            <button id="btnAnalyzendviMapFarmer{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
+                                            <button id="btnRunAnalysisNowndviMapFarmer{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapFarmer{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
+                                        </div>
+                                        <div id="ndviLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
+                                        <div id="ndviErrorndviMapFarmer{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
                                     </div>
-                                    <div id="ndviChatLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
-                                    <div id="ndviRefinedResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
+                                    <div id="ndviResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                                    <div id="ndviChatContainerndviMapFarmer{{ ktima.id }}" class="d-none mt-3 p-3 bg-light border border-primary rounded mb-4">
+                                        <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
+                                        <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
+                                        <div class="input-group">
+                                            <input type="text" id="ndviUserInputndviMapFarmer{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
+                                            <button class="btn btn-primary" id="btnNdviChatndviMapFarmer{{ ktima.id }}">Αποστολή</button>
+                                        </div>
+                                        <div id="ndviChatLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
+                                        <div id="ndviRefinedResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
+                                    </div>
                                 </div>
 
-                                <h6 class="mt-4 text-success border-bottom border-success pb-1"><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</h6>
-                                <div id="syntagesContainer{{ ktima.id }}">
+                                <h6 class="mt-4 text-success border-bottom border-success pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseSyntagesFarmer{{ ktima.id }}" aria-expanded="false">
+                                    <span><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</span>
+                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
+                                </h6>
+                                <div class="collapse" id="collapseSyntagesFarmer{{ ktima.id }}">
+                                    <div id="syntagesContainer{{ ktima.id }}">
                                     {% set last_syntagh = ktima.syntages|sort(attribute='imerominia', reverse=True)|first %}
                                     {% if last_syntagh %}
                                         <div class="card border-success mb-2 shadow-sm">
@@ -248,6 +266,7 @@
                                     {% else %}
                                         <p class="text-muted small italic" id="noSyntagh{{ ktima.id }}">Δεν υπάρχουν συνταγές για αυτό το κτήμα.</p>
                                     {% endif %}
+                                </div>
                                 </div>
                                 
                                 <div class="d-grid mt-3">
