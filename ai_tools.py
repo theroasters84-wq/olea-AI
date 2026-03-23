@@ -314,82 +314,22 @@ def ai_vision():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@ai_bp.route('/ndvi_analyze/<int:ktima_id>', methods=['POST'])
-@login_required
-def ndvi_analyze(ktima_id):
-    ktima = vasi.session.get(Ktima, ktima_id)
-    if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', 'agroths') != 'geoponos'):
-        return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
-
-    data = request.get_json()
-    if not data or 'geo_json' not in data:
-        return jsonify({'error': 'Δεν βρέθηκαν δεδομένα πολυγώνου.'}), 400
-
-    geo_json = data['geo_json']
-    api_key = os.getenv('AGROMONITORING_API_KEY')
-    if not api_key:
-        return jsonify({'error': 'Το σύστημα Δορυφόρου δεν είναι ρυθμισμένο.'}), 500
-
-    try:
-        poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
-        poly_data = {"name": f"Ktima_{ktima.id}", "geo_json": geo_json}
-        
-        if ktima.agromonitoring_poly_id:
-            try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}", timeout=5)
-            except: pass
-            
-        res = requests.post(poly_url, json=poly_data, timeout=10)
-        if res.status_code not in [200, 201]:
-            if res.status_code == 422: return jsonify({'error': 'Το σχήμα απορρίφθηκε (π.χ. γραμμές που τέμνονται). Σχεδιάστε ένα πιο απλό σχήμα.'}), 400
-            return jsonify({'error': f'Σφάλμα επικοινωνίας με δορυφόρο ({res.status_code}).'}), 400
-            
-        poly_info = res.json()
-        poly_id = poly_info.get('id')
-        if not poly_id: return jsonify({'error': 'Αποτυχία καταχώρησης πολυγώνου.'}), 400
-            
-        ktima.agromonitoring_poly_id = poly_id
-        ktima.polygon_geojson = json.dumps(geo_json)
-        vasi.session.commit()
-        
-        end_time = int(datetime.now().timestamp())
-        start_time = end_time - (30 * 24 * 60 * 60)
-        img_url = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={poly_id}&appid={api_key}"
-        
-        img_res = requests.get(img_url, timeout=10)
-        if img_res.status_code == 200:
-            images = img_res.json()
-            if not images: return jsonify({'message': 'Αποθηκεύτηκε, αλλά δεν βρέθηκαν εικόνες χωρίς σύννεφα.'})
-                
-            latest_img = images[-1]
-            urls = latest_img.get('image', {})
-            dt = datetime.fromtimestamp(latest_img.get('dt', end_time)).strftime('%d/%m/%Y')
-            
-            ai_message = ""
-            ndvi_url = urls.get('ndvi')
-            if ndvi_url and api_key_ai:
-                try:
-                    img_response = requests.get(ndvi_url, timeout=10)
-                    if img_response.status_code == 200:
-                        image_file = PIL.Image.open(io.BytesIO(img_response.content))
-                        prompt = f"Είσαι γεωπόνος. Αναλύεις ένα δορυφορικό χάρτη NDVI. Δώσε 2-3 προτάσεις για το τι βλέπεις. Ξεκίνα με 'ΕΝΗΜΕΡΩΣΗ:' αν όλα είναι οκ, ή 'ΕΡΩΤΗΣΗ:' αν θέλεις διευκρίνιση από τον αγρότη."
-                        ai_resp = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
-                        if ai_resp: ai_message = ai_resp.text.strip(); vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"🛰️ Δορυφόρος: {ai_message}", imerominia=datetime.now())); vasi.session.commit()
-                except Exception as e: print("AI NDVI Error:", e)
-
-            return jsonify({'success': True, 'message': 'Επιτυχής λήψη δεδομένων!', 'image_date': dt, 'ndvi_url': urls.get('ndvi'), 'ndwi_url': urls.get('ndwi'), 'evi_url': urls.get('evi'), 'truecolor_url': urls.get('truecolor'), 'falsecolor_url': urls.get('falsecolor'), 'ai_message': ai_message})
-            
-        return jsonify({'message': 'Αποθηκεύτηκε, αλλά σφάλμα στην ανάκτηση εικόνων.'})
-    except Exception as e:
-        vasi.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
 @ai_bp.route('/ndvi_chat/<int:ktima_id>', methods=['POST'])
 @login_required
 def ndvi_chat(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     data = request.get_json()
     client = genai.Client(api_key=api_key_ai)
-    prompt = f"Previous: {data.get('previous_ai_message')}. User: {data.get('user_reply')}..."
+    
+    prompt = (
+        f"Είσαι επαγγελματίας γεωπόνος (AI) και συνομιλείς με τον αγρότη σχετικά με τον δορυφορικό χάρτη NDVI του κτήματός του.\n"
+        f"Προηγούμενη διάγνωση/ερώτησή σου: '{data.get('previous_ai_message')}'\n"
+        f"Απάντηση αγρότη (μπορεί να είναι σε greeklish): '{data.get('user_reply')}'\n\n"
+        f"ΟΔΗΓΙΕΣ:\n"
+        f"1. Κατανόησε τι λέει ο αγρότης (ακόμα και σε greeklish) αλλά ΑΠΑΝΤΗΣΕ ΑΥΣΤΗΡΑ ΣΕ ΣΩΣΤΑ ΕΛΛΗΝΙΚΑ.\n"
+        f"2. ΑΠΑΓΟΡΕΥΕΤΑΙ να κάνεις ανάλυση ή μετάφραση των λέξεων. Δώσε ΚΑΤΕΥΘΕΙΑΝ τη γεωπονική σου συμβουλή/συμπέρασμα βάσει της απάντησής του.\n"
+        f"3. Να είσαι φιλικός, άμεσος και περιεκτικός."
+    )
     response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
     
     nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"Chat: {response.text.strip()}", imerominia=datetime.now())

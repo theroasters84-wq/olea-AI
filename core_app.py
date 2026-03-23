@@ -666,9 +666,13 @@ def ndvi_analyze(ktima_id):
                  return jsonify({'message': 'Αποθηκεύτηκε (Χωρίς Δορυφόρο - Λείπει το API Key)', 'ndvi_url': ''})
 
             if polygon_changed or not ktima.agromonitoring_poly_id:
+                if ktima.agromonitoring_poly_id:
+                    try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}", timeout=5)
+                    except: pass
+
                 # 1. Δημιουργία Πολυγώνου στο Agromonitoring
                 poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
-                payload = {"name": ktima.onoma_ktimatos, "geo_json": geo_json}
+                payload = {"name": f"Ktima_{ktima.id}_{int(time.time())}", "geo_json": geo_json}
                 headers = {'Content-Type': 'application/json'}
                 
                 poly_res = requests.post(poly_url, json=payload, headers=headers)
@@ -677,6 +681,8 @@ def ndvi_analyze(ktima_id):
                     poly_data = poly_res.json()
                     ktima.agromonitoring_poly_id = poly_data.get('id')
                     vasi.session.commit()
+                elif poly_res.status_code == 422:
+                    return jsonify({'error': 'Σφάλμα 422: Το σχήμα απορρίφθηκε. Κάντε ΚΑΘΑΡΙΣΜΟ (Κάδος) και σχεδιάστε ένα απλό τετράγωνο χωρίς να τέμνονται οι γραμμές του!'}), 400
                 else:
                     return jsonify({'error': f'Ο δορυφόρος απέρριψε τον χάρτη. Δοκιμάστε να σχεδιάσετε ένα ελαφρώς μεγαλύτερο πολύγωνο χωρίς να τέμνονται οι γραμμές του. (Σφάλμα API: {poly_res.status_code})'}), 400
                 
@@ -697,8 +703,12 @@ def ndvi_analyze(ktima_id):
                 # Αν δεν βρεθούν εικόνες, δοκιμάζουμε να ξανα-δηλώσουμε το πολύγωνο και να ξανα-ψάξουμε (μόνο αν δεν το κάναμε ήδη)
                 if not images and ktima.polygon_geojson and not polygon_changed:
                     print(f"🔄 Επιδιόρθωση πολυγώνου για το κτήμα {ktima.id} (μέσω ndvi_analyze)...")
+                    if ktima.agromonitoring_poly_id:
+                        try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}", timeout=5)
+                        except: pass
+                        
                     poly_url_retry = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
-                    payload_retry = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(ktima.polygon_geojson)}
+                    payload_retry = {"name": f"Ktima_{ktima.id}_{int(time.time())}", "geo_json": json.loads(ktima.polygon_geojson)}
                     headers_retry = {'Content-Type': 'application/json'}
                     
                     repost_res = requests.post(poly_url_retry, json=payload_retry, headers=headers_retry)
@@ -707,6 +717,7 @@ def ndvi_analyze(ktima_id):
                         ktima.agromonitoring_poly_id = poly_data_retry.get('id')
                         vasi.session.commit()
                         
+                    if ktima.agromonitoring_poly_id:
                         img_url_retry = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
                         time.sleep(1)
                         img_res_retry = requests.get(img_url_retry)
@@ -829,14 +840,17 @@ def trexe_doriforo(ktima_id):
     if not ktima.agromonitoring_poly_id and ktima.polygon_geojson:
         print(f"🔄 Αρχική δημιουργία πολυγώνου στο Agromonitoring για το κτήμα {ktima.id}...")
         poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
-        payload = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(ktima.polygon_geojson)}
+        payload = {"name": f"Ktima_{ktima.id}_{int(time.time())}", "geo_json": json.loads(ktima.polygon_geojson)}
         headers = {'Content-Type': 'application/json'}
         repost_res = requests.post(poly_url, json=payload, headers=headers)
         if repost_res.status_code in [200, 201]:
             ktima.agromonitoring_poly_id = repost_res.json().get('id')
             vasi.session.commit()
+        elif repost_res.status_code == 422:
+            return jsonify({'success': False, 'message': 'Σφάλμα 422: Το σχήμα απορρίφθηκε. Επανασχεδιάστε ένα απλό τετράγωνο χωρίς να τέμνονται οι γραμμές!'}), 400
         else:
-            return jsonify({'success': False, 'message': f'Ο δορυφόρος απέρριψε τον χάρτη. Βεβαιωθείτε ότι το πολύγωνο δεν τέμνεται και είναι επαρκούς μεγέθους. (Σφάλμα: {repost_res.status_code})'}), 400
+            err_msg = repost_res.json().get('message', '') if repost_res.content else ''
+            return jsonify({'success': False, 'message': f'Ο δορυφόρος απέρριψε τον χάρτη (Σφάλμα: {repost_res.status_code}).'}), 400
 
     try:
         # Αναζήτηση Εικόνας NDVI (Τελευταίες 365 μέρες) με 24ωρη προσωρινή μνήμη
@@ -855,8 +869,12 @@ def trexe_doriforo(ktima_id):
         # Αν δεν βρεθούν εικόνες, δοκιμάζουμε να ξανα-δηλώσουμε το πολύγωνο και να ξανα-ψάξουμε
         if not images and ktima.polygon_geojson:
             print(f"🔄 Επιδιόρθωση πολυγώνου για το κτήμα {ktima.id}...")
+            if ktima.agromonitoring_poly_id:
+                try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{ktima.agromonitoring_poly_id}?appid={api_key}", timeout=5)
+                except: pass
+                
             poly_url = f"http://api.agromonitoring.com/agro/1.0/polygons?appid={api_key}"
-            payload = {"name": ktima.onoma_ktimatos, "geo_json": json.loads(ktima.polygon_geojson)}
+            payload = {"name": f"Ktima_{ktima.id}_{int(time.time())}", "geo_json": json.loads(ktima.polygon_geojson)}
             headers = {'Content-Type': 'application/json'}
             
             repost_res = requests.post(poly_url, json=payload, headers=headers)
@@ -865,6 +883,7 @@ def trexe_doriforo(ktima_id):
                 ktima.agromonitoring_poly_id = poly_data_retry.get('id')
                 vasi.session.commit()
                 
+            if ktima.agromonitoring_poly_id:
                 img_url_retry = f"http://api.agromonitoring.com/agro/1.0/image/search?start={start_time}&end={end_time}&polyid={ktima.agromonitoring_poly_id}&appid={api_key}"
                 time.sleep(1)
                 img_res_retry = requests.get(img_url_retry)

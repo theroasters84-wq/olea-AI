@@ -442,6 +442,18 @@
             modal.addEventListener('shown.bs.modal', function () {
                 const lat = parseFloat(this.getAttribute('data-lat')); const lng = parseFloat(this.getAttribute('data-lng')); const mapId = this.getAttribute('data-mapid'); const ktimaId = this.getAttribute('data-ktima-id'); const savedGeoJsonStr = this.getAttribute('data-geojson');
                 window.initAdvancedNdviMap(lat, lng, mapId, ktimaId, savedGeoJsonStr);
+                
+                setTimeout(() => {
+                    let map = window.initializedMaps[mapId];
+                    if (map) {
+                        map.invalidateSize();
+                        if (window.ndviMapBounds && window.ndviMapBounds[mapId] && typeof window.ndviMapBounds[mapId].isValid === 'function' && window.ndviMapBounds[mapId].isValid()) {
+                            map.fitBounds(window.ndviMapBounds[mapId]);
+                        } else if (lat && lng) {
+                            map.setView([lat, lng], 17);
+                        }
+                    }
+                }, 100);
             });
         });
 
@@ -563,6 +575,14 @@
     }
 
     window.runAnalysisNow = function(ktimaId, btn, mapId) {
+        // Αν υπάρχει νέο, μη αποθηκευμένο πολύγωνο (το μπλε κουμπί είναι ορατό),
+        // ανακατευθύνουμε το κλικ αυτόματα στην Αποθήκευση!
+        const analyzeBtn = document.getElementById('btnAnalyze' + mapId);
+        if (analyzeBtn && !analyzeBtn.classList.contains('d-none')) {
+            analyzeBtn.click();
+            return;
+        }
+
         const originalHtml = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ανάλυση...';
         const errorDiv = document.getElementById('ndviError' + mapId); const resultDiv = document.getElementById('ndviResult' + mapId);
         if (errorDiv) errorDiv.classList.add('d-none'); if (resultDiv) resultDiv.classList.add('d-none');
