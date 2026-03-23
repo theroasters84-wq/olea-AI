@@ -192,7 +192,14 @@
                         document.getElementById('geografiko_mikos').value = center.lng.toFixed(6);
                         const latlngs = layer.getLatLngs()[0];
                         const areaSqMeters = L.GeometryUtil.geodesicArea(latlngs);
-                        document.querySelector('input[name="stremmata"]').value = (areaSqMeters / 1000).toFixed(2);
+                        const stremmata = (areaSqMeters / 1000).toFixed(2);
+                        document.querySelector('input[name="stremmata"]').value = stremmata;
+                        
+                        if (areaSqMeters < 100) {
+                            alert("⚠️ Προσοχή! Το κτήμα που σχεδιάσατε είναι πάρα πολύ μικρό (" + stremmata + " στρέμματα). Ο δορυφόρος απαιτεί μεγαλύτερη επιφάνεια (τουλάχιστον 0.1 στρ.) για να δώσει σωστά δεδομένα. Σας προτείνουμε να το επανασχεδιάσετε.");
+                        } else if (areaSqMeters > 500000) {
+                            alert("⚠️ Προσοχή! Το κτήμα που σχεδιάσατε φαίνεται υπερβολικά μεγάλο (" + stremmata + " στρέμματα). Εάν δεν πρόκειται για τόσο μεγάλη έκταση, ίσως έχετε κάνει λάθος στο ζουμ. Παρακαλώ ελέγξτε το.");
+                        }
                     });
                     addKtimaMap.on(L.Draw.Event.DELETED, function(e) {
                         if (drawnItemsAdd.getLayers().length === 0) {
@@ -261,7 +268,15 @@
                         const center = layer.getBounds().getCenter();
                         document.getElementById('latEdit' + ktimaId).value = center.lat.toFixed(6);
                         document.getElementById('lngEdit' + ktimaId).value = center.lng.toFixed(6);
-                        document.getElementById('strEdit' + ktimaId).value = (L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]) / 1000).toFixed(2);
+                        const areaSqMeters = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                        const stremmata = (areaSqMeters / 1000).toFixed(2);
+                        document.getElementById('strEdit' + ktimaId).value = stremmata;
+                        
+                        if (areaSqMeters < 100) {
+                            alert("⚠️ Προσοχή! Το κτήμα που σχεδιάσατε είναι πάρα πολύ μικρό (" + stremmata + " στρέμματα). Ο δορυφόρος απαιτεί μεγαλύτερη επιφάνεια για σωστά δεδομένα. Σας προτείνουμε να το επανασχεδιάσετε.");
+                        } else if (areaSqMeters > 500000) {
+                            alert("⚠️ Προσοχή! Το κτήμα που σχεδιάσατε φαίνεται υπερβολικά μεγάλο (" + stremmata + " στρέμματα). Παρακαλώ βεβαιωθείτε ότι δεν έχετε κάνει λάθος στο ζουμ.");
+                        }
                     });
 
                     map.on(L.Draw.Event.DELETED, function(e) { if (drawnItems.getLayers().length === 0) { document.getElementById('polyEdit' + ktimaId).value = ""; } });
@@ -325,6 +340,15 @@
                     drawnItems.clearLayers(); const layer = event.layer; drawnItems.addLayer(layer);
                     currentGeoJSON = layer.toGeoJSON(); currentBounds = layer.getBounds(); window.ndviMapBounds[mapId] = currentBounds;
                     if (analyzeBtn) analyzeBtn.classList.remove('d-none'); if (redrawBtn) redrawBtn.classList.remove('d-none'); if (errorDiv) errorDiv.classList.add('d-none');
+                    
+                    const areaSqMeters = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                    const stremmata = (areaSqMeters / 1000).toFixed(2);
+                    
+                    if (areaSqMeters < 100) {
+                        alert("⚠️ Προσοχή! Το κτήμα που σχεδιάσατε είναι πάρα πολύ μικρό (" + stremmata + " στρέμματα). Ο δορυφόρος απαιτεί μεγαλύτερη επιφάνεια (τουλάχιστον 0.1 στρ.) για να δώσει σωστά δεδομένα. Παρακαλώ πατήστε 'Επανασχεδιασμός'!");
+                    } else if (areaSqMeters > 500000) {
+                        alert("⚠️ Προσοχή! Το κτήμα που σχεδιάσατε φαίνεται υπερβολικά μεγάλο (" + stremmata + " στρέμματα). Εάν δεν πρόκειται για τόσο μεγάλη έκταση, ίσως έχετε κάνει λάθος. Παρακαλώ πατήστε 'Επανασχεδιασμός'.");
+                    }
                 });
                 map.on(L.Draw.Event.DRAWSTART, function (e) { map.dragging.disable(); map.touchZoom.disable(); });
                 map.on(L.Draw.Event.DRAWSTOP, function (e) { map.dragging.enable(); map.touchZoom.enable(); });
