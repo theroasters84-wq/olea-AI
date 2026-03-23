@@ -32,7 +32,7 @@
                           {% endif %}
                         {% endwith %}
 
-                        <form method="POST" action="{{ url_for('epanafora_kodikou', token=token) }}">
+                        <form method="POST" action="{{ url_for('auth.epanafora_kodikou', token=token) }}">
                             <div class="mb-3">
                                 <label for="kwdikos" class="form-label">Νέος Κωδικός</label>
                                 <div class="input-group">

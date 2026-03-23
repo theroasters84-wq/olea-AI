@@ -46,6 +46,7 @@ def eggrafi():
                 steile_email(email, thema, keimeno)
             except Exception as e:
                 print(f"Σφάλμα αποστολής email επιβεβαίωσης: {e}")
+                print(f"\n[ΕΝΑΛΛΑΚΤΙΚΗ ΛΥΣΗ]: Αφού το email απέτυχε, κάντε κλικ σε αυτό το link για επιβεβαίωση:\n{link}\n")
                 
             flash("Η εγγραφή ολοκληρώθηκε! Έχει σταλεί email επιβεβαίωσης. Ελέγξτε τα εισερχόμενά σας (ή τα spam) για να ενεργοποιήσετε τον λογαριασμό σας.", "success")
             return redirect(url_for('auth.eisodos'))
@@ -94,7 +95,8 @@ def xexasa_kodiko():
                 return redirect(url_for('auth.eisodos'))
             except Exception as e:
                 print(f"EMAIL ERROR: {str(e)}", flush=True)
-                flash('Σφάλμα κατά την αποστολή του email. Ελέγξτε τα logs.', 'danger')
+                print(f"\n[ΕΝΑΛΛΑΚΤΙΚΗ ΛΥΣΗ]: Αφού το email απέτυχε, αντιγράψτε αυτό το link στον browser για να αλλάξετε τον κωδικό σας:\n{link}\n", flush=True)
+                flash('Σφάλμα κατά την αποστολή του email. Ελέγξτε το τερματικό (μαύρη οθόνη) για να βρείτε το link επαναφοράς!', 'danger')
                 return redirect(url_for('auth.xexasa_kodiko'))
         else:
             flash('Δεν βρέθηκε λογαριασμός με αυτό το email.', 'warning')

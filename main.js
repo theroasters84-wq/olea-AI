@@ -452,7 +452,8 @@ document.addEventListener('submit', function(e) {
     if (action.includes('/diagnosi_fwtografias/') || 
         action.includes('/anagnorisi_stadiou/') || 
         action.includes('/ektimisi_paragogis/') ||
-        action.includes('/ai_input_scan/')) {
+        action.includes('/ai_input_scan/') ||
+        action.includes('/apantisi_sto_ai/')) {
         
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {

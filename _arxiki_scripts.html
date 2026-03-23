@@ -572,6 +572,10 @@
         fetch('/apantisi_sto_ai_ajax/' + ktimaId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_reply: replyText, current_question: currentQuestionText }) }).then(res => res.json()).then(data => {
             btn.innerHTML = originalBtnHtml; btn.disabled = false; inputEl.disabled = false;
             if (data.error) { alert('Σφάλμα: ' + data.error); } else {
+                if (data.action_msg) {
+                    historyDiv.innerHTML += `<div class="p-2 mb-2 bg-white border border-success rounded shadow-sm w-75 align-self-start text-success small"><strong><i class="fas fa-check-circle"></i> Ενέργεια Συστήματος:</strong><br>${data.action_msg.replace(/\n/g, '<br>')}</div>`;
+                }
+
                 if (data.next_question && data.next_question !== "") {
                     if (currentQuestionEl) currentQuestionEl.id = ''; historyDiv.innerHTML += `<div class="p-2 mb-2 bg-light border border-danger rounded shadow-sm w-75 align-self-start"><strong><i class="fas fa-robot text-danger"></i> AI:</strong><br><span id="aiCurrentQuestion${ktimaId}">${data.next_question}</span></div>`; inputEl.focus();
                 } else { document.getElementById('aiChatInputArea' + ktimaId).style.display = 'none'; historyDiv.innerHTML += `<div class="p-2 mt-2 bg-success text-white border rounded text-center shadow-sm align-self-center w-100"><i class="fas fa-check-circle fa-lg mb-1"></i><br> Ολοκληρώθηκε!</div>`; }
