@@ -186,7 +186,13 @@
                     addKtimaMap.addControl(drawControlAdd);
                     addKtimaMap.on(L.Draw.Event.CREATED, function (e) {
                         const layer = e.layer; drawnItemsAdd.clearLayers(); drawnItemsAdd.addLayer(layer);
-                        document.getElementById('polygon_geojson').value = JSON.stringify(layer.toGeoJSON());
+                        
+                        let geoJson = layer.toGeoJSON();
+                        if (geoJson.geometry && geoJson.geometry.coordinates) {
+                            geoJson.geometry.coordinates = geoJson.geometry.coordinates.map(ring => ring.map(coord => [Number(coord[0].toFixed(6)), Number(coord[1].toFixed(6))]));
+                        }
+                        document.getElementById('polygon_geojson').value = JSON.stringify(geoJson);
+                        
                         const center = layer.getBounds().getCenter();
                         document.getElementById('geografiko_platos').value = center.lat.toFixed(6);
                         document.getElementById('geografiko_mikos').value = center.lng.toFixed(6);
@@ -264,7 +270,13 @@
 
                     map.on(L.Draw.Event.CREATED, function (e) {
                         drawnItems.clearLayers(); const layer = e.layer; drawnItems.addLayer(layer);
-                        document.getElementById('polyEdit' + ktimaId).value = JSON.stringify(layer.toGeoJSON());
+                        
+                        let geoJson = layer.toGeoJSON();
+                        if (geoJson.geometry && geoJson.geometry.coordinates) {
+                            geoJson.geometry.coordinates = geoJson.geometry.coordinates.map(ring => ring.map(coord => [Number(coord[0].toFixed(6)), Number(coord[1].toFixed(6))]));
+                        }
+                        document.getElementById('polyEdit' + ktimaId).value = JSON.stringify(geoJson);
+                        
                         const center = layer.getBounds().getCenter();
                         document.getElementById('latEdit' + ktimaId).value = center.lat.toFixed(6);
                         document.getElementById('lngEdit' + ktimaId).value = center.lng.toFixed(6);
@@ -338,7 +350,13 @@
 
                 map.on(L.Draw.Event.CREATED, function (event) {
                     drawnItems.clearLayers(); const layer = event.layer; drawnItems.addLayer(layer);
-                    currentGeoJSON = layer.toGeoJSON(); currentBounds = layer.getBounds(); window.ndviMapBounds[mapId] = currentBounds;
+                    
+                    let geoJson = layer.toGeoJSON();
+                    if (geoJson.geometry && geoJson.geometry.coordinates) {
+                        geoJson.geometry.coordinates = geoJson.geometry.coordinates.map(ring => ring.map(coord => [Number(coord[0].toFixed(6)), Number(coord[1].toFixed(6))]));
+                    }
+                    currentGeoJSON = geoJson; currentBounds = layer.getBounds(); window.ndviMapBounds[mapId] = currentBounds;
+                    
                     if (analyzeBtn) analyzeBtn.classList.remove('d-none'); if (redrawBtn) redrawBtn.classList.remove('d-none'); if (errorDiv) errorDiv.classList.add('d-none');
                     
                     const areaSqMeters = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
@@ -548,7 +566,7 @@
         const originalHtml = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ανάλυση...';
         const errorDiv = document.getElementById('ndviError' + mapId); const resultDiv = document.getElementById('ndviResult' + mapId);
         if (errorDiv) errorDiv.classList.add('d-none'); if (resultDiv) resultDiv.classList.add('d-none');
-        fetch('/trexe_doriforo/' + ktimaId, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(res => { return res.json().catch(() => { throw new Error(`Αποτυχία δικτύου: ${res.status}`); }); }).then(data => {
+        fetch('/trexe_doriforo/' + ktimaId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).then(res => { return res.json().catch(() => { throw new Error(`Αποτυχία δικτύου: ${res.status}`); }); }).then(data => {
             btn.disabled = false; btn.innerHTML = originalHtml;
             try {
                 if (data.success) {
