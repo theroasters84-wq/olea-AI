@@ -1,6 +1,7 @@
 import os
 import json
 import PIL.Image
+import io
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
@@ -203,11 +204,16 @@ def ai_secretary():
                     contents.append(types.Part.from_bytes(data=file_data, mime_type='application/pdf'))
                 else:
                     img = PIL.Image.open(img_file)
-                    # Συμπίεση/Σμίκρυνση εικόνας για αποφυγή 503/Timeout λόγω μεγάλου όγκου
-                    img.thumbnail((1600, 1600), PIL.Image.Resampling.LANCZOS)
+                    # Δραστική συμπίεση/σμίκρυνση εικόνας για αποφυγή 503/Timeout
+                    img.thumbnail((1024, 1024), PIL.Image.Resampling.LANCZOS)
                     if img.mode in ('RGBA', 'P'):
                         img = img.convert('RGB')
-                    contents.append(img)
+                        
+                    # Μετατροπή σε JPEG Bytes (Μειώνει το payload από ~5MB σε ~150KB)
+                    img_byte_arr = io.BytesIO()
+                    img.save(img_byte_arr, format='JPEG', quality=75)
+                    img_bytes = img_byte_arr.getvalue()
+                    contents.append(types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'))
                 
         # Ενεργοποίηση Google Search (Ζωντανή Πρόσβαση στο Διαδίκτυο)
         config = types.GenerateContentConfig(

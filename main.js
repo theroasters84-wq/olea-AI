@@ -442,3 +442,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// --- Προσθήκη οπτικής ένδειξης (Loading) στις φόρμες AI Vision ---
+document.addEventListener('submit', function(e) {
+    const form = e.target;
+    const action = form.getAttribute('action') || '';
+    
+    // Ελέγχουμε αν η φόρμα κατευθύνεται σε κάποιο από τα AI εργαλεία όρασης
+    if (action.includes('/diagnosi_fwtografias/') || 
+        action.includes('/anagnorisi_stadiou/') || 
+        action.includes('/ektimisi_paragogis/') ||
+        action.includes('/ai_input_scan/')) {
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            // Απενεργοποιούμε το κουμπί για να μην πατηθεί 2 φορές και βάζουμε το spinner
+            submitBtn.disabled = true;
+            
+            // Αν χρησιμοποιείς FontAwesome, θα βγάλει το εικονίδιο φόρτωσης
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Αναμονή AI...';
+        }
+    }
+});

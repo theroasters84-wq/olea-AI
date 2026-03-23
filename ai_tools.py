@@ -76,12 +76,21 @@ def diagnosi_fwtografias(ktima_id):
     if file:
         try:
             img = PIL.Image.open(file)
+            
+            # Δραστική συμπίεση εικόνας
+            img.thumbnail((1024, 1024), PIL.Image.Resampling.LANCZOS)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='JPEG', quality=75)
+            img_part = types.Part.from_bytes(data=img_byte_arr.getvalue(), mime_type='image/jpeg')
+            
             prompt = "Είσαι γεωπόνος. Ανάλυσε αυτή τη φωτογραφία (φύλλα, καρπός, κορμός Ή ευρεία λήψη εδάφους). Εντόπισε πιθανές ασθένειες ή τροφοπενίες στα δέντρα. ΑΝ η φωτογραφία είναι ευρεία ή εστιάζει στο χώμα, αξιολόγησε οπωσδήποτε την κάλυψη χόρτων/ζιζανίων ΚΑΙ προσπάθησε να εκτιμήσεις τον τύπο/σύσταση του εδάφους (π.χ. Αμμώδες, Αργιλώδες, Πηλώδες, Πετρώδες, Κοκκινόχωμα). Δώσε σύντομη και ξεκάθαρη διάγνωση 1-3 προτάσεων."
             
             response = None
             for attempt in range(3):
                 try:
-                    response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
+                    response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img_part])
                     break
                 except Exception:
                     time.sleep(2)
@@ -128,11 +137,13 @@ def analysi_egrafou(ktima_id):
                 contents.append(types.Part.from_bytes(data=file_data, mime_type='application/pdf'))
             else:
                 img = PIL.Image.open(io.BytesIO(file_data))
-                # Συμπίεση εικόνας για να μην "μπουκώνει" το Gemini API με πολλαπλά μεγάλα αρχεία
-                img.thumbnail((1600, 1600), PIL.Image.Resampling.LANCZOS)
+                # Δραστική συμπίεση εικόνας (JPEG Bytes)
+                img.thumbnail((1024, 1024), PIL.Image.Resampling.LANCZOS)
                 if img.mode in ('RGBA', 'P'):
                     img = img.convert('RGB')
-                contents.append(img)
+                img_byte_arr = io.BytesIO()
+                img.save(img_byte_arr, format='JPEG', quality=75)
+                contents.append(types.Part.from_bytes(data=img_byte_arr.getvalue(), mime_type='image/jpeg'))
                 
         response = None
         for attempt in range(3):
