@@ -124,174 +124,199 @@
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body bg-light">
-                                <div class="table-responsive mb-3">
-                                    <table class="table table-bordered table-sm bg-white shadow-sm align-middle text-center w-100 mb-0">
-                                        <tbody>
-                                            <tr>
-                                                <th class="bg-light w-25 align-middle">Κτήμα</th>
-                                                <td class="w-25 align-middle">{{ ktima.onoma_ktimatos }}</td>
-                                                <th class="bg-light w-25 align-middle">Τοποθεσία</th>
-                                                <td class="w-25 align-middle">{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} <br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td>
-                                            </tr>
-                                            <tr>
-                                                <th class="bg-light align-middle">Έκταση</th>
-                                                <td class="align-middle">{{ ktima.stremmata }} στρ.<br><small class="text-muted">({{ ktima.arithmos_dentron }} δέντρα)</small></td>
-                                                <th class="bg-light align-middle">Ποικιλία</th>
-                                                <td class="align-middle">{{ ktima.poikilia }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th class="bg-light align-middle">Ηλικία <br><small class="text-muted">/ Πυκνότητα</small></th>
-                                                <td class="align-middle">{{ ktima.ilikia_dentron }} <br><small class="text-muted">{{ ktima.puknotita_dentron }}</small></td>
-                                                <th class="bg-light align-middle">Έδαφος <br><small class="text-muted">/ Διαχείριση</small></th>
-                                                <td class="align-middle">{{ ktima.typos_edafous }} <br><small class="text-muted">({{ ktima.diacheirisi_edafous }})</small></td>
-                                            </tr>
-                                            <tr>
-                                                <th class="bg-light align-middle">Άρδευση</th>
-                                                <td class="align-middle">{{ ktima.ardefsi }}</td>
-                                                <th class="bg-light align-middle">Στάδιο <br><small class="text-muted">(GDD)</small></th>
-                                                <td class="align-middle">{{ ktima.fainologiko_stadio }} <br><small class="text-muted">({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</small></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <!-- Ιστορικό Εφαρμογών & Εργασιών -->
-                                <h6 class="mt-3 text-primary border-bottom border-primary pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseErgasiesFarmer{{ ktima.id }}" aria-expanded="false">
-                                    <span><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</span>
-                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
-                                </h6>
-                                <div class="collapse" id="collapseErgasiesFarmer{{ ktima.id }}">
-                                    <div class="table-responsive mb-3" style="max-height: 200px; overflow-y: auto;">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Ημ/νία</th>
-                                                <th>Είδος</th>
-                                                <th>Φάρμακα/Υλικά</th>
-                                                <th>Ποιος το έδωσε</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% set ns = namespace(found=false) %}
-                                            {% for erg in ktima.ergasies|reverse %}
-                                                {% if erg.katastasi == 'Ολοκληρώθηκε' %}
-                                                    {% set ns.found = true %}
+                                <ul class="nav nav-tabs mb-3 shadow-sm bg-white rounded" id="ktimaTabs{{ ktima.id }}" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active fw-bold text-success border-0" id="overview-tab-{{ ktima.id }}" data-bs-toggle="tab" data-bs-target="#overview-{{ ktima.id }}" type="button" role="tab"><i class="fas fa-clipboard-list"></i> Σύνοψη & Συνταγές</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link fw-bold text-primary border-0" id="satellite-tab-{{ ktima.id }}" data-bs-toggle="tab" data-bs-target="#satellite-{{ ktima.id }}" type="button" role="tab" onclick="setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 200);"><i class="fas fa-satellite"></i> Δορυφόρος & AI</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link fw-bold text-dark border-0" id="history-tab-{{ ktima.id }}" data-bs-toggle="tab" data-bs-target="#history-{{ ktima.id }}" type="button" role="tab"><i class="fas fa-history"></i> Ιστορικό & Αναλύσεις</button>
+                                    </li>
+                                </ul>
+                            
+                                <div class="tab-content" id="ktimaTabsContent{{ ktima.id }}">
+                            
+                                    <div class="tab-pane fade show active" id="overview-{{ ktima.id }}" role="tabpanel">
+                                        
+                                        <div class="table-responsive mb-4">
+                                            <table class="table table-bordered table-sm bg-white shadow-sm align-middle text-center w-100 mb-0">
+                                                <tbody>
                                                     <tr>
-                                                        <td>{{ erg.imerominia.strftime('%d/%m/%Y') }}</td>
-                                                        <td><strong>{{ erg.eidos_ergasias }}</strong></td>
-                                                        <td>{{ erg.farmaka_lipasmata or '-' }}</td>
-                                                        <td>
-                                                            <span class="badge {% if erg.proelevsi == 'AI Γεωπόνος' %}bg-info{% elif erg.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %}">
-                                                                {{ erg.proelevsi or 'Αγρότης' }}
-                                                            </span>
-                                                        </td>
+                                                        <th class="bg-light w-25 align-middle">Κτήμα</th>
+                                                        <td class="w-25 align-middle">{{ ktima.onoma_ktimatos }}</td>
+                                                        <th class="bg-light w-25 align-middle">Τοποθεσία</th>
+                                                        <td class="w-25 align-middle">{{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} <br><small class="text-muted">⛰️ {{ ktima.ypsometro }}m</small>{% endif %}</td>
                                                     </tr>
-                                                {% endif %}
-                                            {% endfor %}
-                                            {% if not ns.found %}
-                                                <tr><td colspan="4" class="text-muted text-center fst-italic">Δεν υπάρχουν ολοκληρωμένες εφαρμογές.</td></tr>
+                                                    <tr>
+                                                        <th class="bg-light align-middle">Έκταση</th>
+                                                        <td class="align-middle">{{ ktima.stremmata }} στρ.<br><small class="text-muted">({{ ktima.arithmos_dentron }} δέντρα)</small></td>
+                                                        <th class="bg-light align-middle">Ποικιλία</th>
+                                                        <td class="align-middle">{{ ktima.poikilia }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="bg-light align-middle">Ηλικία <br><small class="text-muted">/ Πυκνότητα</small></th>
+                                                        <td class="align-middle">{{ ktima.ilikia_dentron }} <br><small class="text-muted">{{ ktima.puknotita_dentron }}</small></td>
+                                                        <th class="bg-light align-middle">Έδαφος <br><small class="text-muted">/ Διαχείριση</small></th>
+                                                        <td class="align-middle">{{ ktima.typos_edafous }} <br><small class="text-muted">({{ ktima.diacheirisi_edafous }})</small></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="bg-light align-middle">Άρδευση</th>
+                                                        <td class="align-middle">{{ ktima.ardefsi }}</td>
+                                                        <th class="bg-light align-middle">Στάδιο <br><small class="text-muted">(GDD)</small></th>
+                                                        <td class="align-middle">{{ ktima.fainologiko_stadio }} <br><small class="text-muted">({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</small></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                            
+                                        <h6 class="text-success border-bottom border-success pb-1 d-flex justify-content-between align-items-center mb-3">
+                                            <span><i class="fas fa-prescription-bottle-alt"></i> Ενεργές Γεωπονικές Συνταγές</span>
+                                        </h6>
+                                        <div class="collapse show d-block" id="collapseSyntagesFarmer{{ ktima.id }}">
+                                            <div id="syntagesContainer{{ ktima.id }}">
+                                            {% set last_syntagh = ktima.syntages|sort(attribute='imerominia', reverse=True)|first %}
+                                            {% if last_syntagh %}
+                                                <div class="card border-success mb-2 shadow-sm">
+                                                    <div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center">
+                                                        <span><i class="fas fa-robot"></i> {{ last_syntagh.proelevsi }}</span>
+                                                        <div>
+                                                            <span class="me-2">{{ last_syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
+                                                            <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ last_syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ last_syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body p-3 syntagh-content bg-white" style="white-space: pre-wrap; font-size: 0.95em; border-bottom: 2px dashed #28a745;"><strong class="text-success mb-2 d-block"><i class="fas fa-clipboard-check"></i> Επίσημο Πρόγραμμα Εργασιών:</strong>
+                                                        {{ last_syntagh.keimeno }}
+                                                    </div>
+                                                    {% set chat_history = last_syntagh.chat_history|from_json if last_syntagh.chat_history else [] %}
+                                                    <div class="card-body p-3 bg-light flex-column" id="syntaghChatHistory{{ last_syntagh.id }}" style="max-height: 300px; overflow-y: auto; display: {% if chat_history %}flex{% else %}none{% endif %};">
+                                                        {% for msg in chat_history %}
+                                                            {% if msg.role == 'user' %}
+                                                                <div class="p-2 mb-2 bg-primary text-white shadow-sm w-85 align-self-end ms-auto small" style="border-radius: 18px 18px 0px 18px;">{{ msg.content }}</div>
+                                                            {% else %}
+                                                                <div class="p-2 mb-2 bg-white text-dark border-success border shadow-sm w-85 align-self-start small mt-2" style="border-radius: 18px 18px 18px 0px;"><strong><i class="fas fa-robot text-success"></i> Γεωπόνος:</strong><br>{{ msg.content }}</div>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                    <div class="card-footer bg-light p-1 border-top-0">
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="text" class="form-control border-success" placeholder="Έχετε απορία; Ρωτήστε τον Γεωπόνο..." id="replyInput{{ last_syntagh.id }}" onkeydown="if(event.key === 'Enter') { document.getElementById('btnReply{{ last_syntagh.id }}').click(); }">
+                                                            <button class="btn" style="background-color: #ff5e00; color: white; border-color: #ff5e00;" type="button" title="Αναζήτηση φαρμάκου στο Skroutz" onclick="let val = document.getElementById('replyInput{{ last_syntagh.id }}').value.trim(); if(val) { window.open('https://www.skroutz.gr/search?keyphrase=' + encodeURIComponent(val), '_blank'); document.getElementById('replyInput{{ last_syntagh.id }}').value=''; } else { alert('Γράψτε το όνομα του φαρμάκου/λιπάσματος στο κουτάκι για να το ψάξετε στο Skroutz!'); }">
+                                                                <i class="fas fa-shopping-cart"></i>
+                                                            </button>
+                                                            <button class="btn btn-success" type="button" id="btnReply{{ last_syntagh.id }}" data-ktima-name="{{ ktima.onoma_ktimatos }}" onclick="refineSyntagh('{{ ktima.id }}', '{{ last_syntagh.id }}', this)">
+                                                                <i class="fas fa-paper-plane"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <p class="text-muted small italic" id="noSyntagh{{ ktima.id }}">Δεν υπάρχουν συνταγές για αυτό το κτήμα.</p>
                                             {% endif %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                </div>
-
-                                <!-- Ιστορικό Αναλύσεων -->
-                                <h6 class="mt-3 text-warning border-bottom border-warning pb-1 text-dark d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseAnaluseisFarmer{{ ktima.id }}" aria-expanded="false">
-                                    <span><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</span>
-                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
-                                </h6>
-                                <div class="collapse" id="collapseAnaluseisFarmer{{ ktima.id }}">
-                                    <div class="bg-white p-2 border rounded small mb-4">
-                                        <strong>Συμπεράσματα Ανάλυσης:</strong><br>
-                                        {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
-                                    </div>
-                                </div>
-
-                                <!-- Χάρτης NDVI για Αγρότη -->
-                                <h6 class="mt-3 text-success border-bottom border-success pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseNdviFarmer{{ ktima.id }}" aria-expanded="false">
-                                    <span><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI (Live)</span>
-                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
-                                </h6>
-                                <div class="collapse" id="collapseNdviFarmer{{ ktima.id }}">
-                                    <div class="alert alert-info py-2 mb-2 small shadow-sm border-info">
-                                        <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης Δορυφόρου:</strong></div>
-                                        <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
-                                    </div>
-                                    <div id="ndviMapFarmer{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;"></div>
-                                    <div id="layerControlsndviMapFarmer{{ ktima.id }}" class="d-none mt-2 mb-2 text-center"></div>
-                                    <div class="text-center mt-3 mb-3">
-                                        <div class="btn-group">
-                                            <button id="btnAnalyzendviMapFarmer{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
-                                            <button id="btnRunAnalysisNowndviMapFarmer{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapFarmer{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
+                                            </div>
                                         </div>
-                                        <div id="ndviLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
-                                        <div id="ndviErrorndviMapFarmer{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
-                                    </div>
-                                    <div id="ndviResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
-                                    <div id="ndviChatContainerndviMapFarmer{{ ktima.id }}" class="d-none mt-3 p-3 bg-light border border-primary rounded mb-4">
-                                        <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
-                                        <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
-                                        <div class="input-group">
-                                            <input type="text" id="ndviUserInputndviMapFarmer{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
-                                            <button class="btn btn-primary" id="btnNdviChatndviMapFarmer{{ ktima.id }}">Αποστολή</button>
+                                        
+                                        <div class="d-grid mt-4">
+                                            <button class="btn btn-primary shadow-sm py-2" data-ktima-name="{{ ktima.onoma_ktimatos }}" onclick="generateAISyntagh('{{ ktima.id }}', this)">
+                                                <i class="fas fa-magic"></i> Έκδοση Νέας AI Συνταγής
+                                            </button>
                                         </div>
-                                        <div id="ndviChatLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
-                                        <div id="ndviRefinedResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
                                     </div>
-                                </div>
-
-                                <h6 class="mt-4 text-success border-bottom border-success pb-1 d-flex justify-content-between align-items-center collapsed" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseSyntagesFarmer{{ ktima.id }}" aria-expanded="false">
-                                    <span><i class="fas fa-prescription-bottle-alt"></i> Γεωπονικές Συνταγές</span>
-                                    <i class="fas fa-chevron-down small text-muted transition-icon"></i>
-                                </h6>
-                                <div class="collapse" id="collapseSyntagesFarmer{{ ktima.id }}">
-                                    <div id="syntagesContainer{{ ktima.id }}">
-                                    {% set last_syntagh = ktima.syntages|sort(attribute='imerominia', reverse=True)|first %}
-                                    {% if last_syntagh %}
-                                        <div class="card border-success mb-2 shadow-sm">
-                                            <div class="card-header bg-success text-white py-1 small d-flex justify-content-between align-items-center">
-                                                <span><i class="fas fa-robot"></i> {{ last_syntagh.proelevsi }}</span>
-                                                <div>
-                                                    <span class="me-2">{{ last_syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
-                                                    <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ last_syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ last_syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-success"></i></button>
+                            
+                                    <div class="tab-pane fade" id="satellite-{{ ktima.id }}" role="tabpanel">
+                                        <h6 class="text-primary border-bottom border-primary pb-1 d-flex justify-content-between align-items-center mb-3">
+                                            <span><i class="fas fa-map"></i> Δορυφορικός Χάρτης NDVI (Live)</span>
+                                        </h6>
+                                        
+                                        <div class="collapse show d-block" id="collapseNdviFarmer{{ ktima.id }}">
+                                            <div class="alert alert-info py-2 mb-3 small shadow-sm border-info">
+                                                <div class="d-flex align-items-center mb-1"><i class="fas fa-info-circle fa-lg me-2 text-info"></i><strong>Οδηγίες Σχεδίασης:</strong></div>
+                                                <ul class="mb-1 ps-3"><li>Χρησιμοποιήστε το εργαλείο πολυγώνου (⬟) αριστερά στον χάρτη για να κυκλώσετε το κτήμα.</li><li class="text-danger"><strong>ΚΡΙΣΙΜΟ:</strong> Ο δορυφόρος απαιτεί η σχεδιασμένη επιφάνεια να είναι <strong>τουλάχιστον 10 στρέμματα (1 εκτάριο)</strong>.</li></ul>
+                                            </div>
+                                            
+                                            <div id="ndviMapFarmer{{ ktima.id }}" style="height: 400px; width: 100%; border-radius: 8px;" class="shadow-sm"></div>
+                                            <div id="layerControlsndviMapFarmer{{ ktima.id }}" class="d-none mt-3 mb-2 text-center"></div>
+                                            
+                                            <div class="text-center mt-3 mb-3">
+                                                <div class="btn-group shadow-sm">
+                                                    <button id="btnAnalyzendviMapFarmer{{ ktima.id }}" class="btn btn-primary d-none"><i class="fas fa-search"></i> Αποθήκευση & Ανάλυση</button>
+                                                    <button id="btnRunAnalysisNowndviMapFarmer{{ ktima.id }}" class="btn btn-success" onclick="runAnalysisNow('{{ ktima.id }}', this, 'ndviMapFarmer{{ ktima.id }}')"><i class="fas fa-satellite-dish"></i> Ανάλυση ΤΩΡΑ</button>
                                                 </div>
+                                                <div id="ndviLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-success mt-2"><i class="fas fa-spinner fa-spin"></i> Επικοινωνία με δορυφόρο... Παρακαλώ περιμένετε.</div>
+                                                <div id="ndviErrorndviMapFarmer{{ ktima.id }}" class="d-none text-danger mt-2 fw-bold"></div>
                                             </div>
-                                            <div class="card-body p-3 syntagh-content bg-white" style="white-space: pre-wrap; font-size: 0.95em; border-bottom: 2px dashed #28a745;">
-                                                <strong class="text-success mb-2 d-block"><i class="fas fa-clipboard-check"></i> Επίσημο Πρόγραμμα Εργασιών:</strong>
-                                                {{ last_syntagh.keimeno }}
-                                            </div>
-                                            {% set chat_history = last_syntagh.chat_history|from_json if last_syntagh.chat_history else [] %}
-                                            <div class="card-body p-3 bg-light flex-column" id="syntaghChatHistory{{ last_syntagh.id }}" style="max-height: 300px; overflow-y: auto; display: {% if chat_history %}flex{% else %}none{% endif %};">
-                                                {% for msg in chat_history %}
-                                                    {% if msg.role == 'user' %}
-                                                        <div class="p-2 mb-2 bg-primary text-white shadow-sm w-85 align-self-end ms-auto small" style="border-radius: 18px 18px 0px 18px;">{{ msg.content }}</div>
-                                                    {% else %}
-                                                        <div class="p-2 mb-2 bg-white text-dark border-success border shadow-sm w-85 align-self-start small mt-2" style="border-radius: 18px 18px 18px 0px;"><strong><i class="fas fa-robot text-success"></i> Γεωπόνος:</strong><br>{{ msg.content }}</div>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                            <div class="card-footer bg-light p-1 border-top-0">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text" class="form-control border-success" placeholder="Έχετε απορία; Ρωτήστε τον Γεωπόνο..." id="replyInput{{ last_syntagh.id }}" onkeydown="if(event.key === 'Enter') { document.getElementById('btnReply{{ last_syntagh.id }}').click(); }">
-                                                    <button class="btn" style="background-color: #ff5e00; color: white; border-color: #ff5e00;" type="button" title="Αναζήτηση φαρμάκου στο Skroutz" onclick="let val = document.getElementById('replyInput{{ last_syntagh.id }}').value.trim(); if(val) { window.open('https://www.skroutz.gr/search?keyphrase=' + encodeURIComponent(val), '_blank'); document.getElementById('replyInput{{ last_syntagh.id }}').value=''; } else { alert('Γράψτε το όνομα του φαρμάκου/λιπάσματος στο κουτάκι για να το ψάξετε στο Skroutz!'); }">
-                                                        <i class="fas fa-shopping-cart"></i>
-                                                    </button>
-                                                    <button class="btn btn-success" type="button" id="btnReply{{ last_syntagh.id }}" data-ktima-name="{{ ktima.onoma_ktimatos }}" onclick="refineSyntagh('{{ ktima.id }}', '{{ last_syntagh.id }}', this)">
-                                                        <i class="fas fa-paper-plane"></i>
-                                                    </button>
+                                            
+                                            <div id="ndviResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-info mt-3 text-start shadow-sm"><i class="fas fa-robot"></i> <strong>Ανάλυση AI:</strong> <span class="ai-text"></span></div>
+                                            
+                                            <div id="ndviChatContainerndviMapFarmer{{ ktima.id }}" class="d-none mt-3 p-3 bg-white border border-primary rounded mb-4 shadow-sm">
+                                                <label class="form-label text-primary fw-bold"><i class="fas fa-comments"></i> Διευκρίνιση στον AI Γεωπόνο:</label>
+                                                <p class="small text-muted mb-2">Το AI έκανε μια ερώτηση ή διαπίστωση. Απαντήστε για να πάρετε πιο ακριβή συμβουλή.</p>
+                                                <div class="input-group">
+                                                    <input type="text" id="ndviUserInputndviMapFarmer{{ ktima.id }}" class="form-control" placeholder="π.χ. Ναι, είναι κυρίως άκοπα χόρτα...">
+                                                    <button class="btn btn-primary" id="btnNdviChatndviMapFarmer{{ ktima.id }}">Αποστολή</button>
                                                 </div>
+                                                <div id="ndviChatLoadingndviMapFarmer{{ ktima.id }}" class="d-none text-primary mt-2 small"><i class="fas fa-spinner fa-spin"></i> Ο γεωπόνος αναλύει τα νέα δεδομένα...</div>
+                                                <div id="ndviRefinedResultndviMapFarmer{{ ktima.id }}" class="d-none alert alert-success mt-3 text-start mb-0"></div>
                                             </div>
                                         </div>
-                                    {% else %}
-                                        <p class="text-muted small italic" id="noSyntagh{{ ktima.id }}">Δεν υπάρχουν συνταγές για αυτό το κτήμα.</p>
-                                    {% endif %}
-                                </div>
-                                </div>
-                                
-                                <div class="d-grid mt-3">
-                                    <button class="btn btn-primary shadow-sm" data-ktima-name="{{ ktima.onoma_ktimatos }}" onclick="generateAISyntagh('{{ ktima.id }}', this)">
-                                        <i class="fas fa-magic"></i> Έκδοση Νέας AI Συνταγής
-                                    </button>
+                                    </div>
+                            
+                                    <div class="tab-pane fade" id="history-{{ ktima.id }}" role="tabpanel">
+                                        
+                                        <h6 class="text-dark border-bottom border-secondary pb-1 d-flex justify-content-between align-items-center mb-3">
+                                            <span><i class="fas fa-history"></i> Ιστορικό Εφαρμογών & Εργασιών</span>
+                                        </h6>
+                                        <div class="collapse show d-block mb-4" id="collapseErgasiesFarmer{{ ktima.id }}">
+                                            <div class="table-responsive bg-white rounded shadow-sm p-2" style="max-height: 250px; overflow-y: auto;">
+                                                <table class="table table-hover table-sm mb-0">
+                                                    <thead class="table-light sticky-top">
+                                                        <tr>
+                                                            <th>Ημ/νία</th>
+                                                            <th>Είδος</th>
+                                                            <th>Φάρμακα/Υλικά</th>
+                                                            <th>Προέλευση</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% set ns = namespace(found=false) %}
+                                                        {% for erg in ktima.ergasies|reverse %}
+                                                            {% if erg.katastasi == 'Ολοκληρώθηκε' %}
+                                                                {% set ns.found = true %}
+                                                                <tr>
+                                                                    <td>{{ erg.imerominia.strftime('%d/%m/%Y') }}</td>
+                                                                    <td><strong>{{ erg.eidos_ergasias }}</strong></td>
+                                                                    <td>{{ erg.farmaka_lipasmata or '-' }}</td>
+                                                                    <td>
+                                                                        <span class="badge {% if erg.proelevsi == 'AI Γεωπόνος' %}bg-info{% elif erg.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                                            {{ erg.proelevsi or 'Αγρότης' }}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                        {% if not ns.found %}
+                                                            <tr><td colspan="4" class="text-muted text-center fst-italic py-3">Δεν υπάρχουν ολοκληρωμένες εφαρμογές.</td></tr>
+                                                        {% endif %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                            
+                                        <h6 class="mt-2 text-warning border-bottom border-warning pb-1 text-dark d-flex justify-content-between align-items-center mb-3">
+                                            <span><i class="fas fa-flask"></i> Δεδομένα Αναλύσεων Εδάφους/Νερού</span>
+                                        </h6>
+                                        <div class="collapse show d-block" id="collapseAnaluseisFarmer{{ ktima.id }}">
+                                            <div class="bg-white p-3 border border-warning rounded shadow-sm small">
+                                                <strong class="text-dark"><i class="fas fa-microscope text-warning"></i> Συμπεράσματα Ανάλυσης:</strong><br><br>
+                                                <span class="text-muted">
+                                                {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα. Μπορείτε να ανεβάσετε τη φωτογραφία μιας ανάλυσης από τις επιλογές της κάρτας.' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                    
                                 </div>
                             </div>
                         </div>
