@@ -10,10 +10,23 @@
                 <!-- Οικονομικά -->
                 <h5 style="color: #c0392b;"><i class="fas fa-coins"></i> Οικονομικά</h5>
                 <form action="{{ url_for('ktima_actions.prosthes_exodo', ktima_id=ktima.id) }}" method="POST" class="mb-2" style="font-size: 0.9em;" onsubmit="sessionStorage.setItem('reopenModal', 'modalOikonomika{{ ktima.id }}');">
-                    <div class="input-group input-group-sm mb-1">
-                        <input type="text" name="perigrafi" class="form-control" placeholder="Περιγραφή" required>
-                        <input type="number" name="poso" class="form-control" placeholder="€" step="0.01" required>
-                        <button class="btn btn-danger" type="submit"><i class="fas fa-plus"></i></button>
+                    <div class="row g-1 mb-1">
+                        <div class="col-7">
+                            <input type="text" name="perigrafi" class="form-control form-control-sm" placeholder="Περιγραφή Εξόδου" required>
+                        </div>
+                        <div class="col-5">
+                            <input type="number" name="poso" class="form-control form-control-sm" placeholder="Ποσό (€)" step="0.01" required>
+                        </div>
+                        <div class="col-8 mt-1">
+                            <select name="katigoria" class="form-select form-select-sm">
+                                <option value="Εργασίες/Γενικά" selected>Εργασίες / Γενικά</option>
+                                <option value="Αναλώσιμα">Αναλώσιμα (Λάδια, Καύσιμα)</option>
+                                <option value="Ζημιές">Ζημιές / Φθορές</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mt-1">
+                            <button class="btn btn-danger btn-sm w-100" type="submit"><i class="fas fa-plus"></i> Προσθήκη</button>
+                        </div>
                     </div>
                 </form>
                 
@@ -32,6 +45,9 @@
                                     <div>
                                         <span>{{ exodo.perigrafi }}</span><br>
                                         <small class="text-muted">{{ exodo.imerominia.strftime('%d/%m/%Y') }}</small>
+                                        {% if exodo.katigoria and exodo.katigoria != 'Εργασίες/Γενικά' %}
+                                            <span class="badge {% if exodo.katigoria == 'Ζημιές' %}bg-danger{% else %}bg-secondary{% endif %} ms-1" style="font-size: 0.7em;">{{ exodo.katigoria }}</span>
+                                        {% endif %}
                                     </div>
                                     <span class="badge bg-danger rounded-pill">{{ "%.2f"|format(exodo.poso or 0) }}€</span>
                                 </li>

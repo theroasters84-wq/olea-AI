@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user, logout_user
 from sqlalchemy import text
 from core import vasi, ai_client, api_key_ai, kryptografhsh
-from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths
+from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths, GenikoExodo
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
 from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro
 
@@ -608,7 +608,8 @@ def enimerosi_nerou(ktima_id):
 def prosthes_exodo(ktima_id):
     try:
         poso = float(request.form.get('poso', 0))
-        neo = Exodo(ktima_id=ktima_id, perigrafi=request.form.get('perigrafi', 'Έξοδο'), poso=poso, imerominia=datetime.now())
+        katigoria = request.form.get('katigoria', 'Εργασίες/Γενικά')
+        neo = Exodo(ktima_id=ktima_id, perigrafi=request.form.get('perigrafi', 'Έξοδο'), poso=poso, katigoria=katigoria, imerominia=datetime.now())
         vasi.session.add(neo)
         vasi.session.commit()
     except ValueError:
@@ -1392,6 +1393,18 @@ def esoda_exoda():
     # Χρησιμοποιούμε λεξικό για ομαδοποίηση κτημάτων με το ίδιο όνομα (ώστε να κρύβονται τα διπλότυπα)
     ktimata_dict = {}
 
+    # --- ΓΕΝΙΚΑ ΕΞΟΔΑ/ΕΣΟΔΑ ΧΡΗΣΤΗ ---
+    genika_esoda_val = 0.0
+    genika_exoda_val = 0.0
+    for gx in current_user.genika_exoda:
+        if gx.poso < 0:
+            genika_esoda_val += abs(gx.poso)
+        else:
+            genika_exoda_val += gx.poso
+            
+    synolika_esoda += genika_esoda_val
+    synolika_exoda += genika_exoda_val
+
     for ktima in current_user.ktimata:
         # Έσοδα από τις συγκομιδές
         esoda_sygkomidis = sum([(s.esoda or 0) for s in ktima.arxeia_sygkomidis])
@@ -1399,11 +1412,19 @@ def esoda_exoda():
         # Έξοδα (και πιθανά έξτρα έσοδα π.χ. επιδοτήσεις που το AI αποθηκεύει ως αρνητικά έξοδα)
         exoda_ktimatos = 0.0
         esoda_extra = 0.0
+        exoda_analosima = 0.0
+        exoda_zimies = 0.0
+        exoda_genika = 0.0
         for ex in ktima.exoda:
             if getattr(ex, 'poso', 0) < 0:
                 esoda_extra += abs(ex.poso)
             else:
-                exoda_ktimatos += getattr(ex, 'poso', 0)
+                poso = getattr(ex, 'poso', 0)
+                exoda_ktimatos += poso
+                katigoria = getattr(ex, 'katigoria', 'Εργασίες/Γενικά')
+                if katigoria == 'Αναλώσιμα': exoda_analosima += poso
+                elif katigoria == 'Ζημιές': exoda_zimies += poso
+                else: exoda_genika += poso
         
         synolo_esodon_ktimatos = esoda_sygkomidis + esoda_extra
         
@@ -1423,24 +1444,66 @@ def esoda_exoda():
             'onoma': onoma_emfanisis,
             'esoda': synolo_esodon_ktimatos,
             'exoda': exoda_ktimatos,
-            'kerdos': synolo_esodon_ktimatos - exoda_ktimatos
+            'kerdos': synolo_esodon_ktimatos - exoda_ktimatos,
+            'exoda_analosima': exoda_analosima,
+            'exoda_zimies': exoda_zimies,
+            'exoda_genika': exoda_genika
         })
         # Αν υπάρχει ήδη το όνομα, συγχώνευσε τα ποσά. Αλλιώς, πρόσθεσέ το.
         if onoma_emfanisis in ktimata_dict:
             ktimata_dict[onoma_emfanisis]['esoda'] += synolo_esodon_ktimatos
             ktimata_dict[onoma_emfanisis]['exoda'] += exoda_ktimatos
             ktimata_dict[onoma_emfanisis]['kerdos'] += (synolo_esodon_ktimatos - exoda_ktimatos)
+            ktimata_dict[onoma_emfanisis]['exoda_analosima'] += exoda_analosima
+            ktimata_dict[onoma_emfanisis]['exoda_zimies'] += exoda_zimies
+            ktimata_dict[onoma_emfanisis]['exoda_genika'] += exoda_genika
         else:
             ktimata_dict[onoma_emfanisis] = {
                 'onoma': onoma_emfanisis,
                 'esoda': synolo_esodon_ktimatos,
                 'exoda': exoda_ktimatos,
-                'kerdos': synolo_esodon_ktimatos - exoda_ktimatos
+                'kerdos': synolo_esodon_ktimatos - exoda_ktimatos,
+                'exoda_analosima': exoda_analosima,
+                'exoda_zimies': exoda_zimies,
+                'exoda_genika': exoda_genika
             }
 
     analytika_ktimata = list(ktimata_dict.values())
 
-    return render_template('oikonomika.html', synolika_esoda=synolika_esoda, synolika_exoda=synolika_exoda, kerdos=synolika_esoda - synolika_exoda, analytika_ktimata=analytika_ktimata)
+    return render_template('oikonomika.html', 
+        synolika_esoda=synolika_esoda, 
+        synolika_exoda=synolika_exoda, 
+        kerdos=synolika_esoda - synolika_exoda, 
+        analytika_ktimata=analytika_ktimata,
+        genika_esoda_val=genika_esoda_val,
+        genika_exoda_val=genika_exoda_val,
+        genika_exoda=sorted(current_user.genika_exoda, key=lambda x: x.imerominia, reverse=True))
+
+@core_bp.route('/prosthes_geniko_exodo', methods=['POST'])
+@login_required
+def prosthes_geniko_exodo():
+    try:
+        poso = float(request.form.get('poso', 0))
+        katigoria = request.form.get('katigoria', 'Γενικά')
+        neo = GenikoExodo(xrhsths_id=current_user.id, perigrafi=request.form.get('perigrafi', 'Γενικό Έξοδο'), poso=poso, katigoria=katigoria, imerominia=datetime.now())
+        vasi.session.add(neo)
+        vasi.session.commit()
+        flash('Η γενική καταχώρηση αποθηκεύτηκε!', 'success')
+    except ValueError:
+        flash('Μη έγκυρο ποσό.', 'danger')
+    return redirect(url_for('core_app.esoda_exoda'))
+
+@core_bp.route('/diagrafi_geniko_exodo/<int:id>', methods=['POST'])
+@login_required
+def diagrafi_geniko_exodo(id):
+    exodo = vasi.session.get(GenikoExodo, id)
+    if exodo and exodo.xrhsths_id == current_user.id:
+        vasi.session.delete(exodo)
+        vasi.session.commit()
+        flash('Το γενικό έξοδο/έσοδο διαγράφηκε.', 'success')
+    else:
+        flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
+    return redirect(url_for('core_app.esoda_exoda'))
 
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes

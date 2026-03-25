@@ -135,6 +135,15 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'proelevsi' υπάρχει ήδη στον πίνακα 'ergasies' ({e})")
                 conn.rollback()
 
+            # Προσθήκη στήλης katigoria στα έξοδα
+            try:
+                conn.execute(text("ALTER TABLE exoda ADD COLUMN katigoria VARCHAR(50) DEFAULT 'Εργασίες/Γενικά'"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'katigoria' στον πίνακα 'exoda'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'katigoria' υπάρχει ήδη στον πίνακα 'exoda' ({e})")
+                conn.rollback()
+
             # --- Ενημέρωση Πίνακα Χρηστών (Xrhsths) ---
             print("👤 Έλεγχος και ενημέρωση πίνακα χρηστών...")
             

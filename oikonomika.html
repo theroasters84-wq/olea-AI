@@ -16,7 +16,12 @@
     {% include '_navbar.html' %}
 
     <div class="container mt-4 mb-5">
-        <h2 class="mb-4 fw-bold" style="color: #4A7C59;"><i class="fas fa-chart-pie me-2"></i>Συνολικά Έσοδα / Έξοδα</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h2 class="mb-0 fw-bold" style="color: #4A7C59;"><i class="fas fa-chart-pie me-2"></i>Συνολικά Έσοδα / Έξοδα</h2>
+            <button class="btn btn-warning shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalGenikoExodo">
+                <i class="fas fa-plus-circle me-1"></i> Γενικό Έξοδο / Έσοδο
+            </button>
+        </div>
         
         <div class="row mb-4 g-3">
             <div class="col-md-4">
@@ -45,6 +50,46 @@
             </div>
         </div>
 
+        <div class="row mb-4 mt-5">
+            <div class="col-md-12">
+                <h4 class="mb-3 fw-bold"><i class="fas fa-globe me-2"></i>Γενικά Έξοδα / Αναλώσιμα (Εκτός Κτημάτων)</h4>
+                <div class="table-responsive rounded-4 shadow-sm">
+                    <table class="table table-hover table-bordered bg-white mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ημ/νία</th>
+                                <th>Περιγραφή</th>
+                                <th>Κατηγορία</th>
+                                <th class="text-end">Ποσό (€)</th>
+                                <th class="text-center">Ενέργεια</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for gx in genika_exoda %}
+                            <tr>
+                                <td>{{ gx.imerominia.strftime('%d/%m/%Y') }}</td>
+                                <td class="fw-bold">{{ gx.perigrafi }}</td>
+                                <td><span class="badge {% if gx.katigoria == 'Ζημιές' %}bg-danger{% elif gx.katigoria == 'Αναλώσιμα' %}bg-secondary{% elif gx.katigoria == 'Επιδότηση' %}bg-success{% else %}bg-info text-dark{% endif %}">{{ gx.katigoria }}</span></td>
+                                <td class="text-end fw-bold {% if gx.poso < 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if gx.poso < 0 %}+{{ "%.2f"|format(0 - gx.poso) }}{% else %}-{{ "%.2f"|format(gx.poso) }}{% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <form action="{{ url_for('core_app.diagrafi_geniko_exodo', id=gx.id) }}" method="POST" onsubmit="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την καταχώρηση;');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="fas fa-trash-alt"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">Δεν έχετε καταχωρήσει γενικά έξοδα ή έσοδα.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <h4 class="mb-3 fw-bold mt-5"><i class="fas fa-list me-2"></i>Αναλυτικά ανά Κτήμα</h4>
         <div class="table-responsive rounded-4 shadow-sm">
             <table class="table table-hover table-bordered bg-white mb-0 align-middle">
@@ -61,7 +106,14 @@
                     <tr>
                         <td class="fw-bold">{{ k.onoma }}</td>
                         <td class="text-success text-end">+{{ "%.2f"|format(k.esoda) }}</td>
-                        <td class="text-danger text-end">-{{ "%.2f"|format(k.exoda) }}</td>
+                        <td class="text-danger text-end">
+                            -{{ "%.2f"|format(k.exoda) }}
+                            <div class="small mt-1" style="font-size: 0.75em;">
+                                {% if k.exoda_analosima > 0 %}<span class="badge bg-secondary" title="Αναλώσιμα">Αναλ: {{ "%.2f"|format(k.exoda_analosima) }}€</span>{% endif %}
+                                {% if k.exoda_zimies > 0 %}<span class="badge bg-danger" title="Ζημιές">Ζημ: {{ "%.2f"|format(k.exoda_zimies) }}€</span>{% endif %}
+                                {% if k.exoda_genika > 0 and (k.exoda_analosima > 0 or k.exoda_zimies > 0) %}<span class="badge bg-info text-dark" title="Εργασίες & Γενικά">Γεν: {{ "%.2f"|format(k.exoda_genika) }}€</span>{% endif %}
+                            </div>
+                        </td>
                         <td class="text-end {% if k.kerdos >= 0 %}text-primary fw-bold{% else %}text-danger fw-bold{% endif %}">
                             {{ "%.2f"|format(k.kerdos) }}
                         </td>
@@ -73,6 +125,43 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Modal Νέου Γενικού Εξόδου/Εσόδου -->
+    <div class="modal fade" id="modalGenikoExodo" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark border-0">
+                    <h5 class="modal-title"><i class="fas fa-wallet"></i> Νέο Γενικό Έξοδο / Έσοδο</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <form action="{{ url_for('core_app.prosthes_geniko_exodo') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Περιγραφή</label>
+                            <input type="text" name="perigrafi" class="form-control" placeholder="π.χ. Αγορά εργαλείων, Βενζίνες..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Ποσό (€)</label>
+                            <input type="number" step="0.01" name="poso" class="form-control text-end fs-5" placeholder="0.00" required>
+                            <small class="text-muted"><i class="fas fa-info-circle"></i> Βάλτε αρνητικό πρόσημο (π.χ. <strong>-150</strong>) αν πρόκειται για Έσοδο ή Επιδότηση.</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">Κατηγορία</label>
+                            <select name="katigoria" class="form-select">
+                                <option value="Γενικά">Γενικά</option>
+                                <option value="Αναλώσιμα">Αναλώσιμα (Λάδια, Καύσιμα, Εργαλεία)</option>
+                                <option value="Ζημιές">Ζημιές / Φθορές</option>
+                                <option value="Επιδότηση">Επιδότηση / Γενικό Έσοδο</option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-warning fw-bold fs-5 shadow-sm">Αποθήκευση</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 

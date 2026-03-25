@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from core import vasi
-from models import Ktima, Ergasia, Diagnosi, Exodo, Apothiki, ArxeioSygkomidis, KatagrafiUgrasias
+from models import Ktima, Ergasia, Diagnosi, Exodo, Apothiki, ArxeioSygkomidis, KatagrafiUgrasias, GenikoExodo
 from google import genai
 from google.genai import types
 
@@ -119,7 +119,7 @@ def ai_secretary():
            - ΣΗΜΑΝΤΙΚΟ: Αν αναφέρει εμπορικό όνομα, βάλε τη δραστική στο "task_materials".
         5. Διαγραφή ή Τροποποίηση Εργασιών (Αλλαγή Ημερομηνίας): Αν ζητήσει διαγραφή, βάλε action: "DELETE_TASKS". Αν ο χρήστης πει "Έκανα την εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK" και "new_task_data": {"status": "Ολοκληρώθηκε"}. Αν ζητήσει αλλαγή ΗΜΕΡΟΜΗΝΙΑΣ στο ημερολόγιο, υπολόγισε τη νέα ημερομηνία, βάλε action: "UPDATE_TASK" και συμπλήρωσε "new_task_data": {"date": "YYYY-MM-DD"}.
         6. Πληροφορίες Ημερολογίου, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο 'ΗΜΕΡΟΛΟΓΙΟ (ΕΚΚΡΕΜΕΙΣ ΕΡΓΑΣΙΕΣ)' και στο ιστορικό παραπάνω. Αν ο χρήστης σε ρωτήσει "τι έχω στο ημερολόγιο;" ή "τι δουλειές πρέπει να γίνουν;", διάβασε την ενότητα ΗΜΕΡΟΛΟΓΙΟ και ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τις ημερομηνίες! Ταξινόμησέ τες με βάση το τι επείγει. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "θα ψάξω", δώσε τα δεδομένα κατευθείαν στο "reply" με action: "ADVICE".
-        7. Οικονομικά (Έξοδα/Έσοδα): Αν ο χρήστης αναφέρει νέο έξοδο, βάλε action: "ADD_EXPENSE" ("expense_amount", "expense_desc"). Για ΕΣΟΔΟ, βάλε action: "ADD_INCOME" ("income_amount", "income_desc").
+        7. Οικονομικά (Έξοδα/Έσοδα): Αν το έξοδο/έσοδο αφορά ΣΥΓΚΕΚΡΙΜΕΝΟ ΚΤΗΜΑ, βάλε action: "ADD_EXPENSE" ("expense_amount", "expense_desc"). Αν είναι ΓΕΝΙΚΟ έξοδο (π.χ. αγορά εργαλείων, βενζίνες, γενικά αναλώσιμα, ζημιές) ή ΓΕΝΙΚΟ έσοδο (π.χ. γενική επιδότηση) βάλε action: "ADD_GENERAL_EXPENSE" (ή "ADD_GENERAL_INCOME" για έσοδο) και συμπλήρωσε "expense_amount", "expense_desc" (ή "income_amount", "income_desc") ΚΑΙ "geniko_katigoria" ("Αναλώσιμα", "Ζημιές", "Επιδότηση" ή "Γενικά").
         8. Γεωπονική Συμβουλή: Αν ζητάει συμβουλή, ΚΑΝΕ ΥΠΟΧΡΕΩΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την ορθότητά της πριν απαντήσεις. Δώσε την απάντηση και βάλε action: "ADVICE".
         9. Καταγραφή Συγκομιδής: Αν ο χρήστης αναφέρει δεδομένα συγκομιδής (π.χ. "μάζεψα 5000 κιλά ελιές", "μάζεψα την Κορωνέικη 1000 κιλά"), βάλε action: "ADD_HARVEST". Στο JSON συμπλήρωσε "tonoi" (κιλά καρπού, 1 τόνος = 1000), "kila_ladi" (κιλά λαδιού) και "esoda" (ευρώ). ΣΗΜΑΝΤΙΚΟ: Βάλε "is_final": true ΑΝ ο χρήστης αναφέρει ότι τελείωσε όλη η συγκομιδή για φέτος (για να κλείσει η σεζόν). Αν είναι μερική συγκομιδή (π.χ. μάζεψε μόνο μία ποικιλία και έπεται συνέχεια), βάλε "is_final": false. Προαιρετικά βάλε "poikilia_sygkomidis": "Όνομα ποικιλίας" αν το αναφέρει.
         10. Ασαφή/Ελλιπή Δεδομένα: Αν ο χρήστης ζητήσει ενέργεια (π.χ. διαγραφή, ενημέρωση) για ένα κτήμα που ΔΕΝ υπάρχει στη λίστα, ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις ψέματα ότι το έκανες. Πες του ότι δεν το βρίσκεις και ζήτα διευκρίνιση (action: "DIAGNOSIS"). Το ίδιο ισχύει για ελλιπή δεδομένα (π.χ. ρωτάει για εργασία και το ιστορικό είναι κενό).
@@ -136,7 +136,7 @@ def ai_secretary():
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
+            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_GENERAL_EXPENSE" | "ADD_GENERAL_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
             "tasks": [
                 {
                     "target_ktima_id": "Αριθμός ID κτήματος Ή 'ALL'",
@@ -156,6 +156,7 @@ def ai_secretary():
             "expense_desc": "Περιγραφή κόστους",
             "income_amount": 500,
             "income_desc": "Περιγραφή εσόδου",
+            "geniko_katigoria": "Αναλώσιμα",
             "tonoi": 5000,
             "kila_ladi": 1000,
             "esoda": 2000,
@@ -611,6 +612,24 @@ def ai_secretary():
                     neo_exodo = Exodo(ktima_id=k_id_to_charge, perigrafi=f"ΕΣΟΔΟ / ΕΠΙΔΟΤΗΣΗ: {perigrafi}", poso=-poso, imerominia=datetime.now())
                     vasi.session.add(neo_exodo)
                     vasi.session.add(Diagnosi(ktima_id=k_id_to_charge, apotelesma=f"💶 AI Γραμματέας: Προστέθηκε έσοδο '{perigrafi}' (+{poso}€).", imerominia=datetime.now()))
+                except (ValueError, TypeError): pass
+        elif action == 'ADD_GENERAL_EXPENSE':
+            poso = data.get('expense_amount')
+            perigrafi = data.get('expense_desc', 'Γενικό Έξοδο')
+            katigoria = data.get('geniko_katigoria', 'Γενικά')
+            if poso is not None:
+                try:
+                    poso = float(poso)
+                    vasi.session.add(GenikoExodo(xrhsths_id=current_user.id, perigrafi=perigrafi, poso=poso, katigoria=katigoria, imerominia=datetime.now()))
+                except (ValueError, TypeError): pass
+        elif action == 'ADD_GENERAL_INCOME':
+            poso = data.get('income_amount')
+            perigrafi = data.get('income_desc', 'Γενικό Έσοδο / Επιδότηση')
+            katigoria = data.get('geniko_katigoria', 'Επιδότηση')
+            if poso is not None:
+                try:
+                    poso = float(poso)
+                    vasi.session.add(GenikoExodo(xrhsths_id=current_user.id, perigrafi=perigrafi, poso=-poso, katigoria=katigoria, imerominia=datetime.now()))
                 except (ValueError, TypeError): pass
         elif action == 'ADD_HARVEST':
             target_ktimata = []

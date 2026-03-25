@@ -277,7 +277,8 @@ def enimerosi_nerou(ktima_id):
 @login_required
 def prosthes_exodo(ktima_id):
     try:
-        vasi.session.add(Exodo(ktima_id=ktima_id, perigrafi=request.form.get('perigrafi', 'Έξοδο'), poso=float(request.form.get('poso', 0)), imerominia=datetime.now()))
+        katigoria = request.form.get('katigoria', 'Εργασίες/Γενικά')
+        vasi.session.add(Exodo(ktima_id=ktima_id, perigrafi=request.form.get('perigrafi', 'Έξοδο'), poso=float(request.form.get('poso', 0)), katigoria=katigoria, imerominia=datetime.now()))
         vasi.session.commit()
     except ValueError: flash('Μη έγκυρο ποσό.', 'danger')
     return redirect(url_for('core_app.arxikh'))

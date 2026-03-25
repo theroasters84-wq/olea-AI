@@ -26,6 +26,7 @@ class Xrhsths(vasi.Model, UserMixin):
     ai_auto_ergasies = vasi.Column(vasi.Boolean, default=True)
     geoponos_auto_ergasies = vasi.Column(vasi.Boolean, default=True)
     secretary_history = vasi.Column(vasi.Text, default='[]')
+    genika_exoda = vasi.relationship('GenikoExodo', backref='xrhsths', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"Xrhsths('{self.email}', Ρόλος: '{self.rolos}')"
@@ -120,6 +121,7 @@ class Exodo(vasi.Model):
     perigrafi = vasi.Column(vasi.String(255), nullable=False)
     poso = vasi.Column(vasi.Float, nullable=False)
     imerominia = vasi.Column(vasi.DateTime, nullable=False)
+    katigoria = vasi.Column(vasi.String(50), default='Εργασίες/Γενικά')
     archived = vasi.Column(vasi.Boolean, default=False)
 
     def __repr__(self):
@@ -214,3 +216,13 @@ class Syntagh(vasi.Model):
     keimeno = vasi.Column(vasi.Text, nullable=False)
     chat_history = vasi.Column(vasi.Text, default='[]')
     proelevsi = vasi.Column(vasi.String(50), default='AI Γεωπόνος') # AI Γεωπόνος ή Γεωπόνος
+
+# Μοντέλο Γενικών Εξόδων/Εσόδων (Ανεξάρτητα από Κτήμα)
+class GenikoExodo(vasi.Model):
+    __tablename__ = 'genika_exoda'
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    xrhsths_id = vasi.Column(vasi.Integer, vasi.ForeignKey('xrhstes.id'), nullable=False)
+    perigrafi = vasi.Column(vasi.String(255), nullable=False)
+    poso = vasi.Column(vasi.Float, nullable=False)
+    imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+    katigoria = vasi.Column(vasi.String(50), default='Γενικά')
