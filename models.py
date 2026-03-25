@@ -52,6 +52,8 @@ class Ktima(vasi.Model):
     ugrasies = vasi.relationship('KatagrafiUgrasias', backref='ktima', lazy=True, cascade="all, delete-orphan")
     arxeia_sygkomidis = vasi.relationship('ArxeioSygkomidis', backref='ktima', lazy=True, cascade="all, delete-orphan")
     analuseis_edafous = vasi.relationship('AnalysiEdafous', backref='ktima', lazy=True, cascade="all, delete-orphan")
+    analuseis_fyllon = vasi.relationship('AnalysiFyllon', backref='ktima', lazy=True, cascade="all, delete-orphan")
+    pagides = vasi.relationship('Pagides', backref='ktima', lazy=True, cascade="all, delete-orphan")
     topikes_ergasies = vasi.Column(vasi.Text)
     teleftaia_enimerosi_ergasion = vasi.Column(vasi.DateTime)
     analysi_dedomena = vasi.Column(vasi.Text)
@@ -71,6 +73,9 @@ class Ktima(vasi.Model):
     ekkremis_erotisi_ai = vasi.Column(vasi.Text, nullable=True)
     gdd_target_anthisi = vasi.Column(vasi.Integer, default=600)
     gdd_target_sygkomidi = vasi.Column(vasi.Integer, default=2500)
+    thalassa_apostash = vasi.Column(vasi.Float, nullable=True)
+    in_rema = vasi.Column(vasi.Boolean, default=False)
+
     ypsometro = vasi.Column(vasi.Float, nullable=True)
     kalliergeia_typos = vasi.Column(vasi.String(50), default='Συμβατική')
 
@@ -158,6 +163,27 @@ class AnalysiEdafous(vasi.Model):
     fwsforos = vasi.Column(vasi.Float)
     kalio = vasi.Column(vasi.Float)
     imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+
+# Μοντέλο Ανάλυσης Φύλλων (Φυλλοδιαγνωστική)
+class AnalysiFyllon(vasi.Model):
+    __tablename__ = 'analuseis_fyllon'
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
+    imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+    azwto_fyllo = vasi.Column(vasi.Float)
+    fwsforos_fyllo = vasi.Column(vasi.Float)
+    kalio_fyllo = vasi.Column(vasi.Float)
+    vorio_fyllo = vasi.Column(vasi.Float)
+    pseydargyros_fyllo = vasi.Column(vasi.Float)
+
+# Μοντέλο Παγίδων Εντόμων
+class Pagides(vasi.Model):
+    __tablename__ = 'pagides'
+    id = vasi.Column(vasi.Integer, primary_key=True)
+    ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
+    imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
+    eidos_entomou = vasi.Column(vasi.String(100), nullable=False)
+    arithmos_syllipsewn = vasi.Column(vasi.Integer, nullable=False)
 
 # Μοντέλο για Πολλαπλές Ποικιλίες ανά Κτήμα
 class KtimaPoikilia(vasi.Model):

@@ -306,6 +306,11 @@ def xtise_plires_context(ktima):
         if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None':
             clean_dedomena = ktima.analysi_dedomena.replace('\n', ' ')
             analysi_str += f" | Αναλυτικά Συμπεράσματα Εργαστηρίου: {clean_dedomena}"
+                
+    analysi_fyllon_str = "ΔΕΝ ΥΠΑΡΧΕΙ"
+    if hasattr(ktima, 'analuseis_fyllon') and ktima.analuseis_fyllon:
+        last_leaf = sorted(ktima.analuseis_fyllon, key=lambda x: x.imerominia)[-1]
+        analysi_fyllon_str = f"Υπάρχει (Τελευταία: {last_leaf.imerominia.strftime('%d/%m/%Y')} - N:{last_leaf.azwto_fyllo}, P:{last_leaf.fwsforos_fyllo}, K:{last_leaf.kalio_fyllo}, B:{last_leaf.vorio_fyllo}, Zn:{last_leaf.pseydargyros_fyllo}) (ΟΔΗΓΙΑ: Δώσε έμφαση στα επίπεδα Βορίου και Ψευδαργύρου για τη λίπανση/θρέψη)"
 
     kalliergeia_str = getattr(ktima, 'kalliergeia_typos', 'Συμβατική')
     if kalliergeia_str == 'Βιολογική':
@@ -322,6 +327,8 @@ def xtise_plires_context(ktima):
         stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: Κρίσιμη περίοδος ΠΡΙΝ ανοίξει το άνθος. Αν προτείνεις οποιονδήποτε ψεκασμό, ΤΟΝΙΣΕ ΟΤΙ ΠΡΕΠΕΙ ΝΑ ΓΙΝΕΙ ΑΜΕΣΑ πριν ανοίξουν τα άνθη. Αν τα άνθη είναι έτοιμα να ανοίξουν, ΜΗΝ προτείνεις ψεκασμό, καθώς υπάρχει κίνδυνος να τα κάψει!)"
     elif stadio == 'Άνθιση':
         stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: ΚΡΙΣΙΜΟΣ ΣΥΝΑΓΕΡΜΟΣ! Το δέντρο είναι σε πλήρη Άνθιση. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ ΚΑΙ ΔΙΑ ΡΟΠΑΛΟΥ να προτείνεις οποιονδήποτε ψεκασμό (ειδικά χαλκό ή διαφυλλικά λιπάσματα) γιατί θα κάψει τα άνθη και θα καταστρέψει την παραγωγή. Αν χρειάζεται λίπανση, πρότεινε μόνο από εδάφους ή υδρολίπανση.)"
+        #TODO ADVICE
+        
     elif stadio in ['Καρπόδεση', 'Ανάπτυξη Καρπού']:
         stadio_odigia = " (ΟΔΗΓΙΑ ΣΤΑΔΙΟΥ: Περίοδος ανάπτυξης. Προτεραιότητα σε Άρδευση και Άζωτο. Προσοχή στην έναρξη γενεών Δάκου και Πυρηνοτρήτη.)"
     elif stadio in ['Σκλήρυνση Πυρήνα', 'Ωρίμανση']:
@@ -332,12 +339,13 @@ def xtise_plires_context(ktima):
     ctx = (
         f"--- ΠΡΟΦΙΛ ΚΤΗΜΑΤΟΣ ---\n"
         f"Κτήμα: {ktima.onoma_ktimatos}, Τύπος: {kalliergeia_str}\n"
-        f"Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m\n"
+        f"Ποικιλίες: {poikilies_analytika}, Υψόμετρο: {ktima.ypsometro if ktima.ypsometro else 'Άγνωστο'}m (Απόσταση από θάλασσα: {ktima.thalassa_apostash if ktima.thalassa_apostash else 'Άγνωστη'} χλμ)\n"
         f"Τοποθεσία (Lat, Lng): {ktima.geografiko_platos}, {ktima.geografiko_mikos} (ΟΔΗΓΙΑ: Αξιολόγησε τον χάρτη. Αν είναι παραθαλάσσιο με χαμηλό υψόμετρο, προειδοποίησε για κίνδυνο αλατονέφωσης/εγκαυμάτων από νοτιάδες αν ο καιρός είναι κακός.)\n"
         f"Έκταση: {ktima.stremmata} στρ., Δέντρα: {ktima.arithmos_dentron}\n"
         f"Ηλικία: {ktima.ilikia_dentron} (ΟΔΗΓΙΑ: Προσάρμοσε ΑΥΣΤΗΡΑ τις ποσότητες φαρμάκων, λιπασμάτων και νερού βάσει αυτής της ηλικίας! Αναζήτησε στο internet τις δοσολογίες. Τα νεαρά δέντρα απαιτούν μικρότερο ψεκαστικό υγρό και προσοχή στην τοξικότητα σε σχέση με τα γηραιά.), Πυκνότητα: {ktima.puknotita_dentron}\n"
         f"Έδαφος: {ktima.typos_edafous}, Κλίση: {klisi_str}\n"
         f"Ανάλυση Εδάφους: {analysi_str}\n"
+        f"Ανάλυση Φύλλων: {analysi_fyllon_str}\n"
         f"Διαχείριση: {ktima.diacheirisi_edafous}, Άρδευση: {ardefsi_str}\n"
         f"Στάδιο: {stadio}{stadio_odigia}, Τρέχοντα GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated else 0:.0f} (Στόχος Άνθισης GDD: ~{ktima.gdd_target_anthisi}, Στόχος Συγκομιδής GDD: ~{ktima.gdd_target_sygkomidi})\n"
         f"ΟΔΗΓΙΑ GDD & ΣΤΑΔΙΟΥ: Διασταύρωσε υποχρεωτικά αν το δηλωμένο 'Στάδιο' συμβαδίζει με τα 'Τρέχοντα GDD'. Αν υπάρχει προφανής αναντιστοιχία (π.χ. τα GDD δείχνουν άνθιση αλλά το στάδιο είναι Λήθαργος), επισήμανέ το ξεκάθαρα.\n\n"
@@ -356,6 +364,8 @@ def xtise_plires_context(ktima):
             idx = round(deg / 45) % 8
             dir_text = directions[idx]
             ctx += f"Άνεμος: {bf} Μποφόρ ({speed} m/s), Κατεύθυνση: {dir_text} ({deg}°)\n"
+            if bf > 4 or speed > 6:
+                ctx += "ΟΔΗΓΙΑ ΑΝΕΜΟΥ: ΠΡΟΣΟΧΗ, ο άνεμος είναι ισχυρός (>4 Μποφόρ). Αν ο αγρότης ΠΡΕΠΕΙ υποχρεωτικά να ψεκάσει (λόγω στενών χρονικών περιθωρίων π.χ. άνθιση ή επίθεση δάκου), προειδοποίησέ τον έντονα για τον κίνδυνο αερομεταφοράς (drift) και συμβούλεψέ τον να ψεκάσει νωρίς τα ξημερώματα/αργά το σούρουπο ή με μπεκ χοντρής σταγόνας. ΜΗΝ του απαγορεύσεις τον ψεκασμό αν η ασθένεια/εχθρός είναι σε κρίσιμο στάδιο.\n"
             
         # Προσθήκη Οδηγίας Αντιμετώπισης Παγετού
         if kairos['thermokrasia'] <= 4:
@@ -411,6 +421,18 @@ def xtise_plires_context(ktima):
         uv = u_data.get('uvi', 'N/A') if u_data and 'uvi' in u_data else 'N/A'
         ctx += f"Δορυφόρος (Agromonitoring): Υγρασία Εδάφους (10cm): {sm}, UVI: {uv}\n\n"
         
+    if getattr(ktima, 'pagides', None):
+        recent_traps = [p for p in ktima.pagides if (now - p.imerominia).days <= 15]
+        if recent_traps:
+            trap_str = ", ".join([f"{p.eidos_entomou}: {p.arithmos_syllipsewn} άτομα ({p.imerominia.strftime('%d/%m')})" for p in recent_traps])
+            ctx += f"--- ΠΑΓΙΔΕΣ ΕΝΤΟΜΩΝ (Τελευταίες 15 ημέρες) ---\nΚαταγραφές: {trap_str}\n(ΟΔΗΓΙΑ: Πρότεινε ψεκασμό βάσει αυτού του πραγματικού πληθυσμού εντόμων, εφόσον υπερβαίνει τα όρια οικονομικής ζημιάς).\n\n"
+
+    if ktima.arxeia_sygkomidis:
+        last_harvest = sorted(ktima.arxeia_sygkomidis, key=lambda x: x.imerominia)[-1]
+        # Εντοπισμός υπερπαραγωγής (>= 40 κιλά/δέντρο) για να οριστεί η φετινή ως χρονιά ξεκούρασης
+        if last_harvest.imerominia.year >= now.year - 1 and last_harvest.kila_ana_dentro and last_harvest.kila_ana_dentro >= 40:
+            ctx += "ΟΔΗΓΙΑ ΠΑΡΕΝΙΑΥΤΟΦΟΡΙΑΣ: Πέρυσι το κτήμα είχε τεράστια παραγωγή. Φέτος είναι χρονιά ξεκούρασης (off-year). Πρότεινε ενισχυμένη αζωτούχο λίπανση την άνοιξη και κατάλληλο κλάδεμα για να ευνοηθεί η νέα βλάστηση.\n\n"
+
     if ktima.diagnoseis:
         # Κρατάμε τις πρόσφατες διαγνώσεις, ΑΛΛΑ και τα συμπεράσματα του Onboarding για πάντα!
         recent = [d.apotelesma for d in sorted(ktima.diagnoseis, key=lambda x: x.imerominia, reverse=True) if (now - d.imerominia).days < 45 or "Συμπέρασμα" in d.apotelesma][:5]

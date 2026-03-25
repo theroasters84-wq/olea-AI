@@ -385,7 +385,10 @@ def prosthes_ktima():
                 gdd_accumulated=initial_gdd,
                 gdd_target_anthisi=target_a,
                 gdd_target_sygkomidi=target_s,
-                kalliergeia_typos=kalliergeia_typos
+                kalliergeia_typos=kalliergeia_typos,
+                thalassa_apostash=float(request.form.get('thalassa_apostash') or 0),
+                in_rema=True if request.form.get('in_rema') == 'on' else False,
+
             )
             
             # --- Υπολογισμός Υψομέτρου ---
@@ -1385,6 +1388,9 @@ def esoda_exoda():
     synolika_esoda = 0.0
     synolika_exoda = 0.0
     analytika_ktimata = []
+    
+    # Χρησιμοποιούμε λεξικό για ομαδοποίηση κτημάτων με το ίδιο όνομα (ώστε να κρύβονται τα διπλότυπα)
+    ktimata_dict = {}
 
     for ktima in current_user.ktimata:
         # Έσοδα από τις συγκομιδές
@@ -1400,15 +1406,39 @@ def esoda_exoda():
                 exoda_ktimatos += getattr(ex, 'poso', 0)
         
         synolo_esodon_ktimatos = esoda_sygkomidis + esoda_extra
+        
+        # Αγνόησε τα αρχειοθετημένα κτήματα που έχουν 0 έσοδα/έξοδα (τα λεγόμενα "φαντάσματα")
+        if not ktima.is_active and synolo_esodon_ktimatos == 0 and exoda_ktimatos == 0:
+            continue
+            
         synolika_esoda += synolo_esodon_ktimatos
         synolika_exoda += exoda_ktimatos
         
+        onoma_emfanisis = ktima.onoma_ktimatos
+        onoma_emfanisis = ktima.onoma_ktimatos.strip()
+        if not ktima.is_active:
+            onoma_emfanisis += " (Αρχειοθετημένο)"
+        
         analytika_ktimata.append({
-            'onoma': ktima.onoma_ktimatos,
+            'onoma': onoma_emfanisis,
             'esoda': synolo_esodon_ktimatos,
             'exoda': exoda_ktimatos,
             'kerdos': synolo_esodon_ktimatos - exoda_ktimatos
         })
+        # Αν υπάρχει ήδη το όνομα, συγχώνευσε τα ποσά. Αλλιώς, πρόσθεσέ το.
+        if onoma_emfanisis in ktimata_dict:
+            ktimata_dict[onoma_emfanisis]['esoda'] += synolo_esodon_ktimatos
+            ktimata_dict[onoma_emfanisis]['exoda'] += exoda_ktimatos
+            ktimata_dict[onoma_emfanisis]['kerdos'] += (synolo_esodon_ktimatos - exoda_ktimatos)
+        else:
+            ktimata_dict[onoma_emfanisis] = {
+                'onoma': onoma_emfanisis,
+                'esoda': synolo_esodon_ktimatos,
+                'exoda': exoda_ktimatos,
+                'kerdos': synolo_esodon_ktimatos - exoda_ktimatos
+            }
+
+    analytika_ktimata = list(ktimata_dict.values())
 
     return render_template('oikonomika.html', synolika_esoda=synolika_esoda, synolika_exoda=synolika_exoda, kerdos=synolika_esoda - synolika_exoda, analytika_ktimata=analytika_ktimata)
 

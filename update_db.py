@@ -206,6 +206,24 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'image_path' υπάρχει ήδη στον πίνακα 'diagnoseis' ({e})")
                 conn.rollback()
 
+            # Προσθήκη στήλης thalassa_apostash
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN thalassa_apostash FLOAT"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'thalassa_apostash' στον πίνακα 'ktimata'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'thalassa_apostash' υπάρχει ήδη ή σφάλμα: {e}")
+                conn.rollback()
+
+            # Προσθήκη στήλης in_rema
+            try:
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN in_rema BOOLEAN DEFAULT 0"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'in_rema' στον πίνακα 'ktimata'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'in_rema' υπάρχει ήδη ή σφάλμα: {e}")
+                conn.rollback()
+
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")
 
