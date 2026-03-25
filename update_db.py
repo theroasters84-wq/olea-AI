@@ -197,6 +197,15 @@ def update_db():
             except Exception as e:
                 conn.rollback()
 
+            # Προσθήκη στήλης image_path στο diagnoseis
+            try:
+                conn.execute(text("ALTER TABLE diagnoseis ADD COLUMN image_path VARCHAR(255)"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'image_path' στον πίνακα 'diagnoseis'")
+            except Exception as e:
+                print(f"ℹ️ Η στήλη 'image_path' υπάρχει ήδη στον πίνακα 'diagnoseis' ({e})")
+                conn.rollback()
+
             conn.commit()
             print("🚀 Η βάση δεδομένων είναι έτοιμη!")
 

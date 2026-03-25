@@ -128,6 +128,7 @@ class Diagnosi(vasi.Model):
     ktima_id = vasi.Column(vasi.Integer, vasi.ForeignKey('ktimata.id'), nullable=False)
     imerominia = vasi.Column(vasi.DateTime, nullable=False, default=datetime.now)
     apotelesma = vasi.Column(vasi.Text, nullable=False)
+    image_path = vasi.Column(vasi.String(255), nullable=True) # Path to an associated image, if any
 
     def __repr__(self):
         return f"Diagnosi('{self.imerominia}')"

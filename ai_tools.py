@@ -101,6 +101,9 @@ def diagnosi_fwtografias(ktima_id):
             apotelesma_text = response.text if response else "⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία. Δοκιμάστε μια πιο καθαρή λήψη."
             nea_diagnosi = Diagnosi(ktima_id=ktima_id, apotelesma=apotelesma_text, imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
+            ktima.teleftaia_enimerosi_ergasion = None
+            ktima.ekkremis_erotisi_ai = None
+            ktima.ai_sumvouli_date = None
             vasi.session.commit()
             flash('Η διάγνωση ολοκληρώθηκε επιτυχώς!', 'success')
         except Exception as e:
@@ -196,6 +199,8 @@ def analysi_egrafou(ktima_id):
                 print(f"Σφάλμα JSON: {e}")
 
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True, 'message': 'Η ανάλυση των εγγράφων ολοκληρώθηκε!'})
     except Exception as e:
@@ -227,6 +232,8 @@ def anagnorisi_stadiou(ktima_id):
             vasi.session.add(nea_diagnosi)
             
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         flash(f'Το AI αναγνώρισε το στάδιο: {ktima.fainologiko_stadio}', 'success')
     except Exception as e:
@@ -292,6 +299,9 @@ def ai_input_scan(ktima_id):
         
         nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός/Λίπανση (AI)', katastasi='Ολοκληρώθηκε', farmaka_lipasmata=ai_summary, imerominia=datetime.now())
         vasi.session.add(nea_ergasia)
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ekkremis_erotisi_ai = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         flash('Η ετικέτα σαρώθηκε και η εργασία καταγράφηκε!', 'success')
     except Exception as e:

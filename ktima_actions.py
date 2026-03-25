@@ -181,6 +181,7 @@ def prosthes_ergasia(ktima_id):
     if ktima: 
         ktima.ekkremis_erotisi_ai = None
         ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
 
@@ -235,6 +236,7 @@ def oloklirosi_ergasias(ktima_id):
 
         ktima.ekkremis_erotisi_ai = None
         ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
     except Exception as e:
@@ -248,7 +250,10 @@ def prosthes_ugrasia(ktima_id):
     try:
         vasi.session.add(KatagrafiUgrasias(ktima_id=ktima_id, pososto=float(request.form.get('pososto', 0))))
         ktima = vasi.session.get(Ktima, ktima_id)
-        if ktima: ktima.ekkremis_erotisi_ai = None
+        if ktima: 
+            ktima.ekkremis_erotisi_ai = None
+            ktima.teleftaia_enimerosi_ergasion = None
+            ktima.ai_sumvouli_date = None
         vasi.session.commit()
     except ValueError: flash('Μη έγκυρη τιμή υγρασίας.', 'danger')
     return redirect(url_for('core_app.arxikh'))
@@ -261,6 +266,8 @@ def enimerosi_nerou(ktima_id):
         ktima.nero_ph = float(request.form.get('nero_ph') or 0)
         ktima.nero_agwgimotita = float(request.form.get('nero_agwgimotita') or 0)
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"💧 Ανάλυση Νερού: pH {ktima.nero_ph}, EC {ktima.nero_agwgimotita}", imerominia=datetime.now()))
         vasi.session.commit()
     except ValueError: flash('Εισάγετε έγκυρους αριθμούς.', 'danger')
@@ -325,6 +332,8 @@ def epeksergasia_poikiliwn(ktima_id):
         if len(poikilia_ilikies) > 0 and poikilia_ilikies[0]: ktima.ilikia_dentron = poikilia_ilikies[0]
 
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         flash('Τα δέντρα και οι ποικιλίες ενημερώθηκαν επιτυχώς!', 'success')
     except Exception as e:
@@ -408,6 +417,8 @@ def xeirokiniti_analysi(ktima_id):
             ktima.typos_edafous = typos
             
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.add(Diagnosi(
             ktima_id=ktima_id, 
             apotelesma=f"📄 Χειροκίνητη Ανάλυση Εδάφους: Ολοκληρώθηκε", 
@@ -500,6 +511,8 @@ def epeksergasia_topothesias(ktima_id):
                     if resp.status_code in [200, 201]: ktima.agromonitoring_poly_id = resp.json().get('id')
                 except Exception as e: print(f"Σφάλμα ενημέρωσης δορυφόρου: {e}")
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         flash('Η τοποθεσία ενημερώθηκε επιτυχώς!', 'success')
     return redirect(url_for('core_app.arxikh'))
@@ -517,6 +530,8 @@ def allagi_katastasis_ergasias(ergasia_id):
         else:
             ergasia.katastasi = 'Εκκρεμεί'
         ergasia.ktima.teleftaia_enimerosi_ergasion = None
+        ergasia.ktima.ekkremis_erotisi_ai = None
+        ergasia.ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True, 'nea_katastasi': ergasia.katastasi})
     except Exception as e:

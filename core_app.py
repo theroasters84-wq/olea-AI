@@ -490,6 +490,7 @@ def prosthes_ergasia(ktima_id):
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
     ktima.ekkremis_erotisi_ai = None
     ktima.teleftaia_enimerosi_ergasion = None
+    ktima.ai_sumvouli_date = None
     vasi.session.add(nea_ergasia)
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
@@ -554,6 +555,7 @@ def oloklirosi_ergasias(ktima_id):
 
         ktima.ekkremis_erotisi_ai = None
         ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
         
@@ -571,7 +573,10 @@ def prosthes_ugrasia(ktima_id):
         nea = KatagrafiUgrasias(ktima_id=ktima_id, pososto=pososto)
         vasi.session.add(nea)
         ktima = vasi.session.get(Ktima, ktima_id)
-        if ktima: ktima.ekkremis_erotisi_ai = None
+        if ktima: 
+            ktima.ekkremis_erotisi_ai = None
+            ktima.teleftaia_enimerosi_ergasion = None
+            ktima.ai_sumvouli_date = None
         vasi.session.commit()
     except ValueError:
         flash('Μη έγκυρη τιμή υγρασίας.', 'danger')
@@ -586,6 +591,8 @@ def enimerosi_nerou(ktima_id):
         ktima.nero_agwgimotita = float(request.form.get('nero_agwgimotita') or 0)
         
         ktima.ekkremis_erotisi_ai = None
+        ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ai_sumvouli_date = None
         nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"💧 Ανάλυση Νερού: pH {ktima.nero_ph}, EC {ktima.nero_agwgimotita}", imerominia=datetime.now())
         vasi.session.add(nea_diagnosi)
         vasi.session.commit()
@@ -1306,6 +1313,8 @@ def api_schedule_tasks():
                 if e and e.ktima.idioktitis == current_user:
                     e.imerominia = new_date
                     e.ktima.teleftaia_enimerosi_ergasion = None
+                    e.ktima.ekkremis_erotisi_ai = None
+                    e.ktima.ai_sumvouli_date = None
             elif t_type == 'ai_task':
                 ktima_id = int(item.get('ktima_id'))
                 ktima = vasi.session.get(Ktima, ktima_id)
@@ -1316,6 +1325,8 @@ def api_schedule_tasks():
                     )
                     vasi.session.add(nea_ergasia)
                     ktima.teleftaia_enimerosi_ergasion = None
+                    ktima.ekkremis_erotisi_ai = None
+                    ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -1329,6 +1340,8 @@ def api_delete_task(ergasia_id):
     if not ergasia or ergasia.ktima.idioktitis != current_user:
         return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
     ergasia.ktima.teleftaia_enimerosi_ergasion = None
+    ergasia.ktima.ekkremis_erotisi_ai = None
+    ergasia.ktima.ai_sumvouli_date = None
     vasi.session.delete(ergasia)
     vasi.session.commit()
     return jsonify({'success': True})
@@ -1358,11 +1371,46 @@ def api_add_manual_task():
         )
         vasi.session.add(nea_ergasia)
         ktima.teleftaia_enimerosi_ergasion = None
+        ktima.ekkremis_erotisi_ai = None
+        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True})
     except Exception as e:
         vasi.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@core_bp.route('/esoda_exoda')
+@login_required
+def esoda_exoda():
+    synolika_esoda = 0.0
+    synolika_exoda = 0.0
+    analytika_ktimata = []
+
+    for ktima in current_user.ktimata:
+        # Έσοδα από τις συγκομιδές
+        esoda_sygkomidis = sum([(s.esoda or 0) for s in ktima.arxeia_sygkomidis])
+        
+        # Έξοδα (και πιθανά έξτρα έσοδα π.χ. επιδοτήσεις που το AI αποθηκεύει ως αρνητικά έξοδα)
+        exoda_ktimatos = 0.0
+        esoda_extra = 0.0
+        for ex in ktima.exoda:
+            if getattr(ex, 'poso', 0) < 0:
+                esoda_extra += abs(ex.poso)
+            else:
+                exoda_ktimatos += getattr(ex, 'poso', 0)
+        
+        synolo_esodon_ktimatos = esoda_sygkomidis + esoda_extra
+        synolika_esoda += synolo_esodon_ktimatos
+        synolika_exoda += exoda_ktimatos
+        
+        analytika_ktimata.append({
+            'onoma': ktima.onoma_ktimatos,
+            'esoda': synolo_esodon_ktimatos,
+            'exoda': exoda_ktimatos,
+            'kerdos': synolo_esodon_ktimatos - exoda_ktimatos
+        })
+
+    return render_template('oikonomika.html', synolika_esoda=synolika_esoda, synolika_exoda=synolika_exoda, kerdos=synolika_esoda - synolika_exoda, analytika_ktimata=analytika_ktimata)
 
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes
