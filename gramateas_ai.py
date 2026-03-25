@@ -117,15 +117,16 @@ def ai_secretary():
            - Για κάθε εργασία, φτιάξε ένα αντικείμενο στη λίστα "tasks".
            - Αν ζητάει καταχώρηση σε ΟΛΑ τα κτήματα, βάλε "target_ktima_id": "ALL" στο task.
            - ΣΗΜΑΝΤΙΚΟ: Αν αναφέρει εμπορικό όνομα, βάλε τη δραστική στο "task_materials".
-        5. Διαγραφή ή Τροποποίηση Εργασιών (Αλλαγή Ημερομηνίας): Αν ζητήσει διαγραφή, βάλε action: "DELETE_TASKS". Αν ο χρήστης πει "Έκανα την εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK" και "new_task_data": {"status": "Ολοκληρώθηκε"}. Αν ζητήσει αλλαγή ΗΜΕΡΟΜΗΝΙΑΣ στο ημερολόγιο, υπολόγισε τη νέα ημερομηνία, βάλε action: "UPDATE_TASK" και συμπλήρωσε "new_task_data": {"date": "YYYY-MM-DD"}.
+        5. Διαγραφή ή Τροποποίηση Εργασιών (Αλλαγή Ημερομηνίας): Για διαγραφή εργασιών, βάλε action: "DELETE_TASKS" και συμπλήρωσε τη λίστα "tasks_to_delete" με "target_ktima_id" (ή "ALL") και "task_name" ("ΟΛΕΣ" ή το όνομα). ΑΝ ο χρήστης ζητά να σβήσεις μια ΠΑΛΙΑ/ΣΥΓΚΕΚΡΙΜΕΝΗ εργασία (π.χ. 'τον ψεκασμό του Γενάρη'), βρες την στο ιστορικό και συμπλήρωσε ΚΑΙ το "task_date" (π.χ. '2024-01' ή '2024-01-15'). Αν ο χρήστης πει "Έκανα την εκκρεμή εργασία Χ", βάλε action: "UPDATE_TASK" και "new_task_data": {"status": "Ολοκληρώθηκε"}. Αν ζητήσει αλλαγή ΗΜΕΡΟΜΗΝΙΑΣ στο ημερολόγιο, υπολόγισε τη νέα ημερομηνία, βάλε action: "UPDATE_TASK" και συμπλήρωσε "new_task_data": {"date": "YYYY-MM-DD"}.
         6. Πληροφορίες Ημερολογίου, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο 'ΗΜΕΡΟΛΟΓΙΟ (ΕΚΚΡΕΜΕΙΣ ΕΡΓΑΣΙΕΣ)' και στο ιστορικό παραπάνω. Αν ο χρήστης σε ρωτήσει "τι έχω στο ημερολόγιο;" ή "τι δουλειές πρέπει να γίνουν;", διάβασε την ενότητα ΗΜΕΡΟΛΟΓΙΟ και ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τις ημερομηνίες! Ταξινόμησέ τες με βάση το τι επείγει. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "θα ψάξω", δώσε τα δεδομένα κατευθείαν στο "reply" με action: "ADVICE".
-        7. Οικονομικά (Έξοδα/Έσοδα): Αν το έξοδο/έσοδο αφορά ΣΥΓΚΕΚΡΙΜΕΝΟ ΚΤΗΜΑ, βάλε action: "ADD_EXPENSE" ("expense_amount", "expense_desc"). Αν είναι ΓΕΝΙΚΑ έξοδα (ένα ή περισσότερα) βάλε action: "ADD_GENERAL_EXPENSE" και συμπλήρωσε ΥΠΟΧΡΕΩΤΙΚΑ τη λίστα "general_expenses" βάζοντας σε κάθε αντικείμενο: "amount" (αριθμός), "desc" (περιγραφή) και "category" (Επιλογές: "Αναλώσιμα", "Ζημιές", "Γενικά"). 
+        7. Οικονομικά (Έξοδα/Έσοδα): Αν το έξοδο/έσοδο αφορά ΣΥΓΚΕΚΡΙΜΕΝΟ ΚΤΗΜΑ, βάλε action: "ADD_EXPENSE" ("expense_amount", "expense_desc"). Αν είναι ΓΕΝΙΚΑ έξοδα (ένα ή περισσότερα) βάλε action: "ADD_GENERAL_EXPENSE" και συμπλήρωσε ΥΠΟΧΡΕΩΤΙΚΑ τη λίστα "general_expenses" βάζοντας σε κάθε αντικείμενο: "amount" (αριθμός), "desc" (περιγραφή) και "category" (Επιλογές: "Αναλώσιμα", "Ζημιές", "Γενικά").
            - ΟΔΗΓΙΑ ΚΑΤΗΓΟΡΙΟΠΟΙΗΣΗΣ: Στα "Αναλώσιμα" ανήκουν: Λάδια, πετρέλαιο/καύσιμα, ελαστικά/λάστιχα οχημάτων, λάστιχα/σωλήνες άρδευσης (π.χ. Φ23, σταλάκτες), εργαλεία χειρός, μπαταρίες, πριόνια, ανταλλακτικά συντήρησης. Στις "Ζημιές" ανήκουν αυστηρά: Επισκευές από σπάσιμο (π.χ. έσπασε η αντλία, χάλασε το βυτίο/τρακτέρ), βλάβες και ζημιές από καιρικά φαινόμενα.
-           Αν είναι ΓΕΝΙΚΟ έσοδο (π.χ. επιδότηση) βάλε action: "ADD_GENERAL_INCOME" και συμπλήρωσε "income_amount", "income_desc" ΚΑΙ "geniko_katigoria" ("Επιδότηση").
+           Αν είναι ΓΕΝΙΚΟ έσοδο (π.χ. επιδότηση) βάλε action: "ADD_GENERAL_INCOME" και συμπλήρωσε "income_amount", "income_desc" ΚΑΙ "geniko_katigoria" ("Επιδότηση"). Για διαγραφή εξόδου/εσόδου (π.χ. "λάθος καταχώρηση", "σβήσε τα 50 ευρώ"), βάλε action: "DELETE_EXPENSE" και συμπλήρωσε "expense_desc" (λέξη κλειδί) ή/και "expense_amount" (ποσό).
+        8. Διαγραφή Μετρήσεων Υγρασίας: Αν ζητήσει διαγραφή μέτρησης υγρασίας (π.χ. "σβήσε την τελευταία υγρασία", "διέγραψε την υγρασία 25%"), βάλε action: "DELETE_UGRASIA" και συμπλήρωσε το "moisture_percentage" (ποσοστό υγρασίας) ή "ugrasia_desc" (σχόλια στην υγρασία).
         8. Γεωπονική Συμβουλή: Αν ζητάει συμβουλή, ΚΑΝΕ ΥΠΟΧΡΕΩΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την ορθότητά της πριν απαντήσεις. Δώσε την απάντηση και βάλε action: "ADVICE".
         9. Καταγραφή Συγκομιδής: Αν ο χρήστης αναφέρει δεδομένα συγκομιδής (π.χ. "μάζεψα 5000 κιλά ελιές", "μάζεψα την Κορωνέικη 1000 κιλά"), βάλε action: "ADD_HARVEST". Στο JSON συμπλήρωσε "tonoi" (κιλά καρπού, 1 τόνος = 1000), "kila_ladi" (κιλά λαδιού) και "esoda" (ευρώ). ΣΗΜΑΝΤΙΚΟ: Βάλε "is_final": true ΑΝ ο χρήστης αναφέρει ότι τελείωσε όλη η συγκομιδή για φέτος (για να κλείσει η σεζόν). Αν είναι μερική συγκομιδή (π.χ. μάζεψε μόνο μία ποικιλία και έπεται συνέχεια), βάλε "is_final": false. Προαιρετικά βάλε "poikilia_sygkomidis": "Όνομα ποικιλίας" αν το αναφέρει.
         10. Ασαφή/Ελλιπή Δεδομένα: Αν ο χρήστης ζητήσει ενέργεια (π.χ. διαγραφή, ενημέρωση) για ένα κτήμα που ΔΕΝ υπάρχει στη λίστα, ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις ψέματα ότι το έκανες. Πες του ότι δεν το βρίσκεις και ζήτα διευκρίνιση (action: "DIAGNOSIS"). Το ίδιο ισχύει για ελλιπή δεδομένα (π.χ. ρωτάει για εργασία και το ιστορικό είναι κενό).
-        11. Διαχείριση Αποθήκης: Για αγορά/προσθήκη, βάλε action: "ADD_INVENTORY" (συμπλήρωσε "inv_name", "inv_category", "inv_amount", "inv_unit"). Για διόρθωση υπολοίπου, βάλε action: "UPDATE_INVENTORY" (θέσε το "inv_name" και το "inv_amount" στο νέο νούμερο). Για πέταμα/διαγραφή προϊόντος, βάλε action: "DELETE_INVENTORY" (θέσε το "inv_name").
+        11. Διαχείριση Αποθήκης: Για αγορά/προσθήκη (ένα ή περισσότερα υλικά), βάλε action: "ADD_INVENTORY" και συμπλήρωσε ΥΠΟΧΡΕΩΤΙΚΑ τη λίστα "inventory_items" με αντικείμενα που έχουν "inv_name", "inv_category" (Φάρμακο, Λίπασμα, Εξοπλισμός), "inv_amount", "inv_unit" (Λίτρα, Κιλά, Τεμάχια) και προαιρετικά "expense_amount" (αν αναφέρει κόστος) και "expense_desc". Για διόρθωση υπολοίπου, βάλε action: "UPDATE_INVENTORY" (θέσε το "inv_name" και το "inv_amount" στο νέο νούμερο). Για πέταμα/διαγραφή προϊόντος, βάλε action: "DELETE_INVENTORY" (θέσε το "inv_name").
         12. Διαχείριση Υγρασίας & Νερού: Αν ο χρήστης αναφέρει μέτρηση υγρασίας (π.χ. "η υγρασία του εδάφους είναι 20%") ή ανάλυση νερού ("pH 7.2", "αγωγιμότητα 1.5"), βάλε action: "UPDATE_WATER" και συμπλήρωσε τα "moisture_percentage", "nero_ph", "nero_agwgimotita". Αν ρωτάει πόσο να ποτίσει, διάβασε τις 'Ανάγκες Άρδευσης' από τα δεδομένα και απάντησέ του.
         13. Γενικές / Άσχετες Ερωτήσεις (Internet Access): Είσαι πλέον συνδεδεμένος και στο διαδίκτυο (Google Search). Αν ο χρήστης σε ρωτήσει κάτι εντελώς άσχετο με τα χωράφια (π.χ. συνταγή μαγειρικής, ποιος κέρδισε έναν αγώνα, ειδήσεις, ιστορία), ΑΠΑΝΤΗΣΕ ΤΟΥ ΦΥΣΙΟΛΟΓΙΚΑ, φιλικά και σύντομα. ΜΗΝ προσπαθήσεις να συνδέσεις την ερώτηση με τα κτήματα. Βάλε action: "ADVICE". Αν ο χρήστης γράψει κάτι εντελώς ακατανόητο, γράψε στο reply: "Συγγνώμη, δεν σας κατάλαβα."
         14. Δημιουργία Νέου Κτήματος: Αν ο χρήστης ζητήσει να δημιουργήσεις ένα νέο κτήμα (π.χ. "φτιάξε ένα κτήμα"), βάλε action: "ADD_KTIMA" και συμπλήρωσε το "new_ktima_data". Το "onoma_ktimatos" είναι υποχρεωτικό. Στο "reply" σου πες του ευγενικά: "Το κτήμα δημιουργήθηκε! Σας ανοίγω αυτόματα τον χάρτη για να ορίσετε την ακριβή τοποθεσία.". ΜΗΝ ρωτάς "Σε ποια περιοχή βρίσκεται".
@@ -134,11 +135,12 @@ def ai_secretary():
         ΣΗΜΑΝΤΙΚΟ: Αν ο χρήστης ζητήσει να δει ΠΑΝΩ ΑΠΟ ΕΝΑ κτήματα ταυτόχρονα, ή ζητήσει ΣΥΓΚΡΙΣΗ (π.χ. "σύγκρινε το Α με το Β", "τι διαφορά έχει το Α με το Β"), Ή ζητήσει "όλα τα κτήματα", ΤΟΤΕ βάλε ΑΥΣΤΗΡΑ "target_ktima_id": "ALL" και action: "SWITCH_KTIMA". 
         ΜΗΝ βάλεις ποτέ το όνομα ως target_ktima_id, μόνο το ID ή "ALL"! Στο "reply", εφόσον έχεις πλέον πρόσβαση στα δεδομένα όλων των κτημάτων στο prompt σου, απάντησε απευθείας στο ερώτημά του (π.χ. κάνε τη σύγκριση που ζήτησε ή επιβεβαίωσε την αλλαγή).
         17. Εργαστηριακή Ανάλυση Εδάφους/Φύλλων: Αν ο χρήστης ανεβάσει ανάλυση, ΔΙΑΒΑΣΕ ΤΑ ΔΕΔΟΜΕΝΑ. ΠΡΟΣΟΧΗ: Αν η εικόνα είναι πολύ θολή/δυσανάγνωστη ή λείπει σελίδα (π.χ. έχει μόνο τη σελ. 1 από 2), ΑΠΑΝΤΗΣΕ ΤΟΥ στο "reply" να την ξανανεβάσει σωστά και βάλε action: "ADVICE". ΑΝ ΕΙΝΑΙ ΚΑΘΑΡΗ, βάλε action: "ADD_ANALYSIS". Στο "new_analysis_data" συμπλήρωσε "ph", "organiki_ousia", "azwto" (N), "fwsforos" (P), "kalio" (K) με αριθμούς. Αν αναφέρει τύπο εδάφους (π.χ. Αργιλώδες), βάλτο στο "typos_edafous". Αν ο χρήστης πει πότε έγινε (π.χ. "είναι περσινή", "τον Οκτώβριο του '24"), υπολόγισε την ημερομηνία και βάλτην στο "date" (YYYY-MM-DD).
+        18. ΠΟΛΛΑΠΛΕΣ ΕΝΕΡΓΕΙΕΣ ΤΑΥΤΟΧΡΟΝΑ (MULTI-ACTION): Αν ο χρήστης ζητήσει ΠΟΛΛΑΠΛΕΣ ΚΑΙ ΔΙΑΦΟΡΕΤΙΚΕΣ ενέργειες ταυτόχρονα (π.χ. "Διέγραψε όλες τις εργασίες ΚΑΙ πρόσθεσε ράντισμα στο Κτήμα Α" Ή "Ράντισμα στο Κτήμα Α ΚΑΙ έκοψα χόρτα στο Β"), βάλε action: "MULTI_ACTION". Το JSON σου πρέπει να περιέχει ΤΑΥΤΟΧΡΟΝΑ όσες από τις λίστες χρειάζεται: "tasks_to_delete" (για διαγραφές), "tasks" (για νέες εργασίες), "general_expenses" (για γενικά έξοδα) ΚΑΙ "inventory_items" (για την αποθήκη). Το σύστημα θα τα εκτελέσει με τη σωστή σειρά (πρώτα διαγραφές, μετά προσθήκες)!
         
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_GENERAL_EXPENSE" | "ADD_GENERAL_INCOME" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
+            "action": "MULTI_ACTION" | "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASK" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_GENERAL_EXPENSE" | "ADD_GENERAL_INCOME" | "DELETE_EXPENSE" | "DELETE_UGRASIA" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
             "tasks": [
                 {
                     "target_ktima_id": "Αριθμός ID κτήματος Ή 'ALL'",
@@ -150,6 +152,13 @@ def ai_secretary():
                     "expense_desc": "Περιγραφή κόστους",
                     "used_material_name": "Όνομα από αποθήκη",
                     "used_material_amount": 2.5
+                }
+            ],
+            "tasks_to_delete": [
+                {
+                    "target_ktima_id": "ALL",
+                    "task_name": "ΟΛΕΣ ή όνομα εργασίας",
+                    "task_date": "YYYY-MM ή YYYY-MM-DD (Προαιρετικό)"
                 }
             ],
             "target_ktima_id": "Αριθμός ID Ή 'ALL' (γενική χρήση)",
@@ -171,6 +180,16 @@ def ai_secretary():
             "esoda": 2000,
             "is_final": true,
             "poikilia_sygkomidis": "Κορωνέικη",
+            "inventory_items": [
+                {
+                    "inv_name": "Όνομα προϊόντος",
+                    "inv_category": "Φάρμακο",
+                    "inv_amount": 10,
+                    "inv_unit": "Λίτρα",
+                    "expense_amount": 50,
+                    "expense_desc": "Αγορά Φαρμάκου"
+                }
+            ],
             "inv_name": "Όνομα προϊόντος",
             "inv_category": "Φάρμακο",
             "inv_amount": 10,
@@ -292,11 +311,80 @@ def ai_secretary():
                 reply_text = "Συγγνώμη, αλλά δεν βρήκα κάποιο κτήμα με αυτό το όνομα. Παρακαλώ ελέγξτε τη λίστα με τα ενεργά κτήματά σας."
                 action = 'DIAGNOSIS'
                 target_ktima_id = None
+
+        # --- ΠΡΩΤΑ ΕΚΤΕΛΟΥΝΤΑΙ ΟΙ ΔΙΑΓΡΑΦΕΣ ΕΡΓΑΣΙΩΝ (Για να μην σβηστούν οι νέες αν γίνει MULTI_ACTION) ---
+        if action in ['DELETE_TASKS', 'MULTI_ACTION']:
+            del_list = data.get('tasks_to_delete', [])
+            if not del_list and data.get('task_name') and action != 'MULTI_ACTION':
+                del_list = [{'target_ktima_id': target_ktima_id, 'task_name': data.get('task_name')}]
+                
+            for del_item in del_list:
+                t_name = del_item.get('task_name', '')
+                t_date = del_item.get('task_date', '')
+                t_k_id = del_item.get('target_ktima_id') or target_ktima_id
+                
+                del_targets = []
+                if str(t_k_id).upper() == 'ALL':
+                    del_targets = energa_ktimata
+                else:
+                    try:
+                        k_id_int = int(t_k_id)
+                        k = vasi.session.get(Ktima, k_id_int)
+                        if k and k.idioktitis == current_user: del_targets.append(k)
+                    except (ValueError, TypeError):
+                        if ktima: del_targets.append(ktima)
+                        
+                for target_k in del_targets:
+                    if t_name == 'ΟΛΕΣ' and not t_date:
+                        Ergasia.query.filter_by(ktima_id=target_k.id).delete()
+                        vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma="🗑️ AI Γραμματέας: Έγινε διαγραφή όλων των εργασιών.", imerominia=datetime.now()))
+                    elif t_name or t_date:
+                        tasks_to_check = Ergasia.query.filter_by(ktima_id=target_k.id).order_by(Ergasia.imerominia.desc()).all()
+                        
+                        deleted_count = 0
+                        for t in tasks_to_check:
+                            match_name = False
+                            match_date = False
+                            
+                            if t_name and t_name != 'ΟΛΕΣ':
+                                eidos = (t.eidos_ergasias or "").lower()
+                                farmaka = (t.farmaka_lipasmata or "").lower()
+                                search_term = t_name.lower()
+                                
+                                if search_term in eidos or search_term in farmaka:
+                                    match_name = True
+                                else:
+                                    # Ψάχνουμε μεμονωμένες λέξεις > 3 χαρακτήρων αν δεν ταιριάζει ακριβώς
+                                    words = [w for w in search_term.split() if len(w) > 3]
+                                    for w in words:
+                                        if w in eidos or w in farmaka:
+                                            match_name = True
+                                            break
+                            else:
+                                match_name = True
+                                
+                            if t_date:
+                                if t.imerominia.strftime('%Y-%m-%d').startswith(t_date):
+                                    match_date = True
+                            else:
+                                match_date = True
+                                
+                            if match_name and match_date:
+                                vasi.session.delete(t)
+                                deleted_count += 1
+                                # Προστασία: Αν δεν δόθηκε ημερομηνία, σβήνουμε ΜΟΝΟ την πιο πρόσφατη που ταιριάζει
+                                if not t_date and t_name != 'ΟΛΕΣ':
+                                    break
+                                
+                        if deleted_count > 0:
+                            vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🗑️ AI Γραμματέας: Έγινε διαγραφή {deleted_count} εργασίας ({t_name} {t_date}).", imerominia=datetime.now()))
+                    
+                    target_k.ekkremis_erotisi_ai = None
         
-        if action in ['ADD_TASK', 'ADD_TASKS']:
+        if action in ['ADD_TASK', 'ADD_TASKS', 'MULTI_ACTION']:
             tasks_list = data.get('tasks', [])
             # Αν το AI γύρισε παλιά δομή (1 εργασία)
-            if not tasks_list and data.get('task_name'):
+            if not tasks_list and data.get('task_name') and action != 'MULTI_ACTION':
                 tasks_list = [data]
                 
             for task_data in tasks_list:
@@ -544,25 +632,7 @@ def ai_secretary():
                     target_k.ai_sumvouli_date = None
                     target_k.ekkremis_erotisi_ai = None
 
-        if action == 'DELETE_TASKS':
-            task_name = data.get('task_name', '')
-            target_ktimata = []
-            
-            if str(target_ktima_id).upper() == 'ALL':
-                target_ktimata = energa_ktimata
-            else:
-                if ktima: target_ktimata.append(ktima)
-                
-            for target_k in target_ktimata:
-                if task_name == 'ΟΛΕΣ':
-                    Ergasia.query.filter_by(ktima_id=target_k.id).delete()
-                    vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma="🗑️ AI Γραμματέας: Έγινε διαγραφή όλων των εργασιών.", imerominia=datetime.now()))
-                elif task_name:
-                    Ergasia.query.filter_by(ktima_id=target_k.id).filter(Ergasia.eidos_ergasias.ilike(f"%{task_name}%")).delete(synchronize_session=False)
-                    vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🗑️ AI Γραμματέας: Έγινε διαγραφή εργασιών: {task_name}.", imerominia=datetime.now()))
-                
-                target_k.ekkremis_erotisi_ai = None
-        elif action == 'UPDATE_TASK':
+        if action == 'UPDATE_TASK':
             task_name = data.get('task_name', '')
             new_data = data.get('new_task_data') or {}
             target_ktimata = energa_ktimata if str(target_ktima_id).upper() == 'ALL' else ([ktima] if ktima else [])
@@ -622,10 +692,11 @@ def ai_secretary():
                     vasi.session.add(neo_exodo)
                     vasi.session.add(Diagnosi(ktima_id=k_id_to_charge, apotelesma=f"💶 AI Γραμματέας: Προστέθηκε έσοδο '{perigrafi}' (+{poso}€).", imerominia=datetime.now()))
                 except (ValueError, TypeError): pass
-        elif action == 'ADD_GENERAL_EXPENSE':
+        
+        if action in ['ADD_GENERAL_EXPENSE', 'MULTI_ACTION']:
             g_exps = data.get('general_expenses', [])
             # Εφεδρικός έλεγχος αν το AI χρησιμοποίησε το παλιό, μονό σχήμα
-            if not g_exps and data.get('expense_amount') is not None:
+            if not g_exps and data.get('expense_amount') is not None and action != 'MULTI_ACTION':
                 g_exps = [{'amount': data.get('expense_amount'), 'desc': data.get('expense_desc', 'Γενικό Έξοδο'), 'category': data.get('geniko_katigoria', 'Γενικά')}]
                 
             for ge in g_exps:
@@ -637,16 +708,52 @@ def ai_secretary():
                         poso = float(poso)
                         vasi.session.add(GenikoExodo(xrhsths_id=current_user.id, perigrafi=perigrafi, poso=poso, katigoria=katigoria, imerominia=datetime.now()))
                     except (ValueError, TypeError): pass
-        elif action == 'ADD_GENERAL_INCOME':
+        
+        if action in ['ADD_GENERAL_INCOME', 'MULTI_ACTION']:
             poso = data.get('income_amount')
             perigrafi = data.get('income_desc', 'Γενικό Έσοδο / Επιδότηση')
             katigoria = data.get('geniko_katigoria', 'Επιδότηση')
-            if poso is not None:
+            if poso is not None and action != 'MULTI_ACTION':
                 try:
                     poso = float(poso)
                     vasi.session.add(GenikoExodo(xrhsths_id=current_user.id, perigrafi=perigrafi, poso=-poso, katigoria=katigoria, imerominia=datetime.now()))
                 except (ValueError, TypeError): pass
-        elif action == 'ADD_HARVEST':
+                
+        if action in ['DELETE_EXPENSE', 'MULTI_ACTION']:
+            desc = data.get('expense_desc')
+            amount = data.get('expense_amount')
+            if desc or amount is not None:
+                # 1. Πρώτα ψάχνουμε στα Γενικά Έξοδα (καθώς είναι συνήθως πιο γενικά λάθη)
+                query_geniko = GenikoExodo.query.filter_by(xrhsths_id=current_user.id)
+                if amount is not None:
+                    try: query_geniko = query_geniko.filter_by(poso=float(amount))
+                    except: pass
+                if desc:
+                    query_geniko = query_geniko.filter(GenikoExodo.perigrafi.ilike(f"%{desc}%"))
+                
+                geniko_to_delete = query_geniko.order_by(GenikoExodo.imerominia.desc()).first()
+                
+                if geniko_to_delete:
+                    vasi.session.delete(geniko_to_delete)
+                else:
+                    # 2. Αν δε βρεθεί, ψάχνουμε στα Έξοδα των Κτημάτων
+                    query_exodo = Exodo.query.filter_by(archived=False)
+                    k_id_to_check = target_ktima_id if target_ktima_id and str(target_ktima_id).upper() != 'ALL' else (ktima.id if ktima else None)
+                    if k_id_to_check:
+                        try: query_exodo = query_exodo.filter_by(ktima_id=int(k_id_to_check))
+                        except: pass
+                    if amount is not None:
+                        try: query_exodo = query_exodo.filter_by(poso=float(amount))
+                        except: pass
+                    if desc:
+                        query_exodo = query_exodo.filter(Exodo.perigrafi.ilike(f"%{desc}%"))
+                        
+                    expense_to_delete = query_exodo.order_by(Exodo.imerominia.desc()).first()
+                    if expense_to_delete:
+                        vasi.session.delete(expense_to_delete)
+                        vasi.session.add(Diagnosi(ktima_id=expense_to_delete.ktima_id, apotelesma=f"🗑️ AI Γραμματέας: Διαγράφηκε το έξοδο/έσοδο '{expense_to_delete.perigrafi}'.", imerominia=datetime.now()))
+                
+        if action == 'ADD_HARVEST':
             target_ktimata = []
             if str(target_ktima_id).upper() == 'ALL':
                 target_ktimata = energa_ktimata
@@ -686,27 +793,42 @@ def ai_secretary():
                     msg += ")."
                     vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=msg, imerominia=datetime.now()))
                 target_k.ekkremis_erotisi_ai = None
-        elif action == 'ADD_INVENTORY':
-            inv_name = data.get('inv_name')
-            inv_amount = data.get('inv_amount')
-            if inv_name and inv_amount is not None:
-                try:
-                    amount = float(inv_amount)
-                    vasi.session.add(Apothiki(
-                        xrhsths_id=current_user.id,
-                        eidos=data.get('inv_category', 'Άλλο'),
-                        onoma_proiontos=inv_name,
-                        posotita=amount,
-                        monada_metrisis=data.get('inv_unit', 'Τεμάχια')
-                    ))
-                    
-                    poso = data.get('expense_amount')
-                    k_id_to_charge = ktima.id if ktima else (energa_ktimata[0].id if energa_ktimata else None)
-                    if poso is not None and k_id_to_charge:
-                        vasi.session.add(Exodo(ktima_id=k_id_to_charge, perigrafi=data.get('expense_desc') or f"Αγορά: {inv_name}", poso=float(poso), imerominia=datetime.now()))
-                        vasi.session.add(Diagnosi(ktima_id=k_id_to_charge, apotelesma=f"📦 AI Αποθήκη: Αγορά {amount} {data.get('inv_unit', '')} '{inv_name}' ({poso}€).", imerominia=datetime.now()))
-                except (ValueError, TypeError): pass
-        elif action == 'UPDATE_INVENTORY':
+                
+        if action in ['ADD_INVENTORY', 'MULTI_ACTION']:
+            inv_items = data.get('inventory_items', [])
+            # Εφεδρικός έλεγχος αν το AI χρησιμοποίησε το παλιό, μονό σχήμα
+            if not inv_items and data.get('inv_name') and action != 'MULTI_ACTION':
+                inv_items = [{
+                    'inv_name': data.get('inv_name'),
+                    'inv_category': data.get('inv_category', 'Άλλο'),
+                    'inv_amount': data.get('inv_amount'),
+                    'inv_unit': data.get('inv_unit', 'Τεμάχια'),
+                    'expense_amount': data.get('expense_amount'),
+                    'expense_desc': data.get('expense_desc')
+                }]
+                
+            for item in inv_items:
+                inv_name = item.get('inv_name')
+                inv_amount = item.get('inv_amount')
+                if inv_name and inv_amount is not None:
+                    try:
+                        amount = float(inv_amount)
+                        vasi.session.add(Apothiki(
+                            xrhsths_id=current_user.id,
+                            eidos=item.get('inv_category', 'Άλλο'),
+                            onoma_proiontos=inv_name,
+                            posotita=amount,
+                            monada_metrisis=item.get('inv_unit', 'Τεμάχια')
+                        ))
+                        
+                        poso = item.get('expense_amount')
+                        k_id_to_charge = ktima.id if ktima else (energa_ktimata[0].id if energa_ktimata else None)
+                        if poso is not None and k_id_to_charge:
+                            vasi.session.add(Exodo(ktima_id=k_id_to_charge, perigrafi=item.get('expense_desc') or f"Αγορά: {inv_name}", poso=float(poso), imerominia=datetime.now()))
+                            vasi.session.add(Diagnosi(ktima_id=k_id_to_charge, apotelesma=f"📦 AI Αποθήκη: Αγορά {amount} {item.get('inv_unit', '')} '{inv_name}' ({poso}€).", imerominia=datetime.now()))
+                    except (ValueError, TypeError): pass
+                
+        if action == 'UPDATE_INVENTORY':
             inv_name = data.get('inv_name')
             inv_amount = data.get('inv_amount')
             if inv_name and inv_amount is not None:
@@ -714,14 +836,16 @@ def ai_secretary():
                 if items:
                     for item in items: item.posotita = float(inv_amount)
                     if ktima: vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"📦 AI Αποθήκη: Διορθώθηκε το απόθεμα του '{inv_name}' σε {inv_amount}.", imerominia=datetime.now()))
-        elif action == 'DELETE_INVENTORY':
+                    
+        if action == 'DELETE_INVENTORY':
             inv_name = data.get('inv_name')
             if inv_name:
                 items = [i for i in current_user.apothiki_items if str(inv_name).lower() in i.onoma_proiontos.lower()]
                 for item in items:
                     vasi.session.delete(item)
                 if ktima: vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"📦 AI Αποθήκη: Διαγράφηκε το '{inv_name}'.", imerominia=datetime.now()))
-        elif action == 'UPDATE_WATER':
+                
+        if action == 'UPDATE_WATER':
             moisture = data.get('moisture_percentage')
             ph = data.get('nero_ph')
             ec = data.get('nero_agwgimotita')
@@ -751,7 +875,8 @@ def ai_secretary():
                     target_k.teleftaia_enimerosi_ergasion = None
                     target_k.ai_sumvouli_date = None
                     target_k.ekkremis_erotisi_ai = None
-        elif action == 'ADD_KTIMA':
+                    
+        if action == 'ADD_KTIMA':
             nk_data = data.get('new_ktima_data')
             if nk_data and nk_data.get('onoma_ktimatos'):
                 try:
@@ -799,7 +924,8 @@ def ai_secretary():
                     vasi.session.add(Diagnosi(ktima_id=neo_ktima.id, apotelesma="🤖 AI Γραμματέας: Το κτήμα δημιουργήθηκε αυτόματα.", imerominia=datetime.now()))
                     data['new_ktima_id'] = neo_ktima.id
                 except Exception as e: print(f"Σφάλμα δημιουργίας κτήματος AI: {e}")
-        elif action == 'DELETE_KTIMA':
+                
+        if action == 'DELETE_KTIMA':
             import requests
             target_ktimata = []
             if str(target_ktima_id).upper() == 'ALL':
@@ -812,7 +938,8 @@ def ai_secretary():
                     try: requests.delete(f"http://api.agromonitoring.com/agro/1.0/polygons/{target_k.agromonitoring_poly_id}?appid={os.getenv('AGROMONITORING_API_KEY')}", timeout=5)
                     except: pass
                 vasi.session.delete(target_k)
-        elif action == 'ARCHIVE_KTIMA':
+                
+        if action == 'ARCHIVE_KTIMA':
             target_ktimata = []
             if str(target_ktima_id).upper() == 'ALL': target_ktimata = energa_ktimata
             else:
@@ -820,7 +947,8 @@ def ai_secretary():
             for target_k in target_ktimata:
                 target_k.is_active = False
                 vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"🗂️ AI Γραμματέας: Το κτήμα αρχειοθετήθηκε.", imerominia=datetime.now()))
-        elif action == 'ADD_ANALYSIS':
+                
+        if action == 'ADD_ANALYSIS':
             analysis_data = data.get('new_analysis_data') or {}
             target_ktimata = energa_ktimata if str(target_ktima_id).upper() == 'ALL' else ([ktima] if ktima else [])
             
@@ -846,7 +974,7 @@ def ai_secretary():
                 vasi.session.add(Diagnosi(ktima_id=target_k.id, apotelesma=f"📄 AI Γραμματέας: Καταγράφηκε Ανάλυση Εδάφους (N:{n}, P:{p}, K:{k}, pH:{ph_val})", imerominia=datetime.now()))
                 target_k.ekkremis_erotisi_ai = None
                 
-        elif (action == 'DIAGNOSIS' or any(img.filename != '' for img in image_files)) and ktima:
+        if (action == 'DIAGNOSIS' or any(img.filename != '' for img in image_files)) and action != 'MULTI_ACTION' and ktima:
             image_path_to_save = None
             if any(f.filename != '' for f in image_files):
                 try:
