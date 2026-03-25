@@ -226,7 +226,7 @@ def update_db():
 
             # Προσθήκη στήλης in_rema
             try:
-                conn.execute(text("ALTER TABLE ktimata ADD COLUMN in_rema BOOLEAN DEFAULT 0"))
+                conn.execute(text("ALTER TABLE ktimata ADD COLUMN in_rema BOOLEAN DEFAULT FALSE"))
                 conn.commit()
                 print("✅ Προστέθηκε η στήλη 'in_rema' στον πίνακα 'ktimata'")
             except Exception as e:
