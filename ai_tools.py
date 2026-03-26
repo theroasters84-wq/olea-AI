@@ -389,7 +389,31 @@ def apantisi_sto_ai(ktima_id):
     vasi.session.add(nea_diagnosi)
     
     for task_name in completed_tasks:
-        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now() - timedelta(days=15), proelevsi='AI Ιστορικό'))
+        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='AI Ιστορικό'))
+        
+        # Καθαρισμός εκκρεμών
+        pending_tasks = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+        new_task_text = task_name.lower()
+        
+        synonym_groups = [
+            {'πότισμ', 'νερ', 'άρδευσ'},
+            {'χόρτ', 'ζιζάν', 'καταστροφ'},
+            {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
+            {'κλάδεμ'},
+            {'χαλκ', 'μυκητοκτόν'},
+            {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'},
+            {'όργωμ', 'φρέζ'},
+        ]
+        new_task_group_idx = -1
+        for i, group in enumerate(synonym_groups):
+            if any(syn in new_task_text for syn in group):
+                new_task_group_idx = i
+                break
+        if new_task_group_idx != -1:
+            for pt in pending_tasks:
+                pending_task_text = f"{pt.eidos_ergasias.lower()} {(pt.farmaka_lipasmata or '').lower()}"
+                if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
+                    vasi.session.delete(pt)
         
     if neo_stadio: ktima.fainologiko_stadio = neo_stadio
         
@@ -474,7 +498,32 @@ def apantisi_sto_ai_ajax(ktima_id):
     vasi.session.add(nea_diagnosi)
     
     for task_name in completed_tasks:
-        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now() - timedelta(days=15), proelevsi='AI Ιστορικό'))
+        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='AI Ιστορικό'))
+        
+        # Καθαρισμός εκκρεμών
+        pending_tasks = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+        new_task_text = task_name.lower()
+
+        synonym_groups = [
+            {'πότισμ', 'νερ', 'άρδευσ'},
+            {'χόρτ', 'ζιζάν', 'καταστροφ'},
+            {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
+            {'κλάδεμ'},
+            {'χαλκ', 'μυκητοκτόν'},
+            {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'},
+            {'όργωμ', 'φρέζ'},
+        ]
+        new_task_group_idx = -1
+        for i, group in enumerate(synonym_groups):
+            if any(syn in new_task_text for syn in group):
+                new_task_group_idx = i
+                break
+
+        if new_task_group_idx != -1:
+            for pt in pending_tasks:
+                pending_task_text = f"{pt.eidos_ergasias.lower()} {(pt.farmaka_lipasmata or '').lower()}"
+                if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
+                    vasi.session.delete(pt)
         
     if neo_stadio: ktima.fainologiko_stadio = neo_stadio
         

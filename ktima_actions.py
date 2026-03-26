@@ -175,10 +175,22 @@ def toggle_kalliergeia(ktima_id):
 def prosthes_ergasia(ktima_id):
     date_str = request.form.get('imerominia')
     im = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.now()
-    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=request.form.get('eidos_ergasias'), katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
+    katastasi = request.form.get('katastasi')
+    eidos = request.form.get('eidos_ergasias')
+    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
     vasi.session.add(nea_ergasia)
     ktima = vasi.session.get(Ktima, ktima_id)
     if ktima: 
+        if katastasi == 'Ολοκληρώθηκε':
+            # Καθαρισμός εκκρεμών
+            pending_tasks = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+            t_name = eidos.lower()
+            strong_keywords = ['χόρτ', 'ζιζάν', 'χαλκ', 'κλάδεμ', 'δάκ', 'άζωτ', 'βόρι', 'αμινοξ', 'καταστροφ', 'λίπανσ', 'φρέζ', 'όργωμ', 'μυκητοκτόν', 'εντομοκτόν', 'πότισμ', 'νερ']
+            found_keywords = [k for k in strong_keywords if k in t_name]
+            for pt in pending_tasks:
+                pt_name = pt.eidos_ergasias.lower()
+                if any(k in pt_name for k in found_keywords) or (t_name in pt_name):
+                    vasi.session.delete(pt)
         ktima.ekkremis_erotisi_ai = None
         ktima.teleftaia_enimerosi_ergasion = None
         ktima.ai_sumvouli_date = None
@@ -201,6 +213,29 @@ def oloklirosi_ergasias(ktima_id):
                 eidos = ergasia.eidos_ergasias
         else:
             vasi.session.add(Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='Αγρότης' if getattr(current_user, 'rolos', '') != 'geoponos' else 'Γεωπόνος'))
+            
+            # Καθαρισμός εκκρεμών
+            pending_tasks = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+            new_task_text = eidos.lower()
+            synonym_groups = [
+                {'πότισμ', 'νερ', 'άρδευσ'},
+                {'χόρτ', 'ζιζάν', 'καταστροφ'},
+                {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
+                {'κλάδεμ'},
+                {'χαλκ', 'μυκητοκτόν'},
+                {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'},
+                {'όργωμ', 'φρέζ'},
+            ]
+            new_task_group_idx = -1
+            for i, group in enumerate(synonym_groups):
+                if any(syn in new_task_text for syn in group):
+                    new_task_group_idx = i
+                    break
+            if new_task_group_idx != -1:
+                for pt in pending_tasks:
+                    pending_task_text = f"{pt.eidos_ergasias.lower()} {(pt.farmaka_lipasmata or '').lower()}"
+                    if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
+                        vasi.session.delete(pt)
         
         yliko_id = request.form.get('yliko_id')
         posotita_xrisis_str = request.form.get('posotita_xrisis')

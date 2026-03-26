@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, Response, make_response
 from flask_login import login_required, current_user, logout_user
-from sqlalchemy import text
+from sqlalchemy import text, or_
 from core import vasi, ai_client, api_key_ai, kryptografhsh
 from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths, GenikoExodo
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
@@ -548,7 +548,33 @@ def prosthes_ergasia(ktima_id):
     else:
         im = datetime.now()
         
-    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=request.form.get('katastasi'), imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
+    katastasi = request.form.get('katastasi')
+    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
+    
+    if katastasi == 'Ολοκληρώθηκε':
+        # Καθαρισμός εκκρεμών
+        pending_tasks = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+        new_task_text = eidos.lower()
+        synonym_groups = [
+            {'πότισμ', 'νερ', 'άρδευσ'},
+            {'χόρτ', 'ζιζάν', 'καταστροφ'},
+            {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
+            {'κλάδεμ'},
+            {'χαλκ', 'μυκητοκτόν'},
+            {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'},
+            {'όργωμ', 'φρέζ'},
+        ]
+        new_task_group_idx = -1
+        for i, group in enumerate(synonym_groups):
+            if any(syn in new_task_text for syn in group):
+                new_task_group_idx = i
+                break
+        if new_task_group_idx != -1:
+            for pt in pending_tasks:
+                pending_task_text = f"{pt.eidos_ergasias.lower()} {(pt.farmaka_lipasmata or '').lower()}"
+                if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
+                    vasi.session.delete(pt)
+
     ktima.ekkremis_erotisi_ai = None
     ktima.teleftaia_enimerosi_ergasion = None
     ktima.ai_sumvouli_date = None
@@ -589,6 +615,29 @@ def oloklirosi_ergasias(ktima_id):
                 proelevsi='Αγρότης' if getattr(current_user, 'rolos', '') != 'geoponos' else 'Γεωπόνος'
             )
             vasi.session.add(nea_ergasia)
+            
+            # Καθαρισμός εκκρεμών
+            pending_tasks = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+            new_task_text = eidos.lower()
+            synonym_groups = [
+                {'πότισμ', 'νερ', 'άρδευσ'},
+                {'χόρτ', 'ζιζάν', 'καταστροφ'},
+                {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
+                {'κλάδεμ'},
+                {'χαλκ', 'μυκητοκτόν'},
+                {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'},
+                {'όργωμ', 'φρέζ'},
+            ]
+            new_task_group_idx = -1
+            for i, group in enumerate(synonym_groups):
+                if any(syn in new_task_text for syn in group):
+                    new_task_group_idx = i
+                    break
+            if new_task_group_idx != -1:
+                for pt in pending_tasks:
+                    pending_task_text = f"{pt.eidos_ergasias.lower()} {(pt.farmaka_lipasmata or '').lower()}"
+                    if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
+                        vasi.session.delete(pt)
 
         # 2. Αφαίρεση Υλικού από Αποθήκη (Inventory Sync)
         if yliko_id and posotita_xrisis_str:
@@ -851,8 +900,15 @@ def ndvi_analyze(ktima_id):
                             # Έλεγχος AI Tagging για Χόρτα
                             if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_msg:
                                 ai_msg = ai_msg.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
-                                yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%Χόρτων%')).first()
-                                if not yparxei_kophi:
+                                
+                                yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(
+                                    or_(Ergasia.eidos_ergasias.ilike('%Χόρτ%'), Ergasia.eidos_ergasias.ilike('%Ζιζάν%'), Ergasia.eidos_ergasias.ilike('%Καταστροφ%'))
+                                ).first()
+                                recent_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Ολοκληρώθηκε').filter(
+                                    or_(Ergasia.eidos_ergasias.ilike('%Χόρτ%'), Ergasia.eidos_ergasias.ilike('%Ζιζάν%'), Ergasia.eidos_ergasias.ilike('%Καταστροφ%'))
+                                ).order_by(Ergasia.imerominia.desc()).first()
+                                days_since = (datetime.now() - recent_kophi.imerominia).days if recent_kophi else 999
+                                if not yparxei_kophi and days_since > 15:
                                     vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Κοπή Χόρτων / Καταστροφέας', katastasi='Εκκρεμεί', proelevsi='AI Δορυφόρος', imerominia=datetime.now()))
                             
                             if 'ΕΡΩΤΗΣΗ:' in ai_msg:
@@ -1036,8 +1092,15 @@ def trexe_doriforo(ktima_id):
                         
                         if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_text:
                             ai_text = ai_text.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
-                            yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%Χόρτων%')).first()
-                            if not yparxei_kophi:
+                            
+                            yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(
+                                or_(Ergasia.eidos_ergasias.ilike('%Χόρτ%'), Ergasia.eidos_ergasias.ilike('%Ζιζάν%'), Ergasia.eidos_ergasias.ilike('%Καταστροφ%'))
+                            ).first()
+                            recent_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Ολοκληρώθηκε').filter(
+                                or_(Ergasia.eidos_ergasias.ilike('%Χόρτ%'), Ergasia.eidos_ergasias.ilike('%Ζιζάν%'), Ergasia.eidos_ergasias.ilike('%Καταστροφ%'))
+                            ).order_by(Ergasia.imerominia.desc()).first()
+                            days_since = (datetime.now() - recent_kophi.imerominia).days if recent_kophi else 999
+                            if not yparxei_kophi and days_since > 15:
                                 vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Κοπή Χόρτων / Καταστροφέας', katastasi='Εκκρεμεί', proelevsi='AI Δορυφόρος', imerominia=datetime.now()))
 
                         if 'ΕΡΩΤΗΣΗ:' in ai_text:

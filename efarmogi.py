@@ -18,6 +18,7 @@ def aytomatizomenos_elegxos_ndvi(app_context):
         api_key = os.getenv('AGROMONITORING_API_KEY')
         ai_key = os.getenv('AI_API_KEY')
         if not api_key or not ai_key: return
+``        from sqlalchemy import or_
 
         ktimata = Ktima.query.filter(Ktima.agromonitoring_poly_id.isnot(None)).all()
         client = genai.Client(api_key=ai_key)
@@ -59,8 +60,11 @@ def aytomatizomenos_elegxos_ndvi(app_context):
                             # Έλεγχος AI Tagging
                             if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_text:
                                 ai_text = ai_text.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
-                                yparxei_kophi = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').filter(Ergasia.eidos_ergasias.ilike('%Χόρτων%')).first()
-                                if not yparxei_kophi:
+                                    or_(Ergasia.eidos_ergasias.ilike('%Χόρτ%'), Ergasia.eidos_ergasias.ilike('%Ζιζάν%'), Ergasia.eidos_ergasias.ilike('%Καταστροφ%'))
+                                ).order_by(Ergasia.imerominia.desc()).first()
+                                days_since = (datetime.now() - recent_kophi.imerominia).days if recent_kophi else 999
+                                
+                                if not yparxei_kophi and days_since > 15:
                                     vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias='Κοπή Χόρτων / Καταστροφέας', katastasi='Εκκρεμεί', proelevsi='AI Δορυφόρος', imerominia=datetime.now()))
 
                             if ai_text.startswith("ΕΡΩΤΗΣΗ:"):
