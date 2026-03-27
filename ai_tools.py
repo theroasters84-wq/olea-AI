@@ -449,6 +449,71 @@ def apantisi_sto_ai(ktima_id):
     flash(f'{action_msg}Η απάντησή σας καταγράφηκε και ο AI Γεωπόνος ενημερώθηκε!', 'success')
     return redirect(url_for('core_app.arxikh'))
 
+def _process_secretary_response(ai_text, ktima):
+    """
+    Βοηθητική συνάρτηση για την επεξεργασία της απάντησης του AI Γραμματέα.
+    Απομονώνει την κοινή λογική από τις apantisi_sto_ai και apantisi_sto_ai_ajax.
+    """
+    import re
+    from models import Diagnosi, Ergasia
+
+    symperasma = ai_text
+    
+    match_anaboli = re.search(r'ΑΝΑΒΟΛΗ_ΗΜΕΡΕΣ:\s*(\d+)', symperasma)
+    anaboli_meres = int(match_anaboli.group(1)) if match_anaboli else None
+    if match_anaboli: symperasma = symperasma.replace(match_anaboli.group(0), '')
+        
+    akyrosi = 'ΑΚΥΡΩΣΗ_ΟΛΩΝ:' in symperasma
+    if akyrosi: symperasma = symperasma.replace('ΑΚΥΡΩΣΗ_ΟΛΩΝ:', '')
+        
+    match_stadio = re.search(r'ΝΕΟ ΣΤΑΔΙΟ:\s*(.*?)(?=ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:|ΑΝΑΒΟΛΗ_ΗΜΕΡΕΣ:|ΑΚΥΡΩΣΗ_ΟΛΩΝ:|$)', symperasma, re.DOTALL)
+    neo_stadio = match_stadio.group(1).strip() if match_stadio else None
+    if match_stadio: symperasma = symperasma.replace(match_stadio.group(0), '').replace('ΝΕΟ ΣΤΑΔΙΟ:', '')
+        
+    match_tasks = re.search(r'ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:\s*(.*?)(?=ΝΕΟ ΣΤΑΔΙΟ:|ΑΝΑΒΟΛΗ_ΗΜΕΡΕΣ:|ΑΚΥΡΩΣΗ_ΟΛΩΝ:|$)', symperasma, re.DOTALL)
+    completed_tasks = [t.strip() for t in match_tasks.group(1).split(',') if t.strip()] if match_tasks else []
+    if match_tasks: symperasma = symperasma.replace(match_tasks.group(0), '').replace('ΟΛΟΚΛΗΡΩΜΕΝΕΣ ΕΡΓΑΣΙΕΣ:', '')
+
+    symperasma = symperasma.strip()
+        
+    vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=f"Συμπέρασμα AI (Από Chat): {symperasma}", imerominia=datetime.now()))
+    
+    # Καθαρισμός εκκρεμών εργασιών με βάση τις ολοκληρωμένες
+    synonym_groups = [
+        {'πότισμ', 'νερ', 'άρδευσ'}, {'χόρτ', 'ζιζάν', 'καταστροφ'},
+        {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
+        {'κλάδεμ'}, {'χαλκ', 'μυκητοκτόν'}, {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'}, {'όργωμ', 'φρέζ'}
+    ]
+    pending_tasks_to_check = Ergasia.query.filter_by(ktima_id=ktima.id, katastasi='Εκκρεμεί').all()
+
+    for task_name in completed_tasks:
+        vasi.session.add(Ergasia(ktima_id=ktima.id, eidos_ergasias=task_name + " (Από συζήτηση AI)", katastasi='Ολοκληρώθηκε', imerominia=datetime.now(), proelevsi='AI Ιστορικό'))
+        
+        new_task_text = task_name.lower()
+        new_task_group_idx = next((i for i, group in enumerate(synonym_groups) if any(syn in new_task_text for syn in group)), -1)
+
+        if new_task_group_idx != -1:
+            for pt in pending_tasks_to_check:
+                pending_task_text = f"{pt.eidos_ergasias.lower()} {(pt.farmaka_lipasmata or '').lower()}"
+                if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
+                    vasi.session.delete(pt)
+        
+    if neo_stadio: ktima.fainologiko_stadio = neo_stadio
+        
+    # Εφαρμογή Αναβολής ή Ακύρωσης
+    if anaboli_meres or akyrosi:
+        overdue_tasks = [e for e in ktima.ergasies if not e.archived and e.katastasi == 'Εκκρεμεί' and e.imerominia.date() <= datetime.now().date()]
+        for t in overdue_tasks:
+            if akyrosi:
+                t.katastasi = 'Ακυρώθηκε'
+            else:
+                t.imerominia = datetime.now() + timedelta(days=anaboli_meres)
+
+    return {
+        "anaboli_meres": anaboli_meres, "akyrosi": akyrosi, "neo_stadio": neo_stadio,
+        "completed_tasks": completed_tasks, "symperasma": symperasma
+    }
+
 @ai_bp.route('/apantisi_sto_ai_ajax/<int:ktima_id>', methods=['POST'])
 @login_required
 def apantisi_sto_ai_ajax(ktima_id):

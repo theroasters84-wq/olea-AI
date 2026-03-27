@@ -74,19 +74,36 @@ def inject_helpers():
             greeting += "<ul class='mb-1 ps-3' style='list-style-type: disc;'>" + "".join([f"<li>{t}</li>" for t in tasks_found]) + "</ul>"
             greeting += "Τι θα κάνουμε τελικά; (π.χ. 'Τα έκανα', 'Μόνο το πρώτο' κ.λπ.)"
         else:
-            if not reminders_found:
+            # Αυτό το μπλοκ εκτελείται όταν δεν υπάρχουν προγραμματισμένες εργασίες για σήμερα/αύριο.
+            if reminders_found:
+                greeting += f"Πέρα από την υπενθύμιση, δεν υπάρχουν άλλες εργασίες για <strong>{time_word}</strong>.<br>"
+            else:
                 greeting += f"Δεν έχουμε κάποια εκκρεμή εργασία για <strong>{time_word}</strong>.<br>"
-                if future_tasks:
-                    future_tasks.sort(key=lambda x: x[0])
-                    next_date = future_tasks[0][0]
-                    next_tasks = [t[1] for t in future_tasks if t[0] == next_date]
-                    greeting += f"Οι επόμενες δουλειές είναι στις {next_date.strftime('%d/%m/%Y')}:<br>"
-                    greeting += "<ul class='mb-1 ps-3' style='list-style-type: disc;'>" + "".join([f"<li>{t}</li>" for t in next_tasks]) + "</ul>"
-                greeting += "Μήπως κάνατε κάτι εκτός προγράμματος;"
+
+            if future_tasks:
+                future_tasks.sort(key=lambda x: x[0])
+                next_date = future_tasks[0][0]
+                next_tasks = [t[1] for t in future_tasks if t[0] == next_date]
+                greeting += f"Οι επόμενες δουλειές είναι στις {next_date.strftime('%d/%m/%Y')}:<br>"
+                greeting += "<ul class='mb-1 ps-3' style='list-style-type: disc;'>" + "".join([f"<li>{t}</li>" for t in next_tasks]) + "</ul>"
             
+            # Η τελική ερώτηση γίνεται μόνο αν δεν υπάρχουν υπενθυμίσεις που απαιτούν απάντηση.
+            if not reminders_found:
+                greeting += "Μήπως κάνατε κάτι εκτός προγράμματος;"
         return greeting
         
     return {'datetime': datetime, 'timedelta': timedelta, 'get_secretary_greeting': get_secretary_greeting}
+
+@core_bp.after_request
+def add_no_cache_headers(response):
+    """
+    Προσθέτει κεφαλίδες Cache-Control για να αποτρέψει την προσωρινή αποθήκευση σελίδων.
+    Αυτό αποτρέπει προβλήματα "back button logs me out".
+    """
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @core_bp.app_template_filter('from_json')
 def from_json_filter(s):
