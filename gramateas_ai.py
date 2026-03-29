@@ -439,8 +439,8 @@ def ai_secretary():
                             {'χόρτ', 'ζιζάν', 'καταστροφ'},
                             {'λίπανσ', 'θρέψη', 'άζωτ', 'βόρι', 'αμινοξ', 'κάλι', 'φωσφορ'},
                             {'κλάδεμ'},
-                            {'χαλκ', 'μυκητοκτόν'},
-                            {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ'},
+                            {'χαλκ', 'μυκητοκτόν', 'ψεκασμ'},
+                            {'δάκ', 'εντομοκτόν', 'πυρηνοτρύτ', 'ψεκασμ'},
                             {'όργωμ', 'φρέζ'},
                         ]
                         new_task_group_idx = -1
@@ -1123,6 +1123,24 @@ def ai_secretary():
         current_user.secretary_history = json.dumps(history)
         
         vasi.session.commit()
+
+        # --- ΝΕΟ: ΑΜΕΣΟΣ ΣΥΓΧΡΟΝΙΣΜΟΣ ΤΟΥ "ΕΓΚΕΦΑΛΟΥ" AI ΜΕΤΑ ΑΠΟ ΚΑΘΕ ΕΝΕΡΓΕΙΑ ---
+        try:
+            from logic import syghronismos_ai_ktimatos, evaluate_overdue_tasks
+            
+            # Ελέγχουμε όλα τα κτήματα που μπορεί να επηρεάστηκαν
+            ktimata_gia_sync = []
+            if str(target_ktima_id).upper() == 'ALL':
+                ktimata_gia_sync = energa_ktimata
+            elif ktima:
+                ktimata_gia_sync.append(ktima)
+            
+            for k_sync in ktimata_gia_sync:
+                evaluate_overdue_tasks(k_sync)
+                syghronismos_ai_ktimatos(k_sync)
+        except Exception as e:
+            print(f"Σφάλμα συγχρονισμού AI μετά από ενέργεια γραμματέα: {e}")
+
         return jsonify({
             'success': True, 
             'reply': reply_text, 
