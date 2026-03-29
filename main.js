@@ -297,32 +297,24 @@ document.addEventListener("DOMContentLoaded", function() {
     // Παρακολούθηση ανοίγματος/κλεισίματος για να θυμόμαστε τι βλέπει ο χρήστης
     document.querySelectorAll('.collapse').forEach(function(el) {
         el.addEventListener('shown.bs.collapse', function (e) {
-            console.log("[MAP DEBUG] Collapse opened:", e.target.id);
             if (e.target.id) sessionStorage.setItem('openCollapseId', e.target.id);
             
             // Βελτιστοποίηση: Όταν ανοίγει ένα κτήμα, "ξυπνάμε" τον χάρτη ακαριαία (invalidateSize) 
             // για να μην εμφανίζει "γκρι κουτάκια" και να προφορτώνει τα πλακίδια (tiles).
             setTimeout(() => {
                 const maps = Object.assign({}, window.initializedMaps || {}, window.analytikiMaps || {}, window.geoponosMaps || {});
-                console.log("[MAP DEBUG] Available maps:", Object.keys(maps));
                 for (let mapId in maps) {
                     let map = maps[mapId];
                     if (map && map._container && e.target.contains(map._container)) {
-                        console.log("[MAP DEBUG] Found map in collapse:", mapId);
                         map.invalidateSize();
 
                         // FIX: Αυτόματη εστίαση στον χάρτη του δορυφόρου όταν ανοίγει το modal/accordion
                         const ktimaId = mapId.replace('ndviMap', '').replace('analytikiMapModal', '').replace('analytikiMapGeoponos', '');
-                        console.log("[MAP DEBUG] Extracted ktimaId:", ktimaId);
-``                        let bounds = window.ndviMapBounds ? (window.ndviMapBounds[ktimaId] || window.ndviMapBounds[mapId]) : null;
+                        let bounds = window.ndviMapBounds ? (window.ndviMapBounds[ktimaId] || window.ndviMapBounds[mapId]) : null;
                         if (bounds) {
-                            console.log("[MAP DEBUG] Found bounds:", bounds);
                             if (typeof bounds.isValid === 'function' && bounds.isValid()) {
                                 map.fitBounds(bounds, { padding: [20, 20] }); // Προσθήκη padding για να μην κολλάει στις άκρες
-                                console.log("[MAP DEBUG] fitBounds executed!");
                             }
-                        } else {
-                            console.log("[MAP DEBUG] No bounds found for ktimaId:", ktimaId, "or mapId:", mapId, "Available bounds:", window.ndviMapBounds);
                         }
                     }
                 }
@@ -339,7 +331,6 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]').forEach(function (tabEl) {
         tabEl.addEventListener('shown.bs.tab', function (e) {
             const targetPaneSelector = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
-            console.log("[MAP DEBUG] Tab clicked. Target pane:", targetPaneSelector);
             if (!targetPaneSelector) return;
             const targetPane = document.querySelector(targetPaneSelector);
             if (!targetPane) return;
@@ -347,23 +338,16 @@ document.addEventListener("DOMContentLoaded", function() {
             // Χρησιμοποιούμε την ίδια λογική με το 'shown.bs.collapse'
             setTimeout(() => {
                 const maps = Object.assign({}, window.initializedMaps || {}, window.analytikiMaps || {}, window.geoponosMaps || {});
-                console.log("[MAP DEBUG] Available maps globally:", Object.keys(maps));
                 for (let mapId in maps) {
                     let map = maps[mapId];
                     if (map && map._container && targetPane.contains(map._container)) {
-                        console.log("[MAP DEBUG] Found map inside the tab pane:", mapId);
                         map.invalidateSize();
                         const ktimaId = mapId.replace('ndviMap', '').replace('analytikiMapModal', '').replace('analytikiMapGeoponos', '');
-                        console.log("[MAP DEBUG] Extracted ktimaId:", ktimaId);
                         let bounds = window.ndviMapBounds ? (window.ndviMapBounds[ktimaId] || window.ndviMapBounds[mapId]) : null;
                         if (bounds) {
-                            console.log("[MAP DEBUG] Found bounds:", bounds);
                             if (typeof bounds.isValid === 'function' && bounds.isValid()) {
                                 map.fitBounds(bounds, { padding: [20, 20] });
-                                console.log("[MAP DEBUG] fitBounds executed successfully!");
                             }
-                        } else {
-                            console.log("[MAP DEBUG] No bounds found for ktimaId:", ktimaId, "or mapId:", mapId, "Available bounds:", window.ndviMapBounds);
                         }
                     }
                 }
