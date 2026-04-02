@@ -35,6 +35,9 @@ def aytomatizomenos_elegxos_ndvi(app_context):
                     ndvi_url = latest_img.get('image', {}).get('ndvi')
                     
                     if ndvi_url:
+                        if 'appid=' not in ndvi_url:
+                            ndvi_url += f"&appid={api_key}" if '?' in ndvi_url else f"?appid={api_key}"
+                        
                         img_response = requests.get(ndvi_url)
                         if img_response.status_code == 200:
                             image_file = PIL.Image.open(io.BytesIO(img_response.content))

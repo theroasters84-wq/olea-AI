@@ -860,7 +860,7 @@ def ndvi_analyze(ktima_id):
                             images = img_res_retry.json()
 
                 # --- Τελική Αναζήτηση στην τελική λίστα εικόνων ---
-                ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url, image_dt = None, None, None, None, None, None
+                ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url, image_dt, cloud_cov = None, None, None, None, None, None, 0
                 if images:
                     images.sort(key=lambda x: x['dt'], reverse=True)
                     
@@ -874,6 +874,7 @@ def ndvi_analyze(ktima_id):
                             truecolor_url = img_data.get('truecolor')
                             falsecolor_url = img_data.get('falsecolor')
                             image_dt = img.get('dt')
+                            cloud_cov = img.get('cl', 0)
                             break
                             
                     # 2. Αν όλα τα περάσματα έχουν σύννεφα, αναγκαστικά παίρνουμε την πιο πρόσφατη
@@ -887,7 +888,14 @@ def ndvi_analyze(ktima_id):
                                 truecolor_url = img_data.get('truecolor')
                                 falsecolor_url = img_data.get('falsecolor')
                                 image_dt = img.get('dt')
+                                cloud_cov = img.get('cl', 100)
                                 break
+                    
+                    backend_fetch_url = None
+                    if ndvi_url:
+                        backend_fetch_url = ndvi_url
+                        if backend_fetch_url and 'appid=' not in backend_fetch_url:
+                            backend_fetch_url += f"&appid={api_key}" if '?' in backend_fetch_url else f"?appid={api_key}"
                     
                     # 3. Διόρθωση URL (HTTPS & API Key) για όλους τους χάρτες
                     urls_dict = {'ndvi_url': ndvi_url, 'ndwi_url': ndwi_url, 'evi_url': evi_url, 'truecolor_url': truecolor_url, 'falsecolor_url': falsecolor_url}
@@ -901,11 +909,13 @@ def ndvi_analyze(ktima_id):
                     image_date_str = datetime.fromtimestamp(image_dt).strftime('%d/%m/%Y %H:%M') if image_dt else ''
                     
                     ai_msg = "Ο χάρτης ανανεώθηκε, αλλά δεν έγινε ανάλυση AI."
-                    if ndvi_url:
+                    if backend_fetch_url:
                         # 3. Ανάλυση με Gemini Vision
                         try:
-                            img_content = requests.get(ndvi_url).content
-                            image_file = PIL.Image.open(io.BytesIO(img_content))
+                            img_response = requests.get(backend_fetch_url)
+                            if img_response.status_code != 200:
+                                raise Exception(f"Agromonitoring returned HTTP {img_response.status_code}")
+                            image_file = PIL.Image.open(io.BytesIO(img_response.content))
                             prompt = (
                                 "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον χάρτη NDVI. "
                                 "ΟΔΗΓΙΕΣ: 1. Αν η βλάστηση είναι φυσιολογική, δώσε μια σύντομη αναφορά. "
@@ -914,6 +924,9 @@ def ndvi_analyze(ktima_id):
                             response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                             ai_msg = response.text
                             
+                            if cloud_cov > 20:
+                                ai_msg = f"☁️ ΣΗΜΕΙΩΣΗ: Ο χάρτης έχει {cloud_cov:.0f}% σύννεφα. Οι τιμές είναι ενδεικτικές!\n\n" + ai_msg
+
                             # Έλεγχος AI Tagging για Χόρτα
                             if '[ΧΟΡΤΑ_ΥΨΗΛΑ]' in ai_msg:
                                 ai_msg = ai_msg.replace('[ΧΟΡΤΑ_ΥΨΗΛΑ]', '').strip()
@@ -1033,7 +1046,7 @@ def trexe_doriforo(ktima_id):
                     images = img_res_retry.json() # Διόρθωση bug (ήταν img_res αντί για img_res_retry)
         
         if images:
-            ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url, image_dt = None, None, None, None, None, None
+            ndvi_url, ndwi_url, evi_url, truecolor_url, falsecolor_url, image_dt, cloud_cov = None, None, None, None, None, None, 0
             images.sort(key=lambda x: x['dt'], reverse=True)
             
             for img in images:
@@ -1045,6 +1058,7 @@ def trexe_doriforo(ktima_id):
                     truecolor_url = img_data.get('truecolor')
                     falsecolor_url = img_data.get('falsecolor')
                     image_dt = img.get('dt')
+                    cloud_cov = img.get('cl', 0)
                     break
                     
             if not ndvi_url:
@@ -1057,9 +1071,14 @@ def trexe_doriforo(ktima_id):
                         truecolor_url = img_data.get('truecolor')
                         falsecolor_url = img_data.get('falsecolor')
                         image_dt = img.get('dt')
+                        cloud_cov = img.get('cl', 100)
                         break
             
             if ndvi_url:
+                backend_fetch_url = ndvi_url
+                if backend_fetch_url and 'appid=' not in backend_fetch_url:
+                    backend_fetch_url += f"&appid={api_key}" if '?' in backend_fetch_url else f"?appid={api_key}"
+
                 urls_dict = {'ndvi_url': ndvi_url, 'ndwi_url': ndwi_url, 'evi_url': evi_url, 'truecolor_url': truecolor_url, 'falsecolor_url': falsecolor_url}
                 for k, v in urls_dict.items():
                     if v:
@@ -1086,8 +1105,10 @@ def trexe_doriforo(ktima_id):
                 else:
                     # ΝΕΑ Ανάλυση με Gemini Vision
                     try:
-                        img_content = requests.get(ndvi_url).content
-                        image_file = PIL.Image.open(io.BytesIO(img_content))
+                        img_response = requests.get(backend_fetch_url)
+                        if img_response.status_code != 200:
+                            raise Exception(f"Agromonitoring returned HTTP {img_response.status_code}")
+                        image_file = PIL.Image.open(io.BytesIO(img_response.content))
                         
                         recent_weeds = ""
                         for d in reversed(ktima.diagnoseis):
@@ -1141,6 +1162,8 @@ def trexe_doriforo(ktima_id):
                             pass
 
                         teliko_keimeno = f"🛰️ Δορυφόρος: {stats_msg}{ai_text}"
+                        if cloud_cov > 20:
+                            teliko_keimeno = f"☁️ ΣΗΜΕΙΩΣΗ: Ο χάρτης έχει {cloud_cov:.0f}% σύννεφα. Οι τιμές είναι ενδεικτικές!\n\n" + teliko_keimeno
                         vasi.session.add(Diagnosi(ktima_id=ktima.id, apotelesma=teliko_keimeno, imerominia=datetime.now()))
                         ktima.analysi_dedomena = f"{stats_msg}\n{ai_text}"
                         vasi.session.commit()

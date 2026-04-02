@@ -353,16 +353,16 @@ def xtise_plires_context(ktima):
     elif ardefsi_str == 'Αρδευόμενο':
         ardefsi_str += " (ΟΔΗΓΙΑ: Το κτήμα είναι ΑΡΔΕΥΟΜΕΝΟ. Δώσε ΠΡΩΤΕΥΟΥΣΑ ΣΗΜΑΣΙΑ στην Υδρολίπανση.)"
 
-        # --- ΝΕΟ: ΕΞΥΠΝΕΣ ΟΔΗΓΙΕΣ ΓΙΑ ΖΙΖΑΝΙΑ / ΧΟΡΤΑ ---
-        diacheirisi_edafous_str = ktima.diacheirisi_edafous or 'Άγνωστη'
-        recent_weed_tasks = [e for e in ktima.ergasies if not e.archived and e.katastasi == 'Ολοκληρώθηκε' and any(keyword in e.eidos_ergasias.lower() for keyword in ['χόρτ', 'ζιζάν', 'καταστροφ'])]
-        if recent_weed_tasks:
-            last_weed = sorted(recent_weed_tasks, key=lambda x: x.imerominia)[-1]
-            days_weed = (now - last_weed.imerominia).days
-            if days_weed <= 45:
-                diacheirisi_edafous_str += f" (ΓΝΩΣΗ AI: Ο αγρότης ΕΚΟΨΕ Ή ΨΕΚΑΣΕ τα χόρτα πριν από {days_weed} ημέρες. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να του προτείνεις ξανά 'Κοπή Χόρτων', 'Καταστροφέα' ή 'Ψεκασμό Ζιζανίων'. Το έδαφος είναι ήδη καθαρό!)"
+    # --- ΝΕΟ: ΕΞΥΠΝΕΣ ΟΔΗΓΙΕΣ ΓΙΑ ΖΙΖΑΝΙΑ / ΧΟΡΤΑ ---
+    diacheirisi_edafous_str = ktima.diacheirisi_edafous or 'Άγνωστη'
+    recent_weed_tasks = [e for e in ktima.ergasies if not e.archived and e.katastasi == 'Ολοκληρώθηκε' and any(keyword in e.eidos_ergasias.lower() for keyword in ['χόρτ', 'ζιζάν', 'καταστροφ'])]
+    if recent_weed_tasks:
+        last_weed = sorted(recent_weed_tasks, key=lambda x: x.imerominia)[-1]
+        days_weed = (now - last_weed.imerominia).days
+        if days_weed <= 45:
+            diacheirisi_edafous_str += f" (ΓΝΩΣΗ AI: Ο αγρότης ΕΚΟΨΕ Ή ΨΕΚΑΣΕ τα χόρτα πριν από {days_weed} ημέρες. ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ να του προτείνεις ξανά 'Κοπή Χόρτων', 'Καταστροφέα' ή 'Ψεκασμό Ζιζανίων'. Το έδαφος είναι ήδη καθαρό!)"
 
-        # --- ΝΕΟ: ΕΞΥΠΝΕΣ ΟΔΗΓΙΕΣ ΦΑΙΝΟΛΟΓΙΚΟΥ ΣΤΑΔΙΟΥ ---
+    # --- ΝΕΟ: ΕΞΥΠΝΕΣ ΟΔΗΓΙΕΣ ΦΑΙΝΟΛΟΓΙΚΟΥ ΣΤΑΔΙΟΥ ---
     stadio = ktima.fainologiko_stadio or 'Άγνωστο'
     stadio_odigia = ""
     if stadio in ['Σχηματισμός Ταξιανθιών', 'Πριν την άνθιση', 'Κρόκιασμα', 'Μούρο']:
