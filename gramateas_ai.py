@@ -120,8 +120,10 @@ def ai_secretary():
         5. Διαχείριση, Ολοκλήρωση & Ακύρωση Εργασιών: Για ολοκλήρωση ή αναβολή, βάλε action: "UPDATE_TASKS" με "status": "Ολοκληρώθηκε" ή "date": "YYYY-MM-DD". ΑΝ Ο ΧΡΗΣΤΗΣ ΑΡΝΗΘΕΙ ΜΙΑ ΕΡΓΑΣΙΑ Ή ΠΕΙ ΟΤΙ ΔΕΝ ΜΠΟΡΕΙ (π.χ. 'δεν θα κάνω ανάλυση', 'δεν έχω νερό να ποτίσω', 'δεν θα κλαδέψω', 'άστο δεν χρειάζεται'), κάνε "UPDATE_TASKS" και βάλε "status": "Ακυρώθηκε". Με αυτόν τον τρόπο η εργασία φεύγει από το πρόγραμμα, αλλά παραμένει στο ιστορικό για να το θυμάσαι στις επόμενες συμβουλές σου! Αν ο χρήστης ζητήσει ρητά 'διαγραφή' επειδή έκανε λάθος καταχώρηση, κάνε "DELETE_TASKS".
         6. Πληροφορίες Ημερολογίου, Εκκρεμοτήτων & Καιρού (ΣΗΜΑΝΤΙΚΟ): ΕΧΕΙΣ ΗΔΗ ΠΡΟΣΒΑΣΗ στο 'ΗΜΕΡΟΛΟΓΙΟ (ΕΚΚΡΕΜΕΙΣ ΕΡΓΑΣΙΕΣ)' και στο ιστορικό παραπάνω. Αν ο χρήστης σε ρωτήσει "τι έχω στο ημερολόγιο;" ή "τι δουλειές πρέπει να γίνουν;", διάβασε την ενότητα ΗΜΕΡΟΛΟΓΙΟ και ΑΠΑΝΤΗΣΕ ΑΜΕΣΑ με τις ημερομηνίες! Ταξινόμησέ τες με βάση το τι επείγει. ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις "θα ψάξω", δώσε τα δεδομένα κατευθείαν στο "reply" με action: "ADVICE".
         7. Οικονομικά (Έξοδα/Έσοδα): Αν το έξοδο/έσοδο αφορά ΣΥΓΚΕΚΡΙΜΕΝΟ ΚΤΗΜΑ, βάλε action: "ADD_EXPENSE" ("expense_amount", "expense_desc"). Αν είναι ΓΕΝΙΚΑ έξοδα (ένα ή περισσότερα) βάλε action: "ADD_GENERAL_EXPENSE" και συμπλήρωσε ΥΠΟΧΡΕΩΤΙΚΑ τη λίστα "general_expenses" βάζοντας σε κάθε αντικείμενο: "amount" (αριθμός), "desc" (περιγραφή) και "category" (Επιλογές: "Αναλώσιμα", "Ζημιές", "Γενικά").
-           - ΟΔΗΓΙΑ ΚΑΤΗΓΟΡΙΟΠΟΙΗΣΗΣ: Στα "Αναλώσιμα" ανήκουν: Λάδια, πετρέλαιο/καύσιμα, ελαστικά/λάστιχα οχημάτων, λάστιχα/σωλήνες άρδευσης (π.χ. Φ23, σταλάκτες), εργαλεία χειρός, μπαταρίες, πριόνια, ανταλλακτικά συντήρησης. Στις "Ζημιές" ανήκουν αυστηρά: Επισκευές από σπάσιμο (π.χ. έσπασε η αντλία, χάλασε το βυτίο/τρακτέρ), βλάβες και ζημιές από καιρικά φαινόμενα.
-          Αν είναι ΓΕΝΙΚΟ έσοδο (π.χ. επιδότηση) βάλε action: "ADD_GENERAL_INCOME" και συμπλήρωσε "income_amount", "income_desc" ΚΑΙ "geniko_katigoria" ("Επιδότηση"). Για διαγραφή εξόδου/εσόδου (π.χ. "λάθος καταχώρηση", "σβήσε τα 50 ευρώ"), βάλε action: "DELETE_EXPENSE" και συμπλήρωσε "expense_desc" (λέξη κλειδί) ή/και "expense_amount" (ποσό). Αν ο χρήστης ζητήσει να διαγραφούν ΟΛΑ τα έξοδα γενικά, βάλε action: "DELETE_EXPENSE", "expense_desc": "ΟΛΑ" και "target_ktima_id": "ALL".
+           - ΟΔΗΓΙΑ ΚΑΤΗΓΟΡΙΟΠΟΙΗΣΗΣ: Στα "Αναλώσιμα" ανήκουν: Λάδια, πετρέλαιο/καύσιμα, ελαστικά/λάστιχα οχημάτων, λάστιχα/σωλήνες άρδευσης (π.χ. Φ23, σταλάκτες), εργαλεία χειρός, μπαταρίες, πριόνια, ανταλλακτικά συντήρησης. Στις "Ζημιές" ανήκουν αυστηρά: Επισκευές από σπάσιμο (π.χ. έσπασε η αντλία, χάλασε το βυτίο/τρακτέρ), βλάβες και ζημιές από καιρικά φαινόμενα. ΩΣΤΟΣΟ, αν ο χρήστης διαφωνήσει ρητά με την κατηγορία (π.χ. "το λάστιχο δεν είναι αναλώσιμο, είναι ζημιά"), κάνε UPDATE_EXPENSE και ικανοποίησε το αίτημά του!
+          Αν είναι ΓΕΝΙΚΟ έσοδο (π.χ. επιδότηση) βάλε action: "ADD_GENERAL_INCOME" και συμπλήρωσε "income_amount", "income_desc" ΚΑΙ "geniko_katigoria" ("Επιδότηση"). 
+          - Για διαγραφή εξόδου/εσόδου (π.χ. "λάθος καταχώρηση", "σβήσε τα 50 ευρώ"), βάλε action: "DELETE_EXPENSE" και συμπλήρωσε "expense_desc" (λέξη κλειδί) ή/και "expense_amount" (ποσό). Αν ο χρήστης ζητήσει να διαγραφούν ΟΛΑ τα έξοδα γενικά, βάλε action: "DELETE_EXPENSE", "expense_desc": "ΟΛΑ" και "target_ktima_id": "ALL".
+          - Για ΔΙΟΡΘΩΣΗ/ΑΛΛΑΓΗ εξόδου (π.χ. "το λάστιχο είναι ζημιά, όχι αναλώσιμο", "διόρθωσε το ποσό σε 60"), βάλε action: "UPDATE_EXPENSE". Στο JSON βάλε "expense_desc" (Λέξη κλειδί του ΠΑΛΙΟΥ εξόδου) και συμπλήρωσε τα "new_expense_amount", "new_expense_desc" Ή "geniko_katigoria" με τα νέα δεδομένα.
         8. Έξυπνη Διαχείριση Χόρτων / Ζιζανίων: Η "Κοπή Χόρτων" ΤΙΚΑ αναζήτηση στο internet για να επιβεβαιώσεις 100% την ορθότητά της πριν απαντήσεις. Δώσε την απάντηση και βάλε action: "ADVICE".
         11. Καταγραφή Συγκομιδής: Αν ο χρήστης αναφέρει δεδομένα συγκομιδής (π.χ. "μάζεψα 5000 κιλά ελιές", "μάζεψα την Κορωνέικη 1000 κιλά"), βάλε action: "ADD_HARVEST". Στο JSON συμπλήρωσε "tonoi" (κιλά καρπού, 1 τόνος = 1000), "kila_ladi" (κιλά λαδιού) και "esoda" (ευρώ). ΣΗΜΑΝΤΙΚΟ: Βάλε "is_final": true ΑΝ ο χρήστης αναφέρει ότι τελείωσε όλη η συγκομιδή για φέτος (για να κλείσει η σεζόν). Αν είναι μερική συγκομιδή (π.χ. μάζεψε μόνο μία ποικιλία και έπεται συνέχεια), βάλε "is_final": false. Προαιρετικά βάλε "poikilia_sygkomidis": "Όνομα ποικιλίας" αν το αναφέρει.
         12. Ασαφή/Ελλιπή Δεδομένα: Αν ο χρήστης ζητήσει ενέργεια (π.χ. διαγραφή, ενημέρωση) για ένα κτήμα που ΔΕΝ υπάρχει στη λίστα, ΑΠΑΓΟΡΕΥΕΤΑΙ να πεις ψέματα ότι το έκανες. Πες του ότι δεν το βρίσκεις και ζήτα διευκρίνιση (action: "DIAGNOSIS"). Το ίδιο ισχύει για ελλιπή δεδομένα (π.χ. ρωτάει για εργασία και το ιστορικό είναι κενό).
@@ -139,7 +141,7 @@ def ai_secretary():
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
             "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
-            "action": "MULTI_ACTION" | "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASKS" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_GENERAL_EXPENSE" | "ADD_GENERAL_INCOME" | "DELETE_EXPENSE" | "DELETE_UGRASIA" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
+            "action": "MULTI_ACTION" | "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASKS" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_GENERAL_EXPENSE" | "ADD_GENERAL_INCOME" | "DELETE_EXPENSE" | "UPDATE_EXPENSE" | "DELETE_UGRASIA" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
             "tasks": [
                 {
                     "target_ktima_id": "Αριθμός ID κτήματος Ή 'ALL'",
@@ -175,6 +177,8 @@ def ai_secretary():
             "task_name": "ΟΛΕΣ ή λέξη (Μόνο για DELETE_TASKS ή UPDATE_TASK)",
             "expense_amount": 50,
             "expense_desc": "Περιγραφή κόστους",
+            "new_expense_amount": 60,
+            "new_expense_desc": "Νέα περιγραφή",
             "general_expenses": [
                 {
                     "amount": 120,
@@ -867,6 +871,55 @@ def ai_secretary():
                         vasi.session.delete(expense_to_delete)
                         vasi.session.add(Diagnosi(ktima_id=expense_to_delete.ktima_id, apotelesma=f"🗑️ AI Γραμματέας: Διαγράφηκε το έξοδο/έσοδο '{expense_to_delete.perigrafi}'.", imerominia=datetime.now()))
                 
+        if action == 'UPDATE_EXPENSE':
+            old_desc = data.get('expense_desc')
+            old_amount = data.get('expense_amount')
+            
+            new_amount = data.get('new_expense_amount')
+            new_desc = data.get('new_expense_desc')
+            new_cat = data.get('geniko_katigoria')
+            
+            updated = False
+            
+            query_geniko = GenikoExodo.query.filter_by(xrhsths_id=current_user.id)
+            if old_desc:
+                query_geniko = query_geniko.filter(GenikoExodo.perigrafi.ilike(f"%{old_desc}%"))
+            if old_amount is not None:
+                try: query_geniko = query_geniko.filter_by(poso=float(old_amount))
+                except: pass
+                
+            geniko_to_update = query_geniko.order_by(GenikoExodo.imerominia.desc()).first()
+            if geniko_to_update:
+                if new_amount is not None: geniko_to_update.poso = float(new_amount)
+                if new_desc: geniko_to_update.perigrafi = new_desc
+                if new_cat: geniko_to_update.katigoria = new_cat
+                updated = True
+                k_id_diag = target_ktima_id if target_ktima_id and str(target_ktima_id).upper() != 'ALL' else (ktima.id if ktima else (energa_ktimata[0].id if energa_ktimata else None))
+                if k_id_diag:
+                    vasi.session.add(Diagnosi(ktima_id=k_id_diag, apotelesma=f"✏️ AI Γραμματέας: Ενημερώθηκε το γενικό έξοδο/έσοδο.", imerominia=datetime.now()))
+            else:
+                query_exodo = Exodo.query.filter_by(archived=False)
+                k_id_to_check = target_ktima_id if target_ktima_id and str(target_ktima_id).upper() != 'ALL' else (ktima.id if ktima else None)
+                if k_id_to_check:
+                    try: query_exodo = query_exodo.filter_by(ktima_id=int(k_id_to_check))
+                    except: pass
+                if old_desc:
+                    query_exodo = query_exodo.filter(Exodo.perigrafi.ilike(f"%{old_desc}%"))
+                if old_amount is not None:
+                    try: query_exodo = query_exodo.filter_by(poso=float(old_amount))
+                    except: pass
+                    
+                expense_to_update = query_exodo.order_by(Exodo.imerominia.desc()).first()
+                if expense_to_update:
+                    if new_amount is not None: expense_to_update.poso = float(new_amount)
+                    if new_desc: expense_to_update.perigrafi = new_desc
+                    if new_cat: expense_to_update.katigoria = new_cat
+                    updated = True
+                    vasi.session.add(Diagnosi(ktima_id=expense_to_update.ktima_id, apotelesma=f"✏️ AI Γραμματέας: Ενημερώθηκε το έξοδο/έσοδο κτήματος.", imerominia=datetime.now()))
+            
+            if not updated:
+                reply_text = "Δεν μπόρεσα να βρω το έξοδο με αυτά τα στοιχεία για να το διορθώσω."
+
         if action == 'ADD_HARVEST':
             target_ktimata = []
             if str(target_ktima_id).upper() == 'ALL':
