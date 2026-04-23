@@ -592,9 +592,6 @@ def prosthes_ergasia(ktima_id):
                 if any(syn in pending_task_text for syn in synonym_groups[new_task_group_idx]):
                     vasi.session.delete(pt)
 
-    ktima.ekkremis_erotisi_ai = None
-    ktima.teleftaia_enimerosi_ergasion = None
-    ktima.ai_sumvouli_date = None
     vasi.session.add(nea_ergasia)
     vasi.session.commit()
     return redirect(url_for('core_app.arxikh'))
@@ -680,9 +677,6 @@ def oloklirosi_ergasias(ktima_id):
         except (ValueError, TypeError):
             pass
 
-        ktima.ekkremis_erotisi_ai = None
-        ktima.teleftaia_enimerosi_ergasion = None
-        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
         
@@ -1477,9 +1471,6 @@ def api_schedule_tasks():
                 e = vasi.session.get(Ergasia, t_id)
                 if e and e.ktima.idioktitis == current_user:
                     e.imerominia = new_date
-                    e.ktima.teleftaia_enimerosi_ergasion = None
-                    e.ktima.ekkremis_erotisi_ai = None
-                    e.ktima.ai_sumvouli_date = None
             elif t_type == 'ai_task':
                 ktima_id = int(item.get('ktima_id'))
                 ktima = vasi.session.get(Ktima, ktima_id)
@@ -1489,27 +1480,50 @@ def api_schedule_tasks():
                         katastasi='Εκκρεμεί', imerominia=new_date, proelevsi='AI Γεωπόνος'
                     )
                     vasi.session.add(nea_ergasia)
-                    ktima.teleftaia_enimerosi_ergasion = None
-                    ktima.ekkremis_erotisi_ai = None
-                    ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True})
     except Exception as e:
         vasi.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@core_bp.route('/api/delete_task/<int:ergasia_id>', methods=['POST'])
+@core_bp.route('/api/delete_task/<ergasia_id>', methods=['POST'])
 @login_required
 def api_delete_task(ergasia_id):
-    ergasia = vasi.session.get(Ergasia, ergasia_id)
-    if not ergasia or ergasia.ktima.idioktitis != current_user:
-        return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
-    ergasia.ktima.teleftaia_enimerosi_ergasion = None
-    ergasia.ktima.ekkremis_erotisi_ai = None
-    ergasia.ktima.ai_sumvouli_date = None
-    vasi.session.delete(ergasia)
-    vasi.session.commit()
-    return jsonify({'success': True})
+    # Αν είναι προτεινόμενη εργασία από το AI (έχει μορφή ai_KTIMA_IDX)
+    if str(ergasia_id).startswith('ai_'):
+        try:
+            parts = str(ergasia_id).split('_')
+            if len(parts) >= 3:
+                ktima_id = int(parts[1])
+                idx = int(parts[2])
+                ktima = vasi.session.get(Ktima, ktima_id)
+                if ktima and ktima.idioktitis == current_user:
+                    ideal_tasks = [t.strip() for t in (ktima.topikes_ergasies or '').split('|') if t.strip()]
+                    completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
+                    db_pending_names = [e.eidos_ergasias for e in ktima.ergasies if not e.archived and e.katastasi and e.katastasi.strip() == 'Εκκρεμεί']
+                    pending_ai = [task for task in ideal_tasks if task not in completed_tasks and task not in db_pending_names]
+                    
+                    if idx < len(pending_ai):
+                        task_to_remove = pending_ai[idx]
+                        if task_to_remove in ideal_tasks:
+                            ideal_tasks.remove(task_to_remove)
+                            ktima.topikes_ergasies = '|'.join(ideal_tasks)
+                            vasi.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    # Αλλιώς είναι κανονική εργασία αποθηκευμένη στη Βάση (ID = Ακέραιος)
+    try:
+        ergasia_id_int = int(ergasia_id)
+        ergasia = vasi.session.get(Ergasia, ergasia_id_int)
+        if not ergasia or ergasia.ktima.idioktitis != current_user:
+            return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
+        vasi.session.delete(ergasia)
+        vasi.session.commit()
+        return jsonify({'success': True})
+    except ValueError:
+        return jsonify({'error': 'Λάθος μορφή ID'}), 400
 
 @core_bp.route('/api/add_manual_task', methods=['POST'])
 @login_required
@@ -1535,9 +1549,6 @@ def api_add_manual_task():
             proelevsi='Αγρότης'
         )
         vasi.session.add(nea_ergasia)
-        ktima.teleftaia_enimerosi_ergasion = None
-        ktima.ekkremis_erotisi_ai = None
-        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True})
     except Exception as e:

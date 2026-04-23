@@ -269,9 +269,6 @@ def oloklirosi_ergasias(ktima_id):
                 vasi.session.add(nea_ergasia_amino)
                 flash('Το σύστημα πρόσθεσε αυτόματα χρονόμετρο αναμονής 7 ημερών για τα Αμινοξέα, ώστε να μην καούν τα δέντρα από τον Χαλκό!', 'info')
 
-        ktima.ekkremis_erotisi_ai = None
-        ktima.teleftaia_enimerosi_ergasion = None
-        ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return redirect(request.referrer or url_for('core_app.arxikh'))
     except Exception as e:
@@ -565,9 +562,6 @@ def allagi_katastasis_ergasias(ergasia_id):
             ergasia.katastasi = 'Ολοκληρώθηκε'
         else:
             ergasia.katastasi = 'Εκκρεμεί'
-        ergasia.ktima.teleftaia_enimerosi_ergasion = None
-        ergasia.ktima.ekkremis_erotisi_ai = None
-        ergasia.ktima.ai_sumvouli_date = None
         vasi.session.commit()
         return jsonify({'success': True, 'nea_katastasi': ergasia.katastasi})
     except Exception as e:
