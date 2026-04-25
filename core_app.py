@@ -113,6 +113,17 @@ def from_json_filter(s):
     except:
         return []
 
+@core_app.route('/api/keep_alive', methods=['GET'])
+def keep_alive():
+    """
+    Endpoint για εξωτερικά Cron Jobs (π.χ. cron-job.org).
+    Όταν μια εξωτερική υπηρεσία 'χτυπάει' αυτό το URL κάθε 14 λεπτά, 
+    ο δωρεάν server (π.χ. στο Render) δεν μπαίνει ποτέ σε sleep mode.
+    Επιστρέφει ένα απλό JSON για να ξέρουμε ότι ο server είναι ζωντανός.
+    """
+    import datetime
+    return {"status": "alive", "time": str(datetime.datetime.now())}, 200
+
 @core_bp.route('/')
 @login_required
 def arxikh():
@@ -236,6 +247,7 @@ def arxikh():
                                     if not k.ai_sumvouli_date or k.ai_sumvouli_date.date() < datetime.now().date():
                                         syghronismos_ai_ktimatos(k)
                                     generate_smart_tasks(k)
+                                    vasi.session.commit()
                             except Exception as e:
                                 print(f"Σφάλμα αυτόματης ημερήσιας ανανέωσης AI (Background) για το κτήμα ID {kt_id}: {e}")
                     
