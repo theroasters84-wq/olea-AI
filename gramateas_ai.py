@@ -58,7 +58,7 @@ def ai_secretary():
         # Αν είναι πολύ απλή κουβέντα ΚΑΙ δεν έχει επισυνάψει εικόνες/αρχεία
         if is_very_simple and (not valid_images):
             # Κάνουμε μια πολύ γρήγορη, ελαφριά κλήση στο AI χωρίς κανένα context
-            quick_prompt = f"Είσαι ο φιλικός AI Γραμματέας της Olea. Απάντα σύντομα και φιλικά στο εξής: '{text}'. ΠΡΟΣΟΧΗ: Αν στο ιστορικό ο χρήστης έχει δηλώσει μια ιδιότητα ή έχει ζητήσει συγκεκριμένο τρόπο προσφώνησης (π.χ. είπε 'δεν είμαι αγρότης'), σεβάσου το ΑΠΟΛΥΤΑ και μην χρησιμοποιείς προσφωνήσεις που τον ενοχλούν. Ιστορικό: {history_str[-500:]}. Επίστρεψε ΑΥΣΤΗΡΑ JSON: {{\"reply\": \"...\", \"action\": \"ADVICE\"}}"
+            quick_prompt = f"Είσαι ο φιλικός AI Γραμματέας της Olea. Απάντα σύντομα και φιλικά στο εξής: '{text}'. ΠΡΟΣΟΧΗ: Σεβάσου απόλυτα την ταυτότητα που δηλώνει ο χρήστης στο ιστορικό (π.χ. αν είπε 'δεν είμαι αγρότης'). Ιστορικό: {history_str[-500:]}. Επίστρεψε ΑΥΣΤΗΡΑ JSON: {{\"reply\": \"...\", \"action\": \"ADVICE\"}}"
             
             quick_response = client.models.generate_content(
                 model='gemini-2.5-flash', 
@@ -68,16 +68,20 @@ def ai_secretary():
             
             try:
                 # Καθαρισμός του JSON (όπως κάνουμε και παρακάτω)
-                json_text = quick_response.text.strip().replace('```json', '').replace('```', '').strip()
+                import json, re
+                raw_response = quick_response.text.strip()
+                
+                json_text = re.sub(r'^```json\s*', '', raw_response, flags=re.IGNORECASE)
+                json_text = re.sub(r'^```\s*', '', json_text)
+                json_text = re.sub(r'\s*```$', '', json_text)
+                
                 start_idx = json_text.find('{')
                 end_idx = json_text.rfind('}')
                 if start_idx != -1 and end_idx != -1:
                     json_text = json_text[start_idx:end_idx+1]
                 
-                import re
                 json_text = json_text.replace('\n', ' ').replace('\r', '')
                 
-                import json
                 data = json.loads(json_text, strict=False)
                 reply_text = data.get('reply', 'Γεια σας! Πώς μπορώ να βοηθήσω με τα κτήματα;')
                 
@@ -117,8 +121,8 @@ def ai_secretary():
             ktimata_info += f"\n=== ΚΤΗΜΑ: {k.onoma_ktimatos} (ID: {k.id}) ===\n{context_ktimatos}\n"
             
         context_str = (
-            f"Είσαι ο προσωπικός 'AI Γραμματέας' στην εφαρμογή Olea. Ο βασικός σου ρόλος είναι γεωπονικός βοηθός, αλλά πάνω από όλα είσαι ένας έξυπνος συνομιλητής. \n"
-            f"ΚΑΝΟΝΑΣ ΣΥΜΠΕΡΙΦΟΡΑΣ: Προσάρμοσε το ύφος και τις προσφωνήσεις σου βάσει του ιστορικού. Αν ο χρήστης σου δηλώσει ότι δεν είναι αγρότης, ή αν το ύφος του είναι διαφορετικό, ακολούθησε το δικό του στυλ. Μην επαναλαμβάνεις τυποποιημένες φράσεις αν ο χρήστης τις έχει απορρίψει.\n"
+            f"Είσαι ο προσωπικός 'AI Γραμματέας' στην Olea. Είσαι ένας έξυπνος συνομιλητής που προσαρμόζεται στον χρήστη. \n"
+            f"ΚΑΝΟΝΑΣ: Μην χρησιμοποιείς τυποποιημένες προσφωνήσεις όπως 'αγρότη' αν ο χρήστης έχει δηλώσει ότι δεν του ταιριάζουν. Ακολούθησε το ύφος της συζήτησης.\n"
             f"Έχεις μπροστά σου τον παρακάτω φάκελο με τα δεδομένα των κτημάτων του (αναλύσεις, εκκρεμείς εργασίες, ελλείψεις εγγράφων, καιρός):\n"
             f"{ktimata_info}\n"
             f"ΟΔΗΓΙΕΣ: Αν ο χρήστης σε ρωτήσει 'Τι ανάλυση πρέπει να κάνω στο κτήμα Τάδε;' ή 'Γιατί μου έβαλες αυτή την εργασία;', ΨΑΞΕ στα δεδομένα (ειδικά στις ενότητες των Ελλείψεων ή του Ιστορικού) και ΕΞΗΓΗΣΕ του με απλά λόγια. Μην απαντάς γενικά. Να είσαι πρακτικός, φιλικός και να μιλάς άμεσα.\n"
@@ -356,19 +360,21 @@ def ai_secretary():
         if not response or not getattr(response, 'text', None):
             return jsonify({'success': True, 'reply': '⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία ή το κείμενο. Μπορείτε να ανεβάσετε μια πιο καθαρή λήψη;', 'action': 'ADVICE'})
             
-        import json
-        json_text = response.text.strip()
+        import json, re
+        raw_response = response.text.strip()
         
-        # Καθαρισμός markdown
-        json_text = json_text.replace('```json', '').replace('```', '').strip()
+        # 1. Καθαρισμός Markdown Fences
+        json_text = re.sub(r'^```json\s*', '', raw_response, flags=re.IGNORECASE)
+        json_text = re.sub(r'^```\s*', '', json_text)
+        json_text = re.sub(r'\s*```$', '', json_text)
         
-        # Απομόνωση του JSON block
+        # 2. Απομόνωση του JSON block
         start_idx = json_text.find('{')
         end_idx = json_text.rfind('}')
         if start_idx != -1 and end_idx != -1:
             json_text = json_text[start_idx:end_idx+1]
             
-        # Καθαρισμός εσωτερικών αλλαγών γραμμής
+        # 3. Ασφαλής αφαίρεση αλλαγών γραμμής μέσα στα strings του JSON
         json_text = json_text.replace('\n', ' ').replace('\r', '')
             
         try:
@@ -376,7 +382,6 @@ def ai_secretary():
         except Exception as e:
             print(f"Σφάλμα JSON Parsing: {e}\nΚείμενο: {json_text}")
             # Fallback μηχανισμός
-            import re
             fallback_reply = "Η απάντησή μου ήταν πολύ μεγάλη και μπερδεύτηκα. Μπορείτε να επαναλάβετε;"
             reply_match = re.search(r'"reply"\s*:\s*"([^"]+)"', json_text)
             if reply_match:
