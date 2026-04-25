@@ -161,6 +161,8 @@ def arxikh():
                 joinedload(Ktima.analuseis_edafous)
             ).filter_by(xrhsths_id=current_user.id, is_active=True).all()
 
+        ktimata_gia_ananeosi = []
+
         for ktima in ktimata:
             try:
                 # --- ΑΥΤΟΜΑΤΗ ΕΠΙΔΙΟΡΘΩΣΗ ΔΕΝΤΡΩΝ & ΠΟΙΚΙΛΙΩΝ ---
@@ -198,46 +200,13 @@ def arxikh():
                 ktima.symvouli = None
                 ktima.protaseis = []
                 
-                # --- ΗΜΕΡΗΣΙΑ ΑΝΑΝΕΩΣΗ AI ---
-                # Διασφάλιση ότι η Άμεση Συμβουλή (AI) ανανεώνεται ΚΑΘΕ ΜΕΡΑ με βάση τα σημερινά δεδομένα
-                # --- ΗΜΕΡΗΣΙΑ ΑΝΑΝΕΩΣΗ AI (Ασύγχρονα στο παρασκήνιο) ---
-                from threading import Thread
-                from core import efarmogi
-                
                 now_dt = datetime.now()
-                if not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date():
-                    try:
-                        from logic import syghronismos_ai_ktimatos
-                        syghronismos_ai_ktimatos(ktima)
-                    except Exception as e:
-                        print(f"Σφάλμα αυτόματης ημερήσιας ανανέωσης AI για το κτήμα '{ktima.onoma_ktimatos}': {e}")
                 ai_needs_update = not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date()
                 tasks_need_update = not (ktima.teleftaia_enimerosi_ergasion and ktima.teleftaia_enimerosi_ergasion.date() == now_dt.date() and ktima.topikes_ergasies)
                 
                 if ai_needs_update or tasks_need_update:
-                    def background_ai_update(app, kt_id):
-                        with app.app_context():
-                            try:
-                                from core import vasi
-                                from models import Ktima
-                                from logic import syghronismos_ai_ktimatos, generate_smart_tasks
-                                k = vasi.session.get(Ktima, kt_id)
-                                if k:
-                                    if not k.ai_sumvouli_date or k.ai_sumvouli_date.date() < datetime.now().date():
-                                        syghronismos_ai_ktimatos(k)
-                                    generate_smart_tasks(k)
-                                    vasi.session.commit()
-                            except Exception as e:
-                                print(f"Σφάλμα αυτόματης ημερήσιας ανανέωσης AI (Background) για το κτήμα ID {kt_id}: {e}")
-                    
-                    # Εκκίνηση ξεχωριστού Thread για να μην μπλοκάρει ο server
-                    Thread(target=background_ai_update, args=(efarmogi, ktima.id)).start()
+                    ktimata_gia_ananeosi.append(ktima.id)
 
-                ideal_tasks = generate_smart_tasks(ktima)
-                if isinstance(ideal_tasks, list):
-                     ideal_tasks = [t.strip() for t in ideal_tasks if t.strip()]
-                else:
-                     ideal_tasks = []
                 # Διαβάζουμε απευθείας από την Cache για την άμεση φόρτωση της HTML
                 ideal_tasks_raw = ktima.topikes_ergasies or ''
                 ideal_tasks = [t.strip() for t in ideal_tasks_raw.split('|') if t.strip()]
@@ -350,6 +319,30 @@ def arxikh():
                 if not hasattr(ktima, 'elleipseis'): ktima.elleipseis = []
                 if not hasattr(ktima, 'agro_data'): ktima.agro_data = None
                 
+        # --- Ομαδική Εκτέλεση AI Background Task (Για εξοικονόμηση μνήμης) ---
+        if ktimata_gia_ananeosi:
+            from threading import Thread
+            from core import efarmogi
+            def background_ai_update_all(app, kt_ids):
+                with app.app_context():
+                    from core import vasi
+                    from models import Ktima
+                    from logic import syghronismos_ai_ktimatos, generate_smart_tasks
+                    import time
+                    for kt_id in kt_ids:
+                        try:
+                            k = vasi.session.get(Ktima, kt_id)
+                            if k:
+                                if not k.ai_sumvouli_date or k.ai_sumvouli_date.date() < datetime.now().date():
+                                    syghronismos_ai_ktimatos(k)
+                                generate_smart_tasks(k)
+                                vasi.session.commit()
+                                time.sleep(3) # Παύση 3 δευτ. για να μην κρασάρει η RAM του server (OOM)
+                        except Exception as e:
+                            print(f"Σφάλμα Background AI για κτήμα {kt_id}: {e}")
+            
+            Thread(target=background_ai_update_all, args=(efarmogi, ktimata_gia_ananeosi)).start()
+
         # Μαζική αποθήκευση τυχόν νέων AI tasks (Cache)
         vasi.session.commit()
         # Περνάμε το datetime ΡΗΤΑ για να αποφύγουμε σφάλματα στα templates
