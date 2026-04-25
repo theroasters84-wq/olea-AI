@@ -113,7 +113,7 @@ def from_json_filter(s):
     except:
         return []
 
-@core_app.route('/api/keep_alive', methods=['GET'])
+@core_bp.route('/api/keep_alive', methods=['GET'])
 def keep_alive():
     """
     Endpoint για εξωτερικά Cron Jobs (π.χ. cron-job.org).
