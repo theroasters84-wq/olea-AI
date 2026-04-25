@@ -190,30 +190,9 @@ def arxikh():
                         except Exception as e:
                             print(f"Auto-heal polygon error: {e}")
 
-                # Ενσωμάτωση Agromonitoring API
+                # Αφαιρέθηκαν οι σύγχρονες κλήσεις API (Δορυφόρος, Καιρός, Πρόγνωση) που "κολλούσαν" την εφαρμογή.
+                # Τα δεδομένα αυτά πλέον φορτώνουν ασύγχρονα (στο παρασκήνιο) μέσω του endpoint /api/ktima_weather_widget.
                 ktima.agro_data = None
-                if ktima.agromonitoring_poly_id:
-                    soil = get_cached_api_data(f"soil_{ktima.agromonitoring_poly_id}", lambda: get_agro_soil_data(ktima.agromonitoring_poly_id))
-                    uvi = get_cached_api_data(f"uvi_{ktima.agromonitoring_poly_id}", lambda: get_agro_uvi(ktima.agromonitoring_poly_id))
-                    # Το agro_forecast δεν χρησιμοποιείται στο template, γλιτώνουμε 1 κλήση:
-                    # agro_forecast = get_agro_forecast(ktima.agromonitoring_poly_id)
-                    
-                    # Μετατροπή της ώρας του Δορυφόρου σε αναγνώσιμη μορφή (π.χ. 13/03/2026 14:30)
-                    if soil and 'dt' in soil:
-                        soil['dt_formatted'] = datetime.fromtimestamp(soil['dt']).strftime('%d/%m/%Y %H:%M')
-                    if uvi and 'dt' in uvi:
-                        uvi['dt_formatted'] = datetime.fromtimestamp(uvi['dt']).strftime('%d/%m/%Y %H:%M')
-                    
-                    if soil or uvi:
-                        ktima.agro_data = {'soil': soil, 'uvi': uvi}
-                    ktima.agro_forecast = None
-
-                ktima.kairos = pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
-                if ktima.kairos:
-                    ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
-                    ktima.protaseis = paragwgi_protasewn(ktima, ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], ktima.kairos['perigrafi'])
-                else:
-                    ktima.protaseis = []
                 ktima.agro_forecast = None
                 ktima.kairos = None
                 ktima.symvouli = None
