@@ -11,6 +11,25 @@
         body { background-color: #f8f9fa; }
         #calendar { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); }
         .fc-event { cursor: pointer; border: none; padding: 2px 4px; }
+        
+        /* Βελτίωση εμφάνισης Ημερολογίου στα κινητά */
+        @media (max-width: 768px) {
+            .fc-event-title, .fc-event-time, .fc-title {
+                white-space: normal !important; /* Αλλαγή γραμμής αντί για αποκοπή */
+                overflow: visible !important;
+                text-overflow: unset !important;
+                word-wrap: break-word !important;
+                font-size: 0.85em !important;
+                line-height: 1.2 !important;
+            }
+            .fc-event {
+                padding: 2px 4px !important;
+            }
+            /* Προαιρετικά: Μικραίνουμε λίγο τους αριθμούς των ημερών */
+            .fc-daygrid-day-number {
+                font-size: 0.9em !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -145,12 +164,29 @@
         var eventsData = {{ events | tojson | safe }};
         
         var calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth',
+          initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
           locale: 'el',
+          nowIndicator: true,
           headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,listWeek'
+          },
+          windowResize: function(arg) {
+              if (window.innerWidth < 768) {
+                  calendar.changeView('listWeek');
+              } else {
+                  calendar.changeView('dayGridMonth');
+              }
+          },
+          datesSet: function(info) {
+              // Αυτόματο scroll στη σημερινή μέρα στα κινητά
+              if (window.innerWidth < 768) {
+                  setTimeout(function() {
+                      var todayEl = document.querySelector('.fc-day-today');
+                      if (todayEl) { todayEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                  }, 250);
+              }
           },
           buttonText: {
             today: 'Σήμερα',

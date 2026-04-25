@@ -49,32 +49,86 @@ def ai_secretary():
     client = genai.Client(api_key=api_key_to_use)
 
     try:
-        contents = []
-        context_str = f"Είσαι ο 'AI Γραμματέας' του αγρότη. Σκοπός σου είναι να τον διευκολύνεις να καταχωρεί δεδομένα χωρίς να πατάει πολλά κουμπιά, και να του λύνεις απορίες.\n"
+        # --- ΕΞΥΠΝΟΣ ΕΛΕΓΚΤΗΣ ΓΡΗΓΟΡΩΝ ΑΠΑΝΤΗΣΕΩΝ (Pre-filter) ---
+        text_lower = text.lower().strip()
+        aples_lexeis = ['γεια', 'καλημέρα', 'καλησπέρα', 'τι κάνεις', 'πως εισαι', 'ευχαριστώ', 'ok', 'ναι', 'όχι', 'τελεια', 'μια χαρα']
         
-        # Προσθήκη λίστας κτημάτων ώστε να καταλαβαίνει το AI σε ποιο αναφέρεται ο χρήστης
-        energa_ktimata = [k for k in current_user.ktimata if k.is_active]
-        context_str += "\nΛίστα Ενεργών Κτημάτων του Αγρότη:\n"
-        for k in energa_ktimata:
-            context_str += f"- ID: {k.id}, Όνομα: '{k.onoma_ktimatos}'\n"
+        is_very_simple = len(text_lower.split()) <= 4 and any(text_lower.startswith(lexi) or text_lower == lexi for lexi in aples_lexeis)
         
-        from logic import xtise_plires_context
-        if ktima:
-            context_str += f"\nΤο ΕΝΕΡΓΟ κτήμα στη συζήτηση (που βλέπει τώρα ο χρήστης) είναι το '{ktima.onoma_ktimatos}' (ID: {ktima.id}). Οι ενέργειές σου εξ ορισμού αφορούν αυτό.\nΔεδομένα ΕΝΕΡΓΟΥ Κτήματος:\n{xtise_plires_context(ktima)}\n"
+        # Αν είναι πολύ απλή κουβέντα ΚΑΙ δεν έχει επισυνάψει εικόνες/αρχεία
+        if is_very_simple and (not image_files or not image_files[0].filename):
+            # Κάνουμε μια πολύ γρήγορη, ελαφριά κλήση στο AI χωρίς κανένα context
+            quick_prompt = f"Είσαι ο φιλικός AI Γραμματέας του αγρότη. Απάντα ΣΥΝΤΟΜΑ και φιλικά στο εξής: '{text}'. Επίστρεψε ΑΥΣΤΗΡΑ μόνο ένα JSON της μορφής: {{\\\"reply\\\": \"Η απάντησή σου\", \"action\": \"ADVICE\"}}"
             
-            alla_ktimata = [k for k in energa_ktimata if k.id != ktima.id]
-            if alla_ktimata:
-                context_str += "\nΓια δική σου πληροφόρηση (π.χ. αν ζητηθεί σύγκριση ή αλλαγή), ορίστε τα δεδομένα και των ΥΠΟΛΟΙΠΩΝ κτημάτων:\n"
-                for k in alla_ktimata:
-                    context_str += f"\n--- ΚΤΗΜΑ: {k.onoma_ktimatos} (ID: {k.id}) ---\n{xtise_plires_context(k)}\n"
+            quick_response = client.models.generate_content(
+                model='gemini-2.5-flash', 
+                contents=quick_prompt,
+                config=types.GenerateContentConfig() # Χωρίς internet, χωρίς τίποτα
+            )
+            
+            try:
+                # Καθαρισμός του JSON (όπως κάνουμε και παρακάτω)
+                json_text = quick_response.text.strip().replace('```json', '').replace('```', '').strip()
+                start_idx = json_text.find('{')
+                end_idx = json_text.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    json_text = json_text[start_idx:end_idx+1]
+                
+                import re
+                json_text = json_text.replace('\n', ' ').replace('\r', '')
+                
+                import json
+                data = json.loads(json_text, strict=False)
+                reply_text = data.get('reply', 'Γεια σας! Πώς μπορώ να βοηθήσω με τα κτήματα;')
+                
+                # Αποθήκευση στο ιστορικό
+                try:
+                    history = json.loads(history_str)
+                    if not isinstance(history, list): history = []
+                except: history = []
+                
+                history.append({"role": "user", "content": text})
+                history.append({"role": "model", "content": reply_text})
+                if len(history) > 40: history = history[-40:]
+                current_user.secretary_history = json.dumps(history)
+                vasi.session.commit()
+                
+                return jsonify({
+                    'success': True, 
+                    'reply': reply_text, 
+                    'action': 'ADVICE', 
+                    'target_ktima_id': ktima_id
+                })
+            except Exception as quick_e:
+                print(f"Σφάλμα στο quick response: {quick_e}")
+                # Αν αποτύχει, συνεχίζει κανονικά παρακάτω
+                pass
+        
+        # --- ΤΕΛΟΣ ΕΞΥΠΝΟΥ ΕΛΕΓΚΤΗ ---
+
+        contents = []
+        from logic import xtise_plires_context
+        energa_ktimata = [k for k in current_user.ktimata if k.is_active]
+        
+        # Μάζεψε τα δεδομένα όλων των ενεργών κτημάτων
+        ktimata_info = ""
+        for k in energa_ktimata:
+            context_ktimatos = xtise_plires_context(k)
+            ktimata_info += f"\n=== ΚΤΗΜΑ: {k.onoma_ktimatos} (ID: {k.id}) ===\n{context_ktimatos}\n"
+            
+        context_str = (
+            f"Είσαι ο προσωπικός 'AI Γραμματέας' και γεωπονικός βοηθός του αγρότη. Σκοπός σου είναι να καταχωρείς δεδομένα και να δίνεις στοχευμένες συμβουλές. ΟΔΗΓΙΑ ΣΥΜΠΕΡΙΦΟΡΑΣ: Να μιλάς ΠΑΝΤΑ φιλικά, άμεσα και με φυσικότητα, σαν πραγματικός έμπειρος συνεργάτης. ΑΠΑΓΟΡΕΥΟΝΤΑΙ οι αυστηρές, υπερβολικά μεγάλες και 'ρομποτικές' απαντήσεις. Να είσαι περιεκτικός (concise) για να εξοικονομείς χρόνο στον χρήστη.\n"
+            f"Έχεις μπροστά σου τον παρακάτω φάκελο με τα δεδομένα των κτημάτων του (αναλύσεις, εκκρεμείς εργασίες, ελλείψεις εγγράφων, καιρός):\n"
+            f"{ktimata_info}\n"
+            f"ΟΔΗΓΙΕΣ: Αν ο χρήστης σε ρωτήσει 'Τι ανάλυση πρέπει να κάνω στο κτήμα Τάδε;' ή 'Γιατί μου έβαλες αυτή την εργασία;', ΨΑΞΕ στα δεδομένα (ειδικά στις ενότητες των Ελλείψεων ή του Ιστορικού) και ΕΞΗΓΗΣΕ του με απλά λόγια. Μην απαντάς γενικά. Να είσαι πρακτικός, φιλικός και να μιλάς άμεσα.\n"
+        )
+
+        if ktima:
+            context_str += f"\nΤο ΕΝΕΡΓΟ κτήμα στη συζήτηση (που βλέπει τώρα ο χρήστης) είναι το '{ktima.onoma_ktimatos}' (ID: {ktima.id}). Οι ενέργειές σου εξ ορισμού αφορούν αυτό.\n"
         elif ktima_id == 'all':
-            context_str += "\nΟ αγρότης ΔΕΝ έχει επιλέξει συγκεκριμένο κτήμα (Γενική Προβολή). Επέλεξε 'Όλα τα Κτήματα'. Αν ζητήσει καταχώρηση σε όλα, βάλε target_ktima_id = 'ALL' στο task. Σου δίνω ΠΛΗΡΗ ΠΡΟΣΒΑΣΗ στα δεδομένα ΟΛΩΝ των ενεργών κτημάτων του:\n"
-            for k in energa_ktimata:
-                context_str += f"\n--- ΑΡΧΗ ΔΕΔΟΜΕΝΩΝ ΓΙΑ ΚΤΗΜΑ: {k.onoma_ktimatos} (ID: {k.id}) ---\n"
-                context_str += xtise_plires_context(k)
-                context_str += f"--- ΤΕΛΟΣ ΔΕΔΟΜΕΝΩΝ ΓΙΑ ΚΤΗΜΑ: {k.onoma_ktimatos} ---\n"
+            context_str += "\nΟ αγρότης ΔΕΝ έχει επιλέξει συγκεκριμένο κτήμα (Γενική Προβολή). Επέλεξε 'Όλα τα Κτήματα'. Αν ζητήσει καταχώρηση σε όλα, βάλε target_ktima_id = 'ALL' στο task.\n"
         else:
-            context_str += "\nΠΡΟΣΟΧΗ: Ο αγρότης κάνει 'Γενική Ερώτηση (Χωρίς Κτήμα)'. Αν ρωτάει για εργασίες ή τον καιρό ενός κτήματος που δεν έχεις τα δεδομένα, ΠΕΣ ΤΟΥ ΕΥΓΕΝΙΚΑ να το επιλέξει από το αναδιπλούμενο μενού πάνω-πάνω, για να μπορέσεις να διαβάσεις τον φάκελό του.\n"
+            context_str += "\nΠΡΟΣΟΧΗ: Ο αγρότης κάνει 'Γενική Ερώτηση (Χωρίς Κτήμα)'. Αν ρωτάει για εργασίες ή τον καιρό ενός κτήματος, ΠΕΣ ΤΟΥ ΕΥΓΕΝΙΚΑ να το επιλέξει από το αναδιπλούμενο μενού πάνω-πάνω.\n"
 
             # Προσθήκη της Αποθήκης στη Γενική Προβολή
             if current_user.apothiki_items:
@@ -138,9 +192,11 @@ def ai_secretary():
         20. ΠΟΛΛΑΠΛΕΣ ΕΝΕΡΓΕΙΕΣ ΤΑΥΤΟΧΡΟΝΑ (MULTI-ACTION): Αν ο χρήστης ζητήσει ΠΟΛΛΑΠΛΕΣ ΚΑΙ ΔΙΑΦΟΡΕΤΙΚΕΣ ενέργειες ταυτόχρονα, βάλε action: "MULTI_ACTION". Το JSON σου πρέπει να περιέχει ΤΑΥΤΟΧΡΟΝΑ όσες από τις λίστες/ενέργειες χρειάζεται: "tasks_to_delete" (για διαγραφές), "tasks" (για νέες εργασίες), "general_expenses" (για γενικά έξοδα), "inventory_items" (για την αποθήκη) ΚΑΙ "new_ktima_data" (για δημιουργία νέου κτήματος). Το σύστημα θα τα εκτελέσει όλα με τη σωστή σειρά!
         21. ΜΕΛΛΟΝΤΙΚΕΣ ΥΠΕΝΘΥΜΙΣΕΙΣ (ΓΙΑ ΑΡΓΟΤΕΡΑ Ή ΤΟΥ ΧΡΟΝΟΥ): Αν ο χρήστης σου ζητήσει να του θυμίσεις κάτι για το μέλλον (π.χ. "σε ένα μήνα θύμισέ μου να δω τα μπόλια", "σε 2 εβδομάδες", "του χρόνου"), βάλε action: "ADD_TASKS". Υπολόγισε την ακριβή ημερομηνία (π.χ. αν λέει 'σε 1 μήνα', βάλε ημερομηνία +30 μέρες από σήμερα). Στο "task_name" γράψε ΑΚΡΙΒΩΣ με αυτό το πρόθεμα: "[AI ΥΠΕΝΘΥΜΙΣΗ] [Η δουλειά/έλεγχος]" (π.χ. "[AI ΥΠΕΝΘΥΜΙΣΗ] Έλεγχος στα μπολιάδια") και βάλε "status": "Εκκρεμεί". Όταν έρθει η ώρα, το σύστημα θα του το θυμίσει αυτόματα το πρωί!
         
+        ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΥΣΤΗΡΑ η χρήση διπλών εισαγωγικών (") μέσα στα κείμενα ή τις απαντήσεις σου. Χρησιμοποίησε ΜΟΝΟ μονά εισαγωγικά ('). Απαγορεύεται να χρησιμοποιήσεις αλλαγές γραμμής (Enter/Newlines) μέσα στα string values.
+        
         Επίστρεψε ΑΥΣΤΗΡΑ ένα JSON με την εξής μορφή (χωρίς markdown, καθαρό JSON):
         {
-            "reply": "Η απάντησή σου στον αγρότη. (Σύντομη, φιλική, άμεση)",
+            "reply": "Η απάντησή σου. Πρέπει να είναι ΣΥΝΤΟΜΗ, ΦΙΛΙΚΗ, ΦΥΣΙΚΗ και πολύ πρακτική.",
             "action": "MULTI_ACTION" | "ADD_TASKS" | "DIAGNOSIS" | "ADVICE" | "UPDATE_KTIMA" | "DELETE_TASKS" | "UPDATE_TASKS" | "ADD_EXPENSE" | "ADD_INCOME" | "ADD_GENERAL_EXPENSE" | "ADD_GENERAL_INCOME" | "DELETE_EXPENSE" | "UPDATE_EXPENSE" | "DELETE_UGRASIA" | "ADD_HARVEST" | "ADD_INVENTORY" | "UPDATE_INVENTORY" | "DELETE_INVENTORY" | "UPDATE_WATER" | "ADD_KTIMA" | "DELETE_KTIMA" | "ARCHIVE_KTIMA" | "SWITCH_KTIMA" | "ADD_ANALYSIS",
             "tasks": [
                 {
@@ -270,10 +326,20 @@ def ai_secretary():
                     img_bytes = img_byte_arr.getvalue()
                     contents.append(types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'))
                 
-        # Ενεργοποίηση Google Search (Ζωντανή Πρόσβαση στο Διαδίκτυο)
-        config = types.GenerateContentConfig(
-            tools=[{"google_search": {}}]
-        )
+        # Έξυπνη Ενεργοποίηση Internet και ΥΠΟΧΡΕΩΤΙΚΟ JSON MODE
+        text_lower = text.lower()
+        agrotikes_lexeis = ['κτήμα', 'χωράφι', 'έξοδα', 'δουλειές', 'έσοδα', 'αποθήκη', 'ραντίσω', 'κλάδεψα', 'λιπασμα', 'συνολο', 'σβήσε', 'όλα']
+        is_simple_query = any(lexi in text_lower for lexi in agrotikes_lexeis)
+        
+        if is_simple_query or not text:
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        else:
+            config = types.GenerateContentConfig(
+                tools=[{"google_search": {}}],
+                response_mime_type="application/json"
+            )
         
         import time
         response = None
@@ -290,8 +356,24 @@ def ai_secretary():
         if not response or not getattr(response, 'text', None):
             return jsonify({'success': True, 'reply': '⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία ή το κείμενο. Μπορείτε να ανεβάσετε μια πιο καθαρή λήψη;', 'action': 'ADVICE'})
             
-        json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
-        data = json.loads(json_text, strict=False)
+        import json
+        json_text = response.text.strip()
+        
+        # Αφαιρούμε τυχόν markdown formatting αν το μοντέλο το ξεχάσει
+        if json_text.startswith('```json'):
+            json_text = json_text[7:]
+        if json_text.startswith('```'):
+            json_text = json_text[3:]
+        if json_text.endswith('```'):
+            json_text = json_text[:-3]
+            
+        json_text = json_text.strip()
+            
+        try:
+            data = json.loads(json_text)
+        except Exception as e:
+            print(f"Σφάλμα JSON Parsing: {e}\nΚείμενο: {json_text}")
+            data = {"action": "ADVICE", "reply": "Παρουσιάστηκε ένα μικρό πρόβλημα στην ανάγνωση της απάντησής μου. Παρακαλώ ρωτήστε με ξανά."}
         
         action = data.get('action', 'ADVICE')
         reply_text = data.get('reply', 'Συγγνώμη, δεν σας κατάλαβα.')
@@ -1176,23 +1258,6 @@ def ai_secretary():
         current_user.secretary_history = json.dumps(history)
         
         vasi.session.commit()
-
-        # --- ΝΕΟ: ΑΜΕΣΟΣ ΣΥΓΧΡΟΝΙΣΜΟΣ ΤΟΥ "ΕΓΚΕΦΑΛΟΥ" AI ΜΕΤΑ ΑΠΟ ΚΑΘΕ ΕΝΕΡΓΕΙΑ ---
-        try:
-            from logic import syghronismos_ai_ktimatos, evaluate_overdue_tasks
-            
-            # Ελέγχουμε όλα τα κτήματα που μπορεί να επηρεάστηκαν
-            ktimata_gia_sync = []
-            if str(target_ktima_id).upper() == 'ALL':
-                ktimata_gia_sync = energa_ktimata
-            elif ktima:
-                ktimata_gia_sync.append(ktima)
-            
-            for k_sync in ktimata_gia_sync:
-                evaluate_overdue_tasks(k_sync)
-                syghronismos_ai_ktimatos(k_sync)
-        except Exception as e:
-            print(f"Σφάλμα συγχρονισμού AI μετά από ενέργεια γραμματέα: {e}")
 
         return jsonify({
             'success': True, 

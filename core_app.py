@@ -120,6 +120,8 @@ def arxikh():
         pelatis_id = request.args.get('pelatis_id')
         is_geoponos_view = False
         
+        from sqlalchemy.orm import joinedload
+        
         if getattr(current_user, 'rolos', '') == 'geoponos' and pelatis_id:
             try:
                 pelatis_id_int = int(pelatis_id)
@@ -127,14 +129,26 @@ def arxikh():
                 if not provalomenos_xrhsths:
                     flash('Δεν βρέθηκε ο πελάτης.', 'danger')
                     return redirect(url_for('core_app.dashboard_geoponou'))
-                ktimata = [k for k in provalomenos_xrhsths.ktimata if k.is_active]
+                ktimata = Ktima.query.options(
+                    joinedload(Ktima.ergasies),
+                    joinedload(Ktima.poikilies_details),
+                    joinedload(Ktima.exoda),
+                    joinedload(Ktima.diagnoseis),
+                    joinedload(Ktima.analuseis_edafous)
+                ).filter_by(xrhsths_id=provalomenos_xrhsths.id, is_active=True).all()
                 is_geoponos_view = True
             except ValueError:
                 flash('Μη έγκυρο ID πελάτη.', 'danger')
                 return redirect(url_for('core_app.dashboard_geoponou'))
         else:
             provalomenos_xrhsths = current_user
-            ktimata = [k for k in current_user.ktimata if k.is_active]
+            ktimata = Ktima.query.options(
+                joinedload(Ktima.ergasies),
+                joinedload(Ktima.poikilies_details),
+                joinedload(Ktima.exoda),
+                joinedload(Ktima.diagnoseis),
+                joinedload(Ktima.analuseis_edafous)
+            ).filter_by(xrhsths_id=current_user.id, is_active=True).all()
 
         for ktima in ktimata:
             try:
@@ -196,6 +210,10 @@ def arxikh():
                 
                 # --- ΗΜΕΡΗΣΙΑ ΑΝΑΝΕΩΣΗ AI ---
                 # Διασφάλιση ότι η Άμεση Συμβουλή (AI) ανανεώνεται ΚΑΘΕ ΜΕΡΑ με βάση τα σημερινά δεδομένα
+                # --- ΗΜΕΡΗΣΙΑ ΑΝΑΝΕΩΣΗ AI (Ασύγχρονα στο παρασκήνιο) ---
+                from threading import Thread
+                from core import efarmogi
+                
                 now_dt = datetime.now()
                 if not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date():
                     try:
@@ -203,12 +221,35 @@ def arxikh():
                         syghronismos_ai_ktimatos(ktima)
                     except Exception as e:
                         print(f"Σφάλμα αυτόματης ημερήσιας ανανέωσης AI για το κτήμα '{ktima.onoma_ktimatos}': {e}")
+                ai_needs_update = not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date()
+                tasks_need_update = not (ktima.teleftaia_enimerosi_ergasion and ktima.teleftaia_enimerosi_ergasion.date() == now_dt.date() and ktima.topikes_ergasies)
+                
+                if ai_needs_update or tasks_need_update:
+                    def background_ai_update(app, kt_id):
+                        with app.app_context():
+                            try:
+                                from core import vasi
+                                from models import Ktima
+                                from logic import syghronismos_ai_ktimatos, generate_smart_tasks
+                                k = vasi.session.get(Ktima, kt_id)
+                                if k:
+                                    if not k.ai_sumvouli_date or k.ai_sumvouli_date.date() < datetime.now().date():
+                                        syghronismos_ai_ktimatos(k)
+                                    generate_smart_tasks(k)
+                            except Exception as e:
+                                print(f"Σφάλμα αυτόματης ημερήσιας ανανέωσης AI (Background) για το κτήμα ID {kt_id}: {e}")
+                    
+                    # Εκκίνηση ξεχωριστού Thread για να μην μπλοκάρει ο server
+                    Thread(target=background_ai_update, args=(efarmogi, ktima.id)).start()
 
                 ideal_tasks = generate_smart_tasks(ktima)
                 if isinstance(ideal_tasks, list):
                      ideal_tasks = [t.strip() for t in ideal_tasks if t.strip()]
                 else:
                      ideal_tasks = []
+                # Διαβάζουμε απευθείας από την Cache για την άμεση φόρτωση της HTML
+                ideal_tasks_raw = ktima.topikes_ergasies or ''
+                ideal_tasks = [t.strip() for t in ideal_tasks_raw.split('|') if t.strip()]
                 
                 completed_tasks = [e.eidos_ergasias for e in ktima.ergasies if not e.archived]
                 ktima.pending_tasks = [task for task in ideal_tasks if task not in completed_tasks]
