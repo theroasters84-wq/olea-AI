@@ -336,9 +336,9 @@ def ai_secretary():
                 response_mime_type="application/json"
             )
         else:
+            # Το response_mime_type="application/json" ΔΕΝ υποστηρίζεται ταυτόχρονα με το Google Search
             config = types.GenerateContentConfig(
-                tools=[{"google_search": {}}],
-                response_mime_type="application/json"
+                tools=[{"google_search": {}}]
             )
         
         import time
@@ -359,21 +359,29 @@ def ai_secretary():
         import json
         json_text = response.text.strip()
         
-        # Αφαιρούμε τυχόν markdown formatting αν το μοντέλο το ξεχάσει
-        if json_text.startswith('```json'):
-            json_text = json_text[7:]
-        if json_text.startswith('```'):
-            json_text = json_text[3:]
-        if json_text.endswith('```'):
-            json_text = json_text[:-3]
+        # Καθαρισμός markdown
+        json_text = json_text.replace('```json', '').replace('```', '').strip()
+        
+        # Απομόνωση του JSON block
+        start_idx = json_text.find('{')
+        end_idx = json_text.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            json_text = json_text[start_idx:end_idx+1]
             
-        json_text = json_text.strip()
+        # Καθαρισμός εσωτερικών αλλαγών γραμμής
+        json_text = json_text.replace('\n', ' ').replace('\r', '')
             
         try:
-            data = json.loads(json_text)
+            data = json.loads(json_text, strict=False)
         except Exception as e:
             print(f"Σφάλμα JSON Parsing: {e}\nΚείμενο: {json_text}")
-            data = {"action": "ADVICE", "reply": "Παρουσιάστηκε ένα μικρό πρόβλημα στην ανάγνωση της απάντησής μου. Παρακαλώ ρωτήστε με ξανά."}
+            # Fallback μηχανισμός
+            import re
+            fallback_reply = "Η απάντησή μου ήταν πολύ μεγάλη και μπερδεύτηκα. Μπορείτε να επαναλάβετε;"
+            reply_match = re.search(r'"reply"\s*:\s*"([^"]+)"', json_text)
+            if reply_match:
+                fallback_reply = reply_match.group(1)
+            data = {"action": "ADVICE", "reply": fallback_reply}
         
         action = data.get('action', 'ADVICE')
         reply_text = data.get('reply', 'Συγγνώμη, δεν σας κατάλαβα.')
