@@ -131,7 +131,7 @@ def arxikh():
         pelatis_id = request.args.get('pelatis_id')
         is_geoponos_view = False
         
-        from sqlalchemy.orm import joinedload
+        from sqlalchemy.orm import selectinload
         
         if getattr(current_user, 'rolos', '') == 'geoponos' and pelatis_id:
             try:
@@ -141,11 +141,11 @@ def arxikh():
                     flash('Δεν βρέθηκε ο πελάτης.', 'danger')
                     return redirect(url_for('core_app.dashboard_geoponou'))
                 ktimata = Ktima.query.options(
-                    joinedload(Ktima.ergasies),
-                    joinedload(Ktima.poikilies_details),
-                    joinedload(Ktima.exoda),
-                    joinedload(Ktima.diagnoseis),
-                    joinedload(Ktima.analuseis_edafous)
+                    selectinload(Ktima.ergasies),
+                    selectinload(Ktima.poikilies_details),
+                    selectinload(Ktima.exoda),
+                    selectinload(Ktima.diagnoseis),
+                    selectinload(Ktima.analuseis_edafous)
                 ).filter_by(xrhsths_id=provalomenos_xrhsths.id, is_active=True).all()
                 is_geoponos_view = True
             except ValueError:
@@ -154,11 +154,11 @@ def arxikh():
         else:
             provalomenos_xrhsths = current_user
             ktimata = Ktima.query.options(
-                joinedload(Ktima.ergasies),
-                joinedload(Ktima.poikilies_details),
-                joinedload(Ktima.exoda),
-                joinedload(Ktima.diagnoseis),
-                joinedload(Ktima.analuseis_edafous)
+                selectinload(Ktima.ergasies),
+                selectinload(Ktima.poikilies_details),
+                selectinload(Ktima.exoda),
+                selectinload(Ktima.diagnoseis),
+                selectinload(Ktima.analuseis_edafous)
             ).filter_by(xrhsths_id=current_user.id, is_active=True).all()
 
         ktimata_gia_ananeosi = []
