@@ -11,3 +11,4 @@ google-genai
 APScheduler
 Pillow
 psycopg2-binary
+Flask-Caching
