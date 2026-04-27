@@ -21,6 +21,7 @@ python-dotenv
 google-generativeai
 apscheduler
 Pillow
+Flask-Caching
 gunicorn
 """
 
