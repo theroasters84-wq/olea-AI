@@ -187,6 +187,13 @@ def prosthes_ergasia(ktima_id):
     katastasi = request.form.get('katastasi')
     eidos = request.form.get('eidos_ergasias')
     
+    lipasma_typos = request.form.get('lipasma_typos')
+    posotita_str = request.form.get('posotita')
+    posotita_val = None
+    if posotita_str:
+        try: posotita_val = float(posotita_str)
+        except ValueError: pass
+
     # --- ΣΥΣΤΗΜΑ ΠΡΟΣΤΑΣΙΑΣ GDD ---
     eidos_lower = (eidos or '').lower()
     farmaka_lower = (request.form.get('farmaka_lipasmata') or '').lower()
@@ -202,7 +209,7 @@ def prosthes_ergasia(ktima_id):
                 return redirect(url_for('core_app.arxikh'))
     # ------------------------------
 
-    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
+    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'), lipasma_typos=lipasma_typos, posotita=posotita_val)
     vasi.session.add(nea_ergasia)
     ktima = vasi.session.get(Ktima, ktima_id)
     if ktima: 

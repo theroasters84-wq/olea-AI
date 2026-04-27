@@ -832,20 +832,26 @@ def ypologismos_isozugiou_npk(ktima):
     """
     ΝΕΟ: Δυναμικός Υπολογισμός Ισοζυγίου Θρεπτικών Στοιχείων NPK.
     """
+    is_estimated = False
     if not ktima.analuseis_edafous:
-        return None
-    
-    sorted_analyses = sorted(ktima.analuseis_edafous, key=lambda x: x.imerominia)
-    last_analysi = sorted_analyses[-1]
-    
-    current_n = float(last_analysi.azwto or 0)
-    current_p = float(last_analysi.fwsforos or 0)
-    current_k = float(last_analysi.kalio or 0)
-    
-    if current_n == 0 and current_p == 0 and current_k == 0:
-        return None
+        # Ρεαλιστική αφετηρία για ελαιώνα χωρίς ανάλυση
+        current_n, current_p, current_k = 10.0, 10.0, 15.0
+        start_date = datetime.now() - timedelta(days=180) # 6 μήνες πριν
+        is_estimated = True
+    else:
+        sorted_analyses = sorted(ktima.analuseis_edafous, key=lambda x: x.imerominia)
+        last_analysi = sorted_analyses[-1]
         
-    start_date = last_analysi.imerominia
+        # Χρήση ρεαλιστικών default αν κάποιο στοιχείο λείπει από την ανάλυση
+        current_n = float(last_analysi.azwto if last_analysi.azwto is not None else 10.0)
+        current_p = float(last_analysi.fwsforos if last_analysi.fwsforos is not None else 10.0)
+        current_k = float(last_analysi.kalio if last_analysi.kalio is not None else 15.0)
+        
+        if current_n == 0 and current_p == 0 and current_k == 0:
+            current_n, current_p, current_k = 10.0, 10.0, 15.0
+            is_estimated = True
+            
+        start_date = last_analysi.imerominia
     end_date = datetime.now() + timedelta(days=30) # Προβολή 1 μήνα στο μέλλον
     
     if start_date.year == end_date.year and start_date.month == end_date.month:
@@ -857,6 +863,10 @@ def ypologismos_isozugiou_npk(ktima):
     data_k = []
     
     current_date = datetime(start_date.year, start_date.month, 1)
+    now_month_str = datetime.now().strftime('%m/%Y')
+    current_now_n = current_n
+    current_now_p = current_p
+    current_now_k = current_k
     
     while current_date <= end_date:
         month_str = current_date.strftime('%m/%Y')
@@ -883,9 +893,21 @@ def ypologismos_isozugiou_npk(ktima):
                 farmaka = (t.farmaka_lipasmata or '').lower()
                 
                 if 'λίπανση' in eidos:
-                    current_n += 15.0
-                    current_p += 5.0
-                    current_k += 10.0
+                    if getattr(t, 'lipasma_typos', None):
+                        import re
+                        match = re.search(r'(\d+)[-.,](\d+)[-.,](\d+)', t.lipasma_typos)
+                        if match:
+                            p_n, p_p, p_k = float(match.group(1)), float(match.group(2)), float(match.group(3))
+                            kilos = getattr(t, 'posotita', None) or 25.0
+                            # 1kg καθαρού στοιχείου = 3 μονάδες στο γράφημα (Αναγωγή κλίμακας)
+                            current_n += (p_n / 100.0) * kilos * 3.0
+                            current_p += (p_p / 100.0) * kilos * 3.0
+                            current_k += (p_k / 100.0) * kilos * 3.0
+                        else:
+                            current_n += 15.0; current_p += 5.0; current_k += 10.0
+                    else:
+                        current_n += 15.0; current_p += 5.0; current_k += 10.0
+
                 if 'καταστροφέας' in eidos or 'χόρτα' in eidos:
                     current_n += 3.0
                 if 'κλάδεμα' in eidos and 'θρυμματισμός' in farmaka:
@@ -905,6 +927,11 @@ def ypologismos_isozugiou_npk(ktima):
         data_p.append(round(current_p, 1))
         data_k.append(round(current_k, 1))
         
+        if month_str == now_month_str:
+            current_now_n = current_n
+            current_now_p = current_p
+            current_now_k = current_k
+        
         if current_date.month == 12:
             current_date = datetime(current_date.year + 1, 1, 1)
         else:
@@ -916,5 +943,82 @@ def ypologismos_isozugiou_npk(ktima):
             'N': data_n,
             'P': data_p,
             'K': data_k
-        }
+        },
+        'current_now': {
+            'N': round(current_now_n, 1),
+            'P': round(current_now_p, 1),
+            'K': round(current_now_k, 1)
+        },
+        'is_estimated': is_estimated
+    }
+
+def calculate_dynamic_npk(ktima_id):
+    """
+    ΝΕΟ: Δυναμικός Υπολογισμός NPK βάσει GDD (Growing Degree Days).
+    """
+    ktima = vasi.session.get(Ktima, ktima_id)
+    if not ktima:
+        return None
+
+    is_estimated = False
+    if not ktima.analuseis_edafous:
+        baseline_n, baseline_p, baseline_k = 100.0, 100.0, 100.0
+        is_estimated = True
+    else:
+        sorted_analyses = sorted(ktima.analuseis_edafous, key=lambda x: x.imerominia)
+        last_analysi = sorted_analyses[-1]
+        baseline_n = float(last_analysi.azwto if last_analysi.azwto is not None else 100.0)
+        baseline_p = float(last_analysi.fwsforos if last_analysi.fwsforos is not None else 100.0)
+        baseline_k = float(last_analysi.kalio if last_analysi.kalio is not None else 100.0)
+        if baseline_n == 0 and baseline_p == 0 and baseline_k == 0:
+            baseline_n, baseline_p, baseline_k = 100.0, 100.0, 100.0
+            is_estimated = True
+
+    current_n = baseline_n
+    current_p = baseline_p
+    current_k = baseline_k
+
+    # Credits: Προσθήκη λιπασμάτων
+    for t in ktima.ergasies:
+        if t.katastasi == 'Ολοκληρώθηκε' and 'λίπανση' in (t.eidos_ergasias or '').lower():
+            lipasma_typos = getattr(t, 'lipasma_typos', None)
+            if lipasma_typos:
+                import re
+                match = re.search(r'(\d+)[-.,](\d+)[-.,](\d+)', lipasma_typos)
+                if match:
+                    p_n, p_p, p_k = float(match.group(1)), float(match.group(2)), float(match.group(3))
+                    kilos = getattr(t, 'posotita', None) or 25.0
+                    current_n += (p_n / 100.0) * kilos * 3.0
+                    current_p += (p_p / 100.0) * kilos * 3.0
+                    current_k += (p_k / 100.0) * kilos * 3.0
+                else:
+                    current_n += 15.0; current_p += 5.0; current_k += 10.0
+            else:
+                current_n += 15.0; current_p += 5.0; current_k += 10.0
+
+    # Debits (The GDD Link)
+    gdd = ktima.gdd_accumulated if ktima.gdd_accumulated is not None else 0.0
+    current_n -= 0.05 * gdd
+    current_p -= 0.02 * gdd
+    if gdd > 600:
+        current_k -= 0.08 * (gdd - 600)
+
+    # Πρόληψη αρνητικών τιμών (Ασφάλεια UI)
+    current_n = max(0.0, current_n)
+    current_p = max(0.0, current_p)
+    current_k = max(0.0, current_k)
+
+    return {
+        'labels': ['Αφετηρία', f'Τρέχουσα (GDD: {gdd:.0f})'],
+        'datasets': {
+            'N': [baseline_n, round(current_n, 1)],
+            'P': [baseline_p, round(current_p, 1)],
+            'K': [baseline_k, round(current_k, 1)]
+        },
+        'current_now': {
+            'N': round(current_n, 1),
+            'P': round(current_p, 1),
+            'K': round(current_k, 1)
+        },
+        'is_estimated': is_estimated
     }

@@ -144,6 +144,21 @@ def update_db():
                 print(f"ℹ️ Η στήλη 'katigoria' υπάρχει ήδη στον πίνακα 'exoda' ({e})")
                 conn.rollback()
 
+            # Προσθήκη νέων πεδίων λίπανσης στον πίνακα Εργασιών
+            try:
+                conn.execute(text("ALTER TABLE ergasies ADD COLUMN lipasma_typos VARCHAR(50)"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'lipasma_typos' στον πίνακα 'ergasies'")
+            except Exception as e:
+                conn.rollback()
+
+            try:
+                conn.execute(text("ALTER TABLE ergasies ADD COLUMN posotita FLOAT"))
+                conn.commit()
+                print("✅ Προστέθηκε η στήλη 'posotita' στον πίνακα 'ergasies'")
+            except Exception as e:
+                conn.rollback()
+
             # --- Ενημέρωση Πίνακα Χρηστών (Xrhsths) ---
             print("👤 Έλεγχος και ενημέρωση πίνακα χρηστών...")
             

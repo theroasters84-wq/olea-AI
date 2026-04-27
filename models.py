@@ -109,6 +109,8 @@ class Ergasia(vasi.Model):
     simeiwseis = vasi.Column(vasi.Text)
     archived = vasi.Column(vasi.Boolean, default=False)
     proelevsi = vasi.Column(vasi.String(50), default='Αγρότης') # Αγρότης, AI Γεωπόνος, Γεωπόνος
+    lipasma_typos = vasi.Column(vasi.String(50), nullable=True)
+    posotita = vasi.Column(vasi.Float, nullable=True)
 
     def __repr__(self):
         return f"Ergasia('{self.eidos_ergasias}' on '{self.imerominia}')"

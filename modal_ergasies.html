@@ -117,6 +117,18 @@
                         <label for="eidos_ergasias{{ ktima.id }}">Είδος Εργασίας</label>
                     </div>
 
+                    <!-- Πεδία Λίπανσης (Αρχικά κρυμμένα) -->
+                    <div id="lipasma-fields-{{ ktima.id }}" style="display: none;">
+                        <div class="form-floating mb-3">
+                            <input type="text" name="lipasma_typos" class="form-control bg-light" id="lipasma_typos{{ ktima.id }}" placeholder="π.χ. 21-0-0">
+                            <label for="lipasma_typos{{ ktima.id }}">Τύπος Λιπάσματος N-P-K (π.χ. 21-0-0)</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input type="number" step="0.1" name="posotita" class="form-control bg-light" id="posotita{{ ktima.id }}" placeholder="Ποσότητα σε Κιλά">
+                            <label for="posotita{{ ktima.id }}">Ποσότητα σε Κιλά</label>
+                        </div>
+                    </div>
+
                     <div class="form-floating mb-3">
                         <input type="date" name="imerominia" class="form-control bg-light" id="imerominia{{ ktima.id }}" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
                         <label for="imerominia{{ ktima.id }}">Ημερομηνία</label>
@@ -227,6 +239,24 @@
   </div>
 </div>
 {% endfor %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectElem = document.getElementById('eidos_ergasias{{ ktima.id }}');
+    const lipasmaFields = document.getElementById('lipasma-fields-{{ ktima.id }}');
+    if (selectElem && lipasmaFields) {
+        selectElem.addEventListener('change', function() {
+            if (this.value === 'Λίπανση') {
+                lipasmaFields.style.display = 'block';
+            } else {
+                lipasmaFields.style.display = 'none';
+                document.getElementById('lipasma_typos{{ ktima.id }}').value = '';
+                document.getElementById('posotita{{ ktima.id }}').value = '';
+            }
+        });
+    }
+});
+</script>
 
 <!-- MODAL ΟΛΟΚΛΗΡΩΣΗΣ ΓΙΑ ΧΕΙΡΟΚΙΝΗΤΕΣ ΕΡΓΑΣΙΕΣ (DATABASE) -->
 {% for db_task in ktima.manual_pending_tasks %}

@@ -36,6 +36,15 @@ def dashboard_geoponou():
                     poikilia_val = k.poikilia if k.poikilia else "Κορωνέικη"
                     k.spray_status = check_spraying_status(gdd_val, poikilia_val)
                     k.dynamic_stage = k.spray_status.get('stage_name') if k.spray_status else None
+                    
+                    # Ζωντανός υπολογισμός του τρέχοντος NPK
+                    from logic import calculate_dynamic_npk
+                    npk_data = calculate_dynamic_npk(k.id)
+                    if npk_data:
+                        k.current_npk = npk_data.get('current_now')
+                        k.npk_is_estimated = npk_data.get('is_estimated')
+                    else:
+                        k.current_npk = None
                 
     return render_template('geoponos.html', pelatis=pelatis, energa_ktimata=energa_ktimata)
 

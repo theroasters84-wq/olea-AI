@@ -10,8 +10,8 @@ from flask_caching import Cache
 
 cache = Cache(config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 900})
 from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths, GenikoExodo
-from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
-from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro, check_spraying_status
+from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks, ypologismos_isozugiou_npk, calculate_dynamic_npk
+from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro, check_spraying_status, get_agro_ndvi_trend
 
 core_bp = Blueprint('core_app', __name__)
 
@@ -211,6 +211,14 @@ def arxikh():
                 ai_needs_update = not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date()
                 tasks_need_update = not (ktima.teleftaia_enimerosi_ergasion and ktima.teleftaia_enimerosi_ergasion.date() == now_dt.date() and ktima.topikes_ergasies)
                 
+                # Ζωντανός υπολογισμός του τρέχοντος NPK
+                npk_data = ypologismos_isozugiou_npk(ktima)
+                if npk_data:
+                    ktima.current_npk = npk_data.get('current_now')
+                    ktima.npk_is_estimated = npk_data.get('is_estimated')
+                else:
+                    ktima.current_npk = None
+
                 if ai_needs_update or tasks_need_update:
                     ktimata_gia_ananeosi.append(ktima.id)
 
@@ -600,6 +608,13 @@ def prosthes_ergasia(ktima_id):
         
     katastasi = request.form.get('katastasi')
     
+    lipasma_typos = request.form.get('lipasma_typos')
+    posotita_str = request.form.get('posotita')
+    posotita_val = None
+    if posotita_str:
+        try: posotita_val = float(posotita_str)
+        except ValueError: pass
+
     # --- ΣΥΣΤΗΜΑ ΠΡΟΣΤΑΣΙΑΣ GDD ---
     eidos_lower = (eidos or '').lower()
     farmaka_lower = (request.form.get('farmaka_lipasmata') or '').lower()
@@ -613,7 +628,7 @@ def prosthes_ergasia(ktima_id):
                 return redirect(url_for('core_app.arxikh'))
     # ------------------------------
 
-    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
+    nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'), lipasma_typos=lipasma_typos, posotita=posotita_val)
     
     if katastasi == 'Ολοκληρώθηκε':
         # Καθαρισμός εκκρεμών
@@ -1342,8 +1357,8 @@ def api_npk_isozugio(ktima_id):
     if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
         return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
     
-    from logic import ypologismos_isozugiou_npk
-    data = ypologismos_isozugiou_npk(ktima)
+    from logic import calculate_dynamic_npk
+    data = calculate_dynamic_npk(ktima.id)
     if not data:
         return jsonify({'error': 'Δεν υπάρχουν επαρκή δεδομένα (απαιτείται τουλάχιστον μία ανάλυση εδάφους με καταγεγραμμένα στοιχεία N, P, ή K).'})
     return jsonify(data)
@@ -1396,12 +1411,17 @@ def ktima_weather_widget(ktima_id):
     if ktima.agromonitoring_poly_id:
         soil = get_cached_api_data(f"soil_{ktima.agromonitoring_poly_id}", lambda: get_agro_soil_data(ktima.agromonitoring_poly_id), ttl_seconds=86400)
         uvi = get_cached_api_data(f"uvi_{ktima.agromonitoring_poly_id}", lambda: get_agro_uvi(ktima.agromonitoring_poly_id), ttl_seconds=86400)
+        ndvi = get_cached_api_data(f"ndvi_trend_{ktima.agromonitoring_poly_id}", lambda: get_agro_ndvi_trend(ktima.agromonitoring_poly_id), ttl_seconds=86400)
+        
         if soil and 'dt' in soil:
             soil['dt_formatted'] = datetime.fromtimestamp(soil['dt']).strftime('%d/%m/%Y %H:%M')
         if uvi and 'dt' in uvi:
             uvi['dt_formatted'] = datetime.fromtimestamp(uvi['dt']).strftime('%d/%m/%Y %H:%M')
-        if soil or uvi:
-            ktima.agro_data = {'soil': soil, 'uvi': uvi}
+        if ndvi and 'dt' in ndvi:
+            ndvi['dt_formatted'] = datetime.fromtimestamp(ndvi['dt']).strftime('%d/%m/%Y %H:%M')
+            
+        if soil or uvi or ndvi:
+            ktima.agro_data = {'soil': soil, 'uvi': uvi, 'ndvi': ndvi}
 
     ktima.kairos = get_cached_api_data(f"kairo_{ktima.geografiko_platos}_{ktima.geografiko_mikos}", lambda: pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos), ttl_seconds=1800)
     if ktima.kairos:
@@ -1597,6 +1617,13 @@ def api_add_manual_task():
         date_str = data.get('imerominia')
         farmaka = data.get('farmaka_lipasmata', '')
         
+        lipasma_typos = data.get('lipasma_typos')
+        posotita_str = data.get('posotita')
+        posotita_val = None
+        if posotita_str:
+            try: posotita_val = float(posotita_str)
+            except ValueError: pass
+        
         ktima = vasi.session.get(Ktima, ktima_id)
         if not ktima or ktima.idioktitis != current_user:
             return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
@@ -1619,7 +1646,9 @@ def api_add_manual_task():
             katastasi='Εκκρεμεί',
             imerominia=im,
             farmaka_lipasmata=farmaka,
-            proelevsi='Αγρότης'
+            proelevsi='Αγρότης',
+            lipasma_typos=lipasma_typos,
+            posotita=posotita_val
         )
         vasi.session.add(nea_ergasia)
         vasi.session.commit()

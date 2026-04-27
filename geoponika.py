@@ -205,6 +205,34 @@ def get_agro_uvi(poly_id):
     return None
 
 @cache.memoize(timeout=1800)
+def get_agro_ndvi_trend(poly_id):
+    api_key = os.getenv('AGROMONITORING_API_KEY')
+    if not api_key or not poly_id: return None
+    try:
+        import time
+        end = int(time.time())
+        start = end - (60 * 24 * 60 * 60) # Αναζήτηση τελευταίων 60 ημερών
+        res = requests.get(f"http://api.agromonitoring.com/agro/1.0/ndvi/history?start={start}&end={end}&polyid={poly_id}&appid={api_key}", timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            if len(data) > 0:
+                data.sort(key=lambda x: x['dt'])
+                current_ndvi = data[-1].get('mean')
+                dt_ts = data[-1].get('dt')
+                
+                trend = "stable"
+                if len(data) >= 2:
+                    previous_ndvi = data[-2].get('mean')
+                    if current_ndvi is not None and previous_ndvi is not None:
+                        if current_ndvi > previous_ndvi: trend = "up"
+                        elif current_ndvi < previous_ndvi: trend = "down"
+                
+                if current_ndvi is not None:
+                    return {'value': current_ndvi, 'trend': trend, 'dt': dt_ts}
+    except Exception as e: print(f"Agro NDVI Trend Error: {e}")
+    return None
+
+@cache.memoize(timeout=1800)
 def get_agro_forecast(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None

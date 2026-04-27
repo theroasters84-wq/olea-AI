@@ -16,7 +16,7 @@
 
     <!-- Agromonitoring Live Data -->
     {% if ktima.agro_data %}
-    <div class="d-flex justify-content-between align-items-center bg-white border p-2 rounded mb-2 shadow-sm" style="font-size: 0.85em;">
+    <div class="d-flex justify-content-between align-items-center bg-white border p-2 rounded mb-2 shadow-sm flex-wrap gap-2" style="font-size: 0.85em;">
         {% if ktima.agro_data.soil %}
             <span style="cursor: pointer;" onclick="alert('Η μέτρηση εδάφους πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-secondary"><i class="fas fa-temperature-low"></i> Έδαφος: {{ "%.1f"|format(ktima.agro_data.soil.t10 - 273.15) if ktima.agro_data.soil.t10 else '-' }}°C</span>
             <span style="cursor: pointer;" onclick="alert('Η μέτρηση υγρασίας εδάφους πάρθηκε στις:\n{{ ktima.agro_data.soil.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.soil.dt_formatted }}" class="text-info"><i class="fas fa-water"></i> Υγρασία Εδάφους (10cm): {{ "%.1f"|format(ktima.agro_data.soil.moisture * 100) if ktima.agro_data.soil.moisture else '-' }}%</span>
@@ -27,6 +27,18 @@
                 <strong class="{% if ktima.agro_data.uvi.uvi >= 8 %}text-danger{% elif ktima.agro_data.uvi.uvi >= 5 %}text-warning{% else %}text-success{% endif %}">
                     {{ "%.1f"|format(ktima.agro_data.uvi.uvi) }}
                 </strong>
+            </span>
+        {% endif %}
+        {% if ktima.agro_data.ndvi %}
+            <span style="cursor: pointer;" onclick="alert('Μέτρηση NDVI στις:\n{{ ktima.agro_data.ndvi.dt_formatted }}')" title="Μετρήθηκε: {{ ktima.agro_data.ndvi.dt_formatted }}">
+                <i class="fas fa-leaf text-success"></i> NDVI: <strong>{{ "%.2f"|format(ktima.agro_data.ndvi.value) }}</strong>
+                {% if ktima.agro_data.ndvi.trend == 'up' %}
+                    <i class="fas fa-arrow-trend-up text-success ms-1" title="Αυξητική Τάση"></i>
+                {% elif ktima.agro_data.ndvi.trend == 'down' %}
+                    <i class="fas fa-arrow-trend-down text-danger ms-1" title="Πτωτική Τάση"></i>
+                {% elif ktima.agro_data.ndvi.trend == 'stable' %}
+                    <i class="fas fa-minus text-muted ms-1" title="Σταθερό"></i>
+                {% endif %}
             </span>
         {% endif %}
     </div>
