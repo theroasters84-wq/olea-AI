@@ -502,3 +502,34 @@ document.addEventListener('submit', function(e) {
         }
     }
 });
+
+// --- Global Form Submission Protection (Prevent Double Submits & UI Freezing) ---
+document.addEventListener('submit', function(e) {
+    // Αν η υποβολή έχει ήδη ακυρωθεί από κάποιο άλλο validation script, μην κάνεις τίποτα
+    if (e.defaultPrevented) return;
+
+    const form = e.target;
+    
+    // Εντοπισμός του ενεργού κουμπιού υποβολής
+    const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+    
+    if (submitBtn) {
+        // Παράκαμψη αν το κουμπί είναι ήδη απενεργοποιημένο ή έχει ήδη ένδειξη φόρτωσης (π.χ. από τις AI φόρμες)
+        if (!submitBtn.disabled && !submitBtn.innerHTML.includes('fa-spinner') && !submitBtn.innerHTML.includes('spinner-border')) {
+            
+            if (!submitBtn.hasAttribute('data-original-text')) {
+                submitBtn.setAttribute('data-original-text', submitBtn.value || submitBtn.innerHTML);
+            }
+            
+            // Μικρή καθυστέρηση (10ms) για να μην μπλοκαριστεί το native submit του browser
+            setTimeout(() => {
+                submitBtn.disabled = true;
+                if (submitBtn.tagName.toLowerCase() === 'input') {
+                    submitBtn.value = 'Φόρτωση...';
+                } else {
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Φόρτωση...';
+                }
+            }, 10);
+        }
+    }
+});

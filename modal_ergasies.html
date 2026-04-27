@@ -1,118 +1,183 @@
 <!-- Modal Εργασιών -->
 <div class="modal fade" id="modalErgasies{{ ktima.id }}" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">📋 Διαχείριση Εργασιών</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title"><i class="fas fa-clipboard-list text-warning"></i> Διαχείριση Εργασιών</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body bg-light p-3 p-md-4">
                 <!-- Ατζέντα Εργασιών -->
-                <h5 style="color: #2c3e50;"><i class="fas fa-clipboard-list"></i> Λίστα Εργασιών</h5>
-                <a href="{{ url_for('core_app.ananeosi_ergasion', ktima_id=ktima.id) }}" class="btn btn-sm btn-outline-success mb-2"><i class="fas fa-sync-alt"></i> Επικαιροποίηση AI για την Περιοχή</a>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-calendar-check text-primary"></i> Εκκρεμείς Εργασίες</h5>
+                    <a href="{{ url_for('core_app.ananeosi_ergasion', ktima_id=ktima.id) }}" class="btn btn-sm btn-outline-success shadow-sm"><i class="fas fa-sync-alt"></i> Ανανέωση AI</a>
+                </div>
                 
-                <ul class="list-group mb-3" style="font-size: 0.9em;">
+                <div class="mb-4">
                     <!-- AI Smart Tasks -->
                     {% for task in ktima.pending_tasks %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center task-item-{{ ktima.id }}" data-proelevsi="AI Γεωπόνος">
-                        <div>
-                            {{ task }}
-                            <br>
-                            <span class="badge bg-info">AI Γεωπόνος</span>
+                        {% set border_class = 'border-warning' %}
+                        {% set badge_class = 'bg-warning text-dark' %}
+                        {% if 'Ψεκασμ' in task or 'Ραντισμ' in task %}{% set border_class = 'border-danger' %}{% set badge_class = 'bg-danger' %}
+                        {% elif 'Λίπανσ' in task or 'Άζωτ' in task or 'Βόρι' in task or 'Αμινοξ' in task %}{% set border_class = 'border-success' %}{% set badge_class = 'bg-success' %}
+                        {% elif 'Πότισμ' in task or 'Άρδευσ' in task %}{% set border_class = 'border-info' %}{% set badge_class = 'bg-info text-dark' %}
+                        {% elif 'Κλάδεμ' in task %}{% set border_class = 'border-secondary' %}{% set badge_class = 'bg-secondary' %}
+                        {% endif %}
+
+                        <div class="card shadow-sm mb-3 border-0 border-start border-4 {{ border_class }} rounded-3 task-item-{{ ktima.id }}" data-proelevsi="AI Γεωπόνος">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <small class="text-muted fw-bold"><i class="fas fa-calendar-day"></i> Προτεινόμενη Στιγμή</small>
+                                    <span class="badge {{ badge_class }} shadow-sm">AI Πρόταση</span>
+                                </div>
+                                <h6 class="fw-bold mb-2 text-dark">{{ task }}</h6>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="badge bg-light text-dark border shadow-sm"><i class="fas fa-robot text-primary"></i> AI Γεωπόνος</span>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-success btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#completeTaskModal{{ ktima.id }}_{{ loop.index }}" onclick="document.getElementById('taskNameInput{{ ktima.id }}_{{ loop.index }}').value = '{{ task }}';">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="m-0 p-0">
+                                            <input type="hidden" name="eidos_ergasias" value="{{ task }}">
+                                            <input type="hidden" name="katastasi" value="Ακυρώθηκε">
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Ακύρωση">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <!-- Κουμπί που ανοίγει το ΝΕΟ Modal Ολοκλήρωσης -->
-                            <button type="button" class="btn btn-success btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#completeTaskModal{{ ktima.id }}_{{ loop.index }}" onclick="document.getElementById('taskNameInput{{ ktima.id }}_{{ loop.index }}').value = '{{ task }}';">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
-                                <input type="hidden" name="eidos_ergasias" value="{{ task }}">
-                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
-                                <button type="submit" class="btn btn-secondary btn-sm py-0 px-2"><i class="fas fa-times"></i></button>
-                            </form>
-                        </div>
-                    </li>
                     {% endfor %}
                     
                     <!-- Database Manual Pending Tasks -->
                     {% for db_task in ktima.manual_pending_tasks %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center task-item-{{ ktima.id }}" data-proelevsi="{{ db_task.proelevsi }}">
-                        <div>
-                            <strong>{{ db_task.eidos_ergasias }}</strong>
-                            {% if db_task.farmaka_lipasmata %}<br><small class="text-muted">{{ db_task.farmaka_lipasmata }}</small>{% endif %}
-                            <br>
-                            <span class="badge {% if db_task.proelevsi == 'AI Γεωπόνος' %}bg-info text-dark{% elif db_task.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %}">{{ db_task.proelevsi }}</span>
+                        {% set task_type = db_task.eidos_ergasias %}
+                        {% set border_class = 'border-primary' %}
+                        {% set badge_class = 'bg-primary' %}
+                        {% if 'Ψεκασμ' in task_type or 'Ραντισμ' in task_type %}{% set border_class = 'border-danger' %}{% set badge_class = 'bg-danger' %}
+                        {% elif 'Λίπανσ' in task_type or 'Άζωτ' in task_type or 'Βόρι' in task_type or 'Αμινοξ' in task_type %}{% set border_class = 'border-success' %}{% set badge_class = 'bg-success' %}
+                        {% elif 'Πότισμ' in task_type or 'Άρδευσ' in task_type %}{% set border_class = 'border-info' %}{% set badge_class = 'bg-info text-dark' %}
+                        {% elif 'Κλάδεμ' in task_type %}{% set border_class = 'border-secondary' %}{% set badge_class = 'bg-secondary' %}
+                        {% endif %}
+
+                        <div class="card shadow-sm mb-3 border-0 border-start border-4 {{ border_class }} rounded-3 task-item-{{ ktima.id }}" data-proelevsi="{{ db_task.proelevsi }}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <small class="text-muted fw-bold"><i class="fas fa-calendar-day text-primary"></i> {{ db_task.imerominia.strftime('%d/%m/%Y') if db_task.imerominia else 'Εκκρεμεί' }}</small>
+                                    <span class="badge {{ badge_class }} shadow-sm">Εκκρεμεί</span>
+                                </div>
+                                <h6 class="fw-bold mb-1 text-dark">{{ db_task.eidos_ergasias }}</h6>
+                                {% if db_task.farmaka_lipasmata %}
+                                    <p class="small text-muted mb-2"><i class="fas fa-prescription-bottle-alt"></i> {{ db_task.farmaka_lipasmata }}</p>
+                                {% endif %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="badge {% if db_task.proelevsi == 'AI Γεωπόνος' %}bg-info text-dark{% elif db_task.proelevsi == 'Γεωπόνος' %}bg-success{% else %}bg-secondary{% endif %} shadow-sm">
+                                        <i class="fas {% if 'AI' in db_task.proelevsi %}fa-robot{% elif db_task.proelevsi == 'Γεωπόνος' %}fa-user-md{% else %}fa-user{% endif %}"></i> {{ db_task.proelevsi }}
+                                    </span>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-success btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#completeManualTaskModal{{ db_task.id }}">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="m-0 p-0">
+                                            <input type="hidden" name="eidos_ergasias" value="{{ db_task.eidos_ergasias }}">
+                                            <input type="hidden" name="katastasi" value="Ακυρώθηκε">
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Ακύρωση">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <button type="button" class="btn btn-success btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#completeManualTaskModal{{ db_task.id }}">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" style="display:inline;">
-                                <input type="hidden" name="eidos_ergasias" value="{{ db_task.eidos_ergasias }}">
-                                <input type="hidden" name="katastasi" value="Ακυρώθηκε">
-                                <button type="submit" class="btn btn-secondary btn-sm py-0 px-2" title="Ακύρωση"><i class="fas fa-times"></i></button>
-                            </form>
-                        </div>
-                    </li>
                     {% endfor %}
                     
                     {% if not ktima.pending_tasks and not ktima.manual_pending_tasks %}
-                    <li class="list-group-item text-center text-success">
-                        <i class="fas fa-check-circle"></i> 🎉 Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!
-                    </li>
+                    <div class="alert alert-success border-0 shadow-sm text-center rounded-3 py-4">
+                        <i class="fas fa-check-circle fa-3x mb-2 opacity-75"></i>
+                        <h6 class="mb-0">Όλες οι βασικές εργασίες της εποχής έχουν ολοκληρωθεί!</h6>
+                    </div>
                     {% endif %}
-                </ul>
+                </div>
 
-                <h6 style="color: #2c3e50;"><i class="fas fa-plus-circle"></i> Προσθήκη Άλλης Εργασίας</h6>
-                <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-3" style="font-size: 0.9em;" onsubmit="sessionStorage.setItem('reopenModal', 'modalErgasies{{ ktima.id }}');">
-                    <div class="mb-1">
-                        <select name="eidos_ergasias" class="form-select form-select-sm" required>
-                            <option value="" disabled selected>Επιλογή Εργασίας</option>
+                <!-- Add Task Form (Modernized) -->
+                <form action="{{ url_for('ktima_actions.prosthes_ergasia', ktima_id=ktima.id) }}" method="POST" class="mb-4 bg-white p-3 p-md-4 rounded-4 shadow-sm border-0" onsubmit="sessionStorage.setItem('reopenModal', 'modalErgasies{{ ktima.id }}');">
+                    <h5 class="text-dark mb-3 fw-bold"><i class="fas fa-plus-circle text-primary"></i> Νέα Εργασία</h5>
+                    
+                    <div class="form-floating mb-3">
+                        <select name="eidos_ergasias" class="form-select bg-light fw-bold" id="eidos_ergasias{{ ktima.id }}" required>
+                            <option value="" disabled selected>Επιλέξτε...</option>
                             <option value="Ψεκασμός">Ψεκασμός</option>
                             <option value="Κλάδεμα">Κλάδεμα</option>
                             <option value="Λίπανση">Λίπανση</option>
                             <option value="Πότισμα">Πότισμα</option>
-                            <option value="Φρεζάρισμα">Φρεζάρισμα</option>
+                            <option value="Φρεζάρισμα">Φρεζάρισμα / Όργωμα</option>
+                            <option value="Κοπή Χόρτων">Κοπή Χόρτων / Καταστροφέας</option>
                         </select>
+                        <label for="eidos_ergasias{{ ktima.id }}">Είδος Εργασίας</label>
                     </div>
-                    <div class="mb-1">
-                        <label class="form-label visually-hidden">Ημερομηνία</label>
-                        <input type="date" name="imerominia" class="form-control form-control-sm" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+
+                    <div class="form-floating mb-3">
+                        <input type="date" name="imerominia" class="form-control bg-light" id="imerominia{{ ktima.id }}" value="{{ datetime.now().strftime('%Y-%m-%d') }}" required>
+                        <label for="imerominia{{ ktima.id }}">Ημερομηνία</label>
                     </div>
-                    <div class="mb-1">
-                        <input type="text" name="farmaka_lipasmata" class="form-control form-control-sm" placeholder="Φάρμακα/Λιπάσματα">
+
+                    <div class="form-floating mb-3">
+                        <input type="text" name="farmaka_lipasmata" class="form-control bg-light" id="farmaka{{ ktima.id }}" placeholder="Φάρμακα/Λιπάσματα">
+                        <label for="farmaka{{ ktima.id }}">Φάρμακα / Λιπάσματα / Υλικά (Προαιρετικό)</label>
                     </div>
-                    <div class="mb-1">
-                        <select name="katastasi" class="form-select form-select-sm">
-                            <option value="Εκκρεμεί">Εκκρεμεί</option>
-                            <option value="Ολοκληρώθηκε">Ολοκληρώθηκε</option>
-                            <option value="Ακυρώθηκε">Ακυρώθηκε</option>
+
+                    <div class="form-floating mb-3">
+                        <select name="katastasi" class="form-select bg-light" id="katastasi{{ ktima.id }}">
+                            <option value="Εκκρεμεί">Στο Πρόγραμμα (Εκκρεμεί)</option>
+                            <option value="Ολοκληρώθηκε">Ολοκληρώθηκε Ήδη</option>
                         </select>
+                        <label for="katastasi{{ ktima.id }}">Κατάσταση</label>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">Προσθήκη Εργασίας</button>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm mt-2 fw-bold"><i class="fas fa-save"></i> Αποθήκευση Στο Ημερολόγιο</button>
                 </form>
 
-                <hr>
-
-                <h6 class="mt-3"><i class="fas fa-history"></i> Ιστορικό Εργασιών:</h6>
+                <!-- History Tasks -->
+                <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-history text-secondary"></i> Ιστορικό (Timeline)</h5>
                 {% if ktima.ergasies %}
-                    <div class="table-responsive" style="max-height: 150px; overflow-y: auto; font-size: 0.85em;">
-                        <ul class="list-group">
-                            {% for ergasia in ktima.ergasies|reverse %}
-                              {% if not ergasia.archived %}
-                                <li class="list-group-item {% if ergasia.katastasi == 'Εκκρεμεί' %}bg-light{% endif %}">
-                                    <strong>{{ ergasia.eidos_ergasias }}</strong> - {{ ergasia.katastasi }}<br>
-                                    <small class="text-muted">{{ ergasia.imerominia.strftime('%d/%m/%Y') }}</small>
+                    <div class="timeline-feed pe-2" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
+                        {% for ergasia in ktima.ergasies|reverse %}
+                          {% if not ergasia.archived %}
+                            {% set task_type = ergasia.eidos_ergasias %}
+                            {% set border_class = 'border-primary' %}
+                            {% set badge_class = 'bg-primary' %}
+                            {% if 'Ψεκασμ' in task_type or 'Ραντισμ' in task_type %}{% set border_class = 'border-danger' %}{% set badge_class = 'bg-danger' %}
+                            {% elif 'Λίπανσ' in task_type or 'Άζωτ' in task_type or 'Βόρι' in task_type or 'Αμινοξ' in task_type %}{% set border_class = 'border-success' %}{% set badge_class = 'bg-success' %}
+                            {% elif 'Πότισμ' in task_type or 'Άρδευσ' in task_type %}{% set border_class = 'border-info' %}{% set badge_class = 'bg-info text-dark' %}
+                            {% elif 'Κλάδεμ' in task_type %}{% set border_class = 'border-secondary' %}{% set badge_class = 'bg-secondary' %}
+                            {% endif %}
+                            
+                            {% if ergasia.katastasi == 'Ακυρώθηκε' %}
+                                {% set border_class = 'border-secondary' %}
+                                {% set badge_class = 'bg-secondary opacity-75' %}
+                            {% endif %}
+
+                            <div class="card shadow-sm mb-3 border-0 border-start border-4 {{ border_class }} bg-white rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted fw-bold"><i class="fas fa-calendar-day"></i> {{ ergasia.imerominia.strftime('%d/%m/%Y') }}</small>
+                                        <span class="badge {{ badge_class }} shadow-sm">{{ ergasia.katastasi }}</span>
+                                    </div>
+                                    <h6 class="fw-bold mb-1 {% if ergasia.katastasi == 'Ακυρώθηκε' %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">{{ ergasia.eidos_ergasias }}</h6>
                                     {% if ergasia.farmaka_lipasmata %}
-                                        <br><small>💊 {{ ergasia.farmaka_lipasmata }}</small>
+                                        <p class="small text-muted mb-0"><i class="fas fa-prescription-bottle-alt"></i> {{ ergasia.farmaka_lipasmata }}</p>
                                     {% endif %}
-                                </li>
-                              {% endif %}
-                            {% endfor %}
-                        </ul>
+                                </div>
+                            </div>
+                          {% endif %}
+                        {% endfor %}
                     </div>
                 {% else %}
-                    <p style="font-size: 0.9em; font-style: italic;">Δεν υπάρχουν καταγεγραμμένες εργασίες.</p>
+                    <div class="alert alert-light border-0 shadow-sm text-center py-4 rounded-3">
+                        <i class="fas fa-history fa-2x text-muted mb-2 opacity-50"></i>
+                        <p class="text-muted mb-0 fst-italic">Δεν υπάρχουν καταγεγραμμένες εργασίες στο ιστορικό.</p>
+                    </div>
                 {% endif %}
             </div>
         </div>

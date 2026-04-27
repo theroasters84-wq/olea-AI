@@ -16,6 +16,7 @@ class Xrhsths(vasi.Model, UserMixin):
     id = vasi.Column(vasi.Integer, primary_key=True)
     email = vasi.Column(vasi.String(120), unique=True, nullable=False)
     kwdikos = vasi.Column(vasi.String(60), nullable=False)
+    onoma_xrhsth = vasi.Column(vasi.String(20), unique=True, nullable=True)
     rolos = vasi.Column(vasi.String(20), nullable=False, default='agroths') # 'agroths' ή 'geoponos'
     afm = vasi.Column(vasi.String(9), unique=True, nullable=True)
     ar_tautotitas = vasi.Column(vasi.String(20), unique=True, nullable=True)

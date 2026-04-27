@@ -148,6 +148,7 @@ def update_db():
             print("👤 Έλεγχος και ενημέρωση πίνακα χρηστών...")
             
             xrhstes_cols = [
+                ("onoma_xrhsth", "VARCHAR(20)"),
                 ("rolos", "VARCHAR(20) DEFAULT 'agroths'"),
                 ("afm", "VARCHAR(9)"),
                 ("ar_tautotitas", "VARCHAR(20)"),

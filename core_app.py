@@ -6,9 +6,12 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user, logout_user
 from sqlalchemy import text, or_
 from core import vasi, ai_client, api_key_ai, kryptografhsh
+from flask_caching import Cache
+
+cache = Cache(config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 900})
 from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths, GenikoExodo
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks
-from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro
+from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro, check_spraying_status
 
 core_bp = Blueprint('core_app', __name__)
 
@@ -200,6 +203,10 @@ def arxikh():
                 ktima.symvouli = None
                 ktima.protaseis = []
                 
+                gdd_val = ktima.gdd_accumulated if ktima.gdd_accumulated else 0.0
+                poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
+                ktima.spray_status = check_spraying_status(gdd_val, poikilia_val)
+                ktima.dynamic_stage = ktima.spray_status.get('stage_name') if ktima.spray_status else None
                 now_dt = datetime.now()
                 ai_needs_update = not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date()
                 tasks_need_update = not (ktima.teleftaia_enimerosi_ergasion and ktima.teleftaia_enimerosi_ergasion.date() == now_dt.date() and ktima.topikes_ergasies)
@@ -416,11 +423,12 @@ def prosthes_ktima():
                 now = datetime.now()
                 current_year = now.year
                 start_date = f"{current_year}-01-01"
-                yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+                # Το Open-Meteo Archive API έχει καθυστέρηση 5 ημερών
+                safe_end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
                 
                 # Only fetch if today is strictly after Jan 1st
-                if now.strftime('%Y-%m-%d') > start_date:
-                    hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={float(platos)}&longitude={float(mikos)}&start_date={start_date}&end_date={yesterday}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                if now.strftime('%Y-%m-%d') > start_date and safe_end_date >= start_date:
+                    hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={float(platos)}&longitude={float(mikos)}&start_date={start_date}&end_date={safe_end_date}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
                     hist_resp = requests.get(hist_url, timeout=5)
                     
                     if hist_resp.status_code == 200:
@@ -591,6 +599,20 @@ def prosthes_ergasia(ktima_id):
         im = datetime.now()
         
     katastasi = request.form.get('katastasi')
+    
+    # --- ΣΥΣΤΗΜΑ ΠΡΟΣΤΑΣΙΑΣ GDD ---
+    eidos_lower = (eidos or '').lower()
+    farmaka_lower = (request.form.get('farmaka_lipasmata') or '').lower()
+    if 'ψεκασμ' in eidos_lower or 'ραντισμ' in eidos_lower or 'χαλκ' in eidos_lower or 'ψεκασμ' in farmaka_lower or 'ραντισμ' in farmaka_lower:
+        if ktima:
+            gdd_val = ktima.gdd_accumulated if ktima.gdd_accumulated else 0.0
+            poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
+            spray_status = check_spraying_status(gdd_val, poikilia_val)
+            if not spray_status.get('can_spray', True):
+                flash(f"Αποτυχία: Το κτήμα βρίσκεται σε στάδιο {spray_status.get('stage_name', 'Άνθισης')}. Ο ψεκασμός απαγορεύεται αυστηρά για την προστασία του ανθού!", "danger")
+                return redirect(url_for('core_app.arxikh'))
+    # ------------------------------
+
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
     
     if katastasi == 'Ολοκληρώθηκε':
@@ -1216,23 +1238,34 @@ def diorthosi_gdd():
     count = 0
     
     now = datetime.now()
-    current_year = now.year
-    start_date = f"{current_year}-01-01"
-    yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+    start_date = f"{now.year}-01-01"
+    safe_end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
     
     for ktima in ktimata:
         try:
-            # Ανάκτηση ιστορικού καιρού από 1η Ιανουαρίου
-            hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={yesterday}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
-            resp = requests.get(hist_url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json().get('daily', {})
-                t_max = data.get('temperature_2m_max', [])
-                t_min = data.get('temperature_2m_min', [])
+            total_gdd = 0.0
+            if safe_end_date >= start_date:
+                # 1. Ιστορικό από 1η Ιανουαρίου μέχρι 5 μέρες πριν
+                hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={safe_end_date}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                resp = requests.get(hist_url, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json().get('daily', {})
+                    t_max = data.get('temperature_2m_max', [])
+                    t_min = data.get('temperature_2m_min', [])
+                    total_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
+            
+            # 2. Κλείσιμο "τρύπας" 4 ημερών με το Forecast API
+            recent_url = f"https://api.open-meteo.com/v1/forecast?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+            resp_recent = requests.get(recent_url, timeout=5)
+            if resp_recent.status_code == 200:
+                data_rec = resp_recent.json().get('daily', {})
+                # Αφαιρούμε το τελευταίο στοιχείο που είναι η σημερινή πρόγνωση
+                t_max_rec = data_rec.get('temperature_2m_max', [])[:-1]
+                t_min_rec = data_rec.get('temperature_2m_min', [])[:-1]
+                total_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max_rec, t_min_rec) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
                 
-                total_gdd = sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx and mn and ((mx + mn)/2.0 > 10.0)])
-                ktima.gdd_accumulated = total_gdd
-                count += 1
+            ktima.gdd_accumulated = total_gdd
+            count += 1
         except Exception as e:
             print(f"Σφάλμα GDD Update για κτήμα {ktima.id}: {e}")
             
@@ -1318,6 +1351,7 @@ def api_npk_isozugio(ktima_id):
 # --- API ΓΙΑ ΤΟ ΙΣΤΟΡΙΚΟ NDVI ---
 @core_bp.route('/api/ndvi_history/<int:ktima_id>')
 @login_required
+@cache.memoize(timeout=1800)
 def api_ndvi_history(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     if not ktima or (ktima.idioktitis != current_user and getattr(current_user, 'rolos', '') != 'geoponos'):
@@ -1371,7 +1405,10 @@ def ktima_weather_widget(ktima_id):
 
     ktima.kairos = get_cached_api_data(f"kairo_{ktima.geografiko_platos}_{ktima.geografiko_mikos}", lambda: pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos), ttl_seconds=1800)
     if ktima.kairos:
-        ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'])
+        gdd_val = ktima.gdd_accumulated if ktima.gdd_accumulated else 0.0
+        poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
+        spray_status = check_spraying_status(gdd_val, poikilia_val)
+        ktima.symvouli = geoponikos_elegxos(ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], spray_status)
         ktima.protaseis = paragwgi_protasewn(ktima, ktima.kairos['thermokrasia'], ktima.kairos['ygrasia'], ktima.kairos['perigrafi'])
     else:
         ktima.protaseis = []
@@ -1564,6 +1601,17 @@ def api_add_manual_task():
         if not ktima or ktima.idioktitis != current_user:
             return jsonify({'error': 'Μη εξουσιοδοτημένη ενέργεια'}), 403
             
+        # --- ΣΥΣΤΗΜΑ ΠΡΟΣΤΑΣΙΑΣ GDD ---
+        eidos_lower = (eidos or '').lower()
+        farmaka_lower = (farmaka or '').lower()
+        if 'ψεκασμ' in eidos_lower or 'ραντισμ' in eidos_lower or 'χαλκ' in eidos_lower or 'ψεκασμ' in farmaka_lower or 'ραντισμ' in farmaka_lower:
+            gdd_val = ktima.gdd_accumulated if ktima.gdd_accumulated else 0.0
+            poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
+            spray_status = check_spraying_status(gdd_val, poikilia_val)
+            if not spray_status.get('can_spray', True):
+                return jsonify({'error': f"Αποτυχία: Το κτήμα βρίσκεται σε στάδιο {spray_status.get('stage_name', 'Άνθισης')}. Ο ψεκασμός απαγορεύεται αυστηρά για την προστασία του ανθού!"}), 400
+        # ------------------------------
+
         im = datetime.strptime(date_str, '%Y-%m-%d')
         nea_ergasia = Ergasia(
             ktima_id=ktima.id,

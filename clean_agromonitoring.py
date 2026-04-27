@@ -2,7 +2,9 @@ import os
 import requests
 from core import efarmogi, vasi
 from models import Ktima
+from core_app import cache
 
+@cache.memoize(timeout=1800)
 def clean_orphaned_polygons():
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key:

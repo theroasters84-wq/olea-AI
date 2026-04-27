@@ -47,10 +47,10 @@ def prosthes_ktima():
                 now = datetime.now()
                 current_year = now.year
                 start_date = f"{current_year}-01-01"
-                yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+                safe_end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
                 
-                if now.strftime('%Y-%m-%d') > start_date:
-                    hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={float(platos)}&longitude={float(mikos)}&start_date={start_date}&end_date={yesterday}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                if safe_end_date >= start_date:
+                    hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={float(platos)}&longitude={float(mikos)}&start_date={start_date}&end_date={safe_end_date}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
                     hist_resp = requests.get(hist_url, timeout=5)
                     
                     if hist_resp.status_code == 200:
@@ -64,6 +64,15 @@ def prosthes_ktima():
                                 daily_gdd = t_mean - 10.0
                                 if daily_gdd > 0:
                                     initial_gdd += daily_gdd
+                    
+                    recent_url = f"https://api.open-meteo.com/v1/forecast?latitude={float(platos)}&longitude={float(mikos)}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                    resp_recent = requests.get(recent_url, timeout=5)
+                    if resp_recent.status_code == 200:
+                        data_rec = resp_recent.json().get('daily', {})
+                        t_max_rec = data_rec.get('temperature_2m_max', [])[:-1]
+                        t_min_rec = data_rec.get('temperature_2m_min', [])[:-1]
+                        initial_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max_rec, t_min_rec) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
+
             except Exception as e:
                 print(f"Historical GDD API Error: {e}")
             # --- END HISTORICAL GDD CALCULATION ---
@@ -177,6 +186,22 @@ def prosthes_ergasia(ktima_id):
     im = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.now()
     katastasi = request.form.get('katastasi')
     eidos = request.form.get('eidos_ergasias')
+    
+    # --- ΣΥΣΤΗΜΑ ΠΡΟΣΤΑΣΙΑΣ GDD ---
+    eidos_lower = (eidos or '').lower()
+    farmaka_lower = (request.form.get('farmaka_lipasmata') or '').lower()
+    if 'ψεκασμ' in eidos_lower or 'ραντισμ' in eidos_lower or 'χαλκ' in eidos_lower or 'ψεκασμ' in farmaka_lower or 'ραντισμ' in farmaka_lower:
+        ktima_check = vasi.session.get(Ktima, ktima_id)
+        if ktima_check:
+            from geoponika import check_spraying_status
+            gdd_val = ktima_check.gdd_accumulated if ktima_check.gdd_accumulated else 0.0
+            poikilia_val = ktima_check.poikilia if ktima_check.poikilia else "Κορωνέικη"
+            spray_status = check_spraying_status(gdd_val, poikilia_val)
+            if not spray_status.get('can_spray', True):
+                flash(f"Αποτυχία: Το κτήμα βρίσκεται σε στάδιο {spray_status.get('stage_name', 'Άνθισης')}. Ο ψεκασμός απαγορεύεται αυστηρά για την προστασία του ανθού!", "danger")
+                return redirect(url_for('core_app.arxikh'))
+    # ------------------------------
+
     nea_ergasia = Ergasia(ktima_id=ktima_id, eidos_ergasias=eidos, katastasi=katastasi, imerominia=im, farmaka_lipasmata=request.form.get('farmaka_lipasmata'))
     vasi.session.add(nea_ergasia)
     ktima = vasi.session.get(Ktima, ktima_id)

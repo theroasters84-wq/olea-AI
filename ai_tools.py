@@ -95,10 +95,12 @@ def diagnosi_fwtografias(ktima_id):
                 try:
                     response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img_part])
                     break
-                except Exception:
+                except Exception as e:
+                    print(f"AI API Error: {e}")
+                    if attempt == 2: response = None
                     time.sleep(2)
             
-            apotelesma_text = response.text if response else "⚠️ Δεν κατάφερα να διακρίνω καθαρά τη φωτογραφία. Δοκιμάστε μια πιο καθαρή λήψη."
+            apotelesma_text = response.text if response else "Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα."
             nea_diagnosi = Diagnosi(ktima_id=ktima_id, apotelesma=apotelesma_text, imerominia=datetime.now())
             vasi.session.add(nea_diagnosi)
             ktima.teleftaia_enimerosi_ergasion = None
@@ -157,17 +159,22 @@ def analysi_egrafou(ktima_id):
                 response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=contents)
                 break
             except Exception as e:
-                if attempt == 2: raise e
+                print(f"AI API Error: {e}")
+                if attempt == 2: response = None
                 time.sleep(3 * (attempt + 1))
         
-        analysi_text = response.text if response else "⚠️ Δεν μπόρεσα να διαβάσω το έγγραφο. Ανεβάστε πιο καθαρή φωτογραφία."
+        analysi_text = response.text if response else "Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα."
         
         extraction_prompt = """Διάβασε την ανάλυση και εξήγαγε τα δεδομένα σε μορφή JSON. Επίστρεψε ΜΟΝΟ το JSON χωρίς άλλο κείμενο (ούτε markdown).
 Περίλαβε τα εξής κλειδιά (με αριθμητικές τιμές) αν υπάρχουν: ph, organiki_ousia, azwto, fwsforos, kalio.
 Επιπλέον, αν η ανάλυση αναφέρει τη μηχανική σύσταση / τύπο εδάφους (π.χ. Αργιλώδες, Αμμώδες, Πηλώδες, κτλ), πρόσθεσε και το κλειδί "typos_edafous" με την αντίστοιχη λέξη.
 ΠΡΟΣΟΧΗ: Αν η εικόνα είναι πολύ θολή/δυσανάγνωστη, ή αν λείπουν βασικές σελίδες (π.χ. βλέπεις μόνο τη σελίδα 1 από 2), πρόσθεσε στο JSON ένα κλειδί "provlima" με ένα σύντομο μήνυμα προς τον χρήστη (π.χ. "Η φωτογραφία είναι πολύ θολή, παρακαλώ ανεβάστε την ξανά." ή "Φαίνεται να λείπει η δεύτερη σελίδα.")."""
         
-        ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt] + contents[1:])
+        try:
+            ext_response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[extraction_prompt] + contents[1:])
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            return jsonify({'success': False, 'message': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'})
         
         if ext_response:
             try:
@@ -224,8 +231,13 @@ def anagnorisi_stadiou(ktima_id):
     try:
         img = PIL.Image.open(file)
         prompt = "Είσαι κορυφαίος γεωπόνος. Σε ποιο φαινολογικό στάδιο βρίσκεται η ελιά; Απάντησε ΜΟΝΟ με το όνομα του σταδίου (π.χ. Λήθαργος, Σχηματισμός Ταξιανθιών, Άνθιση, Καρπόδεση)."
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
-        ktima.fainologiko_stadio = response.text.strip().replace('.', '') if response else "Άγνωστο"
+        try:
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
+            ktima.fainologiko_stadio = response.text.strip().replace('.', '') if response else "Άγνωστο"
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            flash('Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.', 'warning')
+            return redirect(url_for('core_app.arxikh'))
         
         if response:
             nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"🌿 Αναγνώριση Σταδίου: {ktima.fainologiko_stadio}", imerominia=datetime.now())
@@ -261,8 +273,12 @@ def ektimisi_paragogis(ktima_id):
         img = PIL.Image.open(file)
         poikilies = ", ".join([f"{p.poikilia_onoma}" for p in ktima.poikilies_details]) if ktima.poikilies_details else ktima.poikilia
         prompt = f"Είσαι ειδικός γεωπόνος. Εκτίμησε την παραγωγή για {ktima.arithmos_dentron} δέντρα ({poikilies}) βάσει αυτής της εικόνας καρποφορίας. Δώσε 1-2 προτάσεις."
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
-        flash(f'Εκτίμηση: {response.text}', 'info')
+        try:
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, img])
+            flash(f'Εκτίμηση: {response.text}', 'info')
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            flash('Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.', 'warning')
     except Exception as e:
         error_msg = str(e).lower()
         if '429' in error_msg or 'quota' in error_msg or '413' in error_msg or 'too large' in error_msg:
@@ -294,8 +310,13 @@ def ai_input_scan(ktima_id):
         else:
             content_part = PIL.Image.open(io.BytesIO(file_data))
             
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, content_part])
-        ai_summary = response.text.strip() if response else "⚠️ Δεν κατάφερα να διαβάσω την ετικέτα."
+        try:
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=[prompt, content_part])
+            ai_summary = response.text.strip() if response else "⚠️ Δεν κατάφερα να διαβάσω την ετικέτα."
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            flash('Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.', 'warning')
+            return redirect(url_for('core_app.arxikh'))
         
         nea_ergasia = Ergasia(ktima_id=ktima.id, eidos_ergasias='Ψεκασμός/Λίπανση (AI)', katastasi='Ολοκληρώθηκε', farmaka_lipasmata=ai_summary, imerominia=datetime.now())
         vasi.session.add(nea_ergasia)
@@ -319,8 +340,12 @@ def ai_vision():
     if 'image' not in request.files: return jsonify({'error': 'No image'}), 400
     try:
         img = PIL.Image.open(request.files['image'])
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=["Analyze this...", img])
-        return jsonify({'result': response.text})
+        try:
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=["Analyze this...", img])
+            return jsonify({'result': response.text})
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            return jsonify({'result': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -340,12 +365,17 @@ def ndvi_chat(ktima_id):
         f"2. ΑΠΑΓΟΡΕΥΕΤΑΙ να κάνεις ανάλυση ή μετάφραση των λέξεων. Δώσε ΚΑΤΕΥΘΕΙΑΝ τη γεωπονική σου συμβουλή/συμπέρασμα βάσει της απάντησής του.\n"
         f"3. Να είσαι φιλικός, άμεσος και περιεκτικός."
     )
-    response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+    try:
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        ai_text = response.text.strip()
+    except Exception as e:
+        print(f"AI API Error: {e}")
+        ai_text = "Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα."
     
-    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"Chat: {response.text.strip()}", imerominia=datetime.now())
+    nea_diagnosi = Diagnosi(ktima_id=ktima.id, apotelesma=f"Chat: {ai_text}", imerominia=datetime.now())
     vasi.session.add(nea_diagnosi)
     vasi.session.commit()
-    return jsonify({'refined_message': response.text.strip()})
+    return jsonify({'refined_message': ai_text})
 
 @ai_bp.route('/apantisi_sto_ai/<int:ktima_id>', methods=['POST'])
 @login_required
@@ -360,10 +390,14 @@ def apantisi_sto_ai(ktima_id):
         f"ΟΔΗΓΙΑ 3: Αν ο αγρότης περιγράφει το φαινολογικό στάδιο (π.χ. 'μούρο', 'μπουμπούκια', 'ανθοταξίες'), γράψε στο τέλος τη φράση 'ΝΕΟ ΣΤΑΔΙΟ:' και δίπλα μια σύντομη ονομασία του σταδίου.\n"
         f"ΟΔΗΓΙΑ 4: Αν ο αγρότης απαντήσει ότι ΔΕΝ έκανε τις εκκρεμείς εργασίες αλλά θα τις κάνει αργότερα (π.χ. 'αύριο', 'avrio', 'μεθαύριο', 'methaurio', 'το Σαββατοκύριακο'), γράψε στο τέλος τη φράση 'ΑΝΑΒΟΛΗ_ΗΜΕΡΕΣ:' και δίπλα ένα νούμερο (π.χ. 1 για αύριο, 2 για μεθαύριο, 4 για γενικά). Αν λέει ότι ΔΕΝ θα τις κάνει καθόλου, γράψε 'ΑΚΥΡΩΣΗ_ΟΛΩΝ:'."
     )
-    response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-    
-    import re
-    ai_text = response.text.strip()
+    try:
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        import re
+        ai_text = response.text.strip()
+    except Exception as e:
+        print(f"AI API Error: {e}")
+        import re
+        ai_text = "Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα."
     symperasma = ai_text
     
     match_anaboli = re.search(r'ΑΝΑΒΟΛΗ_ΗΜΕΡΕΣ:\s*(\d+)', symperasma)
@@ -534,9 +568,14 @@ def apantisi_sto_ai_ajax(ktima_id):
         f"ΟΔΗΓΙΑ 4: Αν ο αγρότης απαντήσει ότι ΔΕΝ έκανε τις εκκρεμείς εργασίες αλλά θα τις κάνει αργότερα (π.χ. 'αύριο', 'avrio', 'μεθαύριο', 'methaurio', 'το Σαββατοκύριακο'), γράψε στο τέλος τη φράση 'ΑΝΑΒΟΛΗ_ΗΜΕΡΕΣ:' και δίπλα ένα νούμερο (π.χ. 1 για αύριο, 2 για μεθαύριο, 4 για γενικά). Αν λέει ότι ΔΕΝ θα τις κάνει καθόλου, γράψε 'ΑΚΥΡΩΣΗ_ΟΛΩΝ:'."
     )
     
-    response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-    import re
-    ai_text = response.text.strip()
+    try:
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        import re
+        ai_text = response.text.strip()
+    except Exception as e:
+        print(f"AI API Error: {e}")
+        import re
+        ai_text = "Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα."
     
     symperasma = ai_text
     
@@ -688,10 +727,14 @@ def paragogi_syntaghs(ktima_id):
         config = types.GenerateContentConfig(
             tools=[{"google_search": {}}]
         )
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+        try:
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            return jsonify({'error': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'}), 500
         
         if not response or not getattr(response, 'text', None):
-            return jsonify({'error': 'Το AI δεν επέστρεψε δεδομένα. Δοκιμάστε ξανά.'}), 500
+            return jsonify({'error': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'}), 500
 
         # Καθαρισμός του JSON
         json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
@@ -810,10 +853,14 @@ def refine_syntagh(ktima_id):
         config = types.GenerateContentConfig(
             tools=[{"google_search": {}}]
         )
-        response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+        try:
+            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+        except Exception as e:
+            print(f"AI API Error: {e}")
+            return jsonify({'error': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'}), 500
         
         if not response or not getattr(response, 'text', None):
-            return jsonify({'error': 'Το AI δεν επέστρεψε δεδομένα.'}), 500
+            return jsonify({'error': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'}), 500
             
         json_text = response.text.strip().replace('```json', '').replace('```', '').strip()
         
@@ -972,7 +1019,11 @@ def xeirokiniti_syntagh(ktima_id):
             )
             
             config = types.GenerateContentConfig(response_mime_type="application/json")
-            response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+            try:
+                response = ai_client.models.generate_content(model='gemini-2.5-flash', contents=prompt, config=config)
+            except Exception as e:
+                print(f"AI API Error: {e}")
+                return jsonify({'error': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.'}), 500
             
             if not response or not getattr(response, 'text', None):
                 return jsonify({'success': True}) # Προστασία να μην σκάσει η διαδικασία

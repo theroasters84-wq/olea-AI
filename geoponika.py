@@ -5,6 +5,7 @@ from email.mime.text import MIMEText
 from datetime import datetime
 import time
 from google.genai import types
+from core_app import cache
 
 # --- Έξυπνη Μνήμη (Cache) για τις κλήσεις στο Internet ---
 _api_cache = {}
@@ -19,6 +20,7 @@ def _cached_get(url, ttl_seconds=1800):
     return None
 
 # Βοηθητική συνάρτηση για τον καιρό
+@cache.memoize(timeout=1800)
 def pare_kairo(lat, lng):
     api_key = os.getenv('WEATHER_API_KEY')
     
@@ -63,6 +65,7 @@ def pare_kairo(lat, lng):
     return None
 
 # Νέα συνάρτηση για πρόγνωση καιρού (5 ημέρες / 3 ώρες)
+@cache.memoize(timeout=1800)
 def pare_prognosi_kairou(lat, lng):
     api_key = os.getenv('WEATHER_API_KEY')
     
@@ -81,15 +84,22 @@ def pare_prognosi_kairou(lat, lng):
     return None
 
 # Γεωπονικός Έλεγχος (Rule Engine)
-def geoponikos_elegxos(thermokrasia, ygrasia):
+def geoponikos_elegxos(thermokrasia, ygrasia, spray_status=None):
     if thermokrasia < 2:
-        return {"minima": "Κίνδυνος Παγετού! Αποφύγετε το κλάδεμα.", "xroma": "red"}
+        base_status = {"minima": "Κίνδυνος Παγετού! Αποφύγετε το κλάδεμα.", "xroma": "red"}
     elif thermokrasia > 35:
-        return {"minima": "Κίνδυνος Καύσωνα! Προγραμματίστε βαθύ πότισμα.", "xroma": "orange"}
+        base_status = {"minima": "Κίνδυνος Καύσωνα! Προγραμματίστε βαθύ πότισμα.", "xroma": "orange"}
     elif 20 <= thermokrasia <= 30 and ygrasia > 60:
-        return {"minima": "Ιδανικές συνθήκες για Δάκο! Εξετάστε το ενδεχόμενο δολωματικού ψεκασμού.", "xroma": "red"}
+        base_status = {"minima": "Ιδανικές συνθήκες για Δάκο! Εξετάστε το ενδεχόμενο δολωματικού ψεκασμού.", "xroma": "red"}
     else:
-        return {"minima": "Κανονικές συνθήκες. Καμία άμεση ενέργεια.", "xroma": "green"}
+        base_status = {"minima": "Κανονικές συνθήκες. Καμία άμεση ενέργεια.", "xroma": "green"}
+
+    if spray_status and not spray_status.get("can_spray", True):
+        base_status["xroma"] = "red"
+        stage = spray_status.get("stage_name", "Άνθιση")
+        base_status["minima"] = f"ΠΡΟΣΟΧΗ: Περίοδος {stage}. Απαγορεύεται αυστηρά κάθε ψεκασμός! " + base_status["minima"]
+
+    return base_status
 
 # AI Γεωπόνος
 def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
@@ -131,7 +141,7 @@ def pare_simvouli_ai(thermokrasia, ygrasia, perigrafi):
         print(f"🔴 ΚΡΙΣΙΜΟ ΣΦΑΛΜΑ AI: {e}")
         print("!"*50 + "\n")
         # Επιστροφή φιλικού μηνύματος αντί για None/null
-        return "Το σύστημα AI είναι προσωρινά μη διαθέσιμο λόγω μεγάλου φόρτου. Δοκιμάστε ξανά σε λίγο."
+        return "Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα."
 
 # Λειτουργία Αποστολής Email
 def steile_email(paraliptis, thema, keimeno, raise_exception=False):
@@ -176,6 +186,7 @@ def get_epoxikes_ergasies(minas):
 
 # --- ΝΕΕΣ ΣΥΝΑΡΤΗΣΕΙΣ AGROMONITORING API ---
 
+@cache.memoize(timeout=1800)
 def get_agro_soil_data(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
@@ -184,6 +195,7 @@ def get_agro_soil_data(poly_id):
     except Exception as e: print(f"Soil Data Error: {e}")
     return None
 
+@cache.memoize(timeout=1800)
 def get_agro_uvi(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
@@ -192,6 +204,7 @@ def get_agro_uvi(poly_id):
     except Exception as e: print(f"UVI Error: {e}")
     return None
 
+@cache.memoize(timeout=1800)
 def get_agro_forecast(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
@@ -200,6 +213,7 @@ def get_agro_forecast(poly_id):
     except Exception as e: print(f"Agro Forecast Error: {e}")
     return None
 
+@cache.memoize(timeout=1800)
 def get_agro_gdd(poly_id):
     api_key = os.getenv('AGROMONITORING_API_KEY')
     if not api_key or not poly_id: return None
@@ -233,6 +247,7 @@ def ypologismos_anagkon_nerou(thermokrasia, mhnas, arithmos_dentron, stremmata):
     litra_ana_dentro_imera = eto * kc * tetragonika_ana_dentro * 0.5
     return int(litra_ana_dentro_imera)
 
+@cache.memoize(timeout=1800)
 def pare_ypsometro(lat, lng):
     try:
         url = f"https://api.open-meteo.com/v1/elevation?latitude={lat}&longitude={lng}"
@@ -245,6 +260,7 @@ def pare_ypsometro(lat, lng):
         print(f"Σφάλμα λήψης υψομέτρου: {e}")
     return None
 
+@cache.memoize(timeout=1800)
 def pare_istoriko_kairou(lat, lng, past_days=5):
     try:
         # Χρήση του Open-Meteo για δωρεάν δεδομένα παρελθόντος (χωρίς API key)
@@ -271,3 +287,82 @@ def pare_istoriko_kairou(lat, lng, past_days=5):
     except Exception as e:
         print(f"Σφάλμα λήψης ιστορικού καιρού: {e}")
     return None
+
+# --- GDD Thresholds for Spraying Windows per Variety ---
+GDD_THRESHOLDS = {
+    "Κορωνέικη": {"stop_spray": 550, "start_spray": 850},
+    "Καλαμών": {"stop_spray": 680, "start_spray": 950},
+    "Χαλκιδικής": {"stop_spray": 620, "start_spray": 920},
+    "Μανάκι": {"stop_spray": 600, "start_spray": 900},
+    "Αθηνολιά": {"stop_spray": 500, "start_spray": 800},
+    "Μεγαρίτικη": {"stop_spray": 600, "start_spray": 900},
+    "Χονδρολιά": {"stop_spray": 680, "start_spray": 950},
+    "Αρμπεκίνα": {"stop_spray": 550, "start_spray": 850}
+}
+
+def evaluate_spraying_window(current_gdd, poikilia):
+    """
+    Αξιολογεί αν επιτρέπεται ο ψεκασμός βάσει των GDD και της ποικιλίας.
+    """
+    if current_gdd is None:
+        return {"can_spray": True, "reason": "Δεν υπάρχουν επαρκή δεδομένα GDD."}
+        
+    thresholds = GDD_THRESHOLDS.get(poikilia, {"stop_spray": 600, "start_spray": 900})
+    stop_spray = thresholds["stop_spray"]
+    start_spray = thresholds["start_spray"]
+    
+    if stop_spray <= current_gdd < start_spray:
+        return {
+            "can_spray": False, 
+            "reason": f"Βρίσκεστε σε περίοδο άνθισης (GDD: {current_gdd:.1f}). ΑΠΑΓΟΡΕΥΕΤΑΙ ο ψεκασμός για την ποικιλία {poikilia}."
+        }
+    elif current_gdd >= start_spray:
+        return {
+            "can_spray": True, 
+            "reason": f"Έχει ολοκληρωθεί η καρπόδεση (GDD: {current_gdd:.1f}). Επιτρέπονται οι ψεκασμοί για την ποικιλία {poikilia}."
+        }
+    else:
+        return {
+            "can_spray": True, 
+            "reason": f"Βρίσκεστε πριν την άνθιση (GDD: {current_gdd:.1f}). Επιτρέπονται οι προληπτικοί ψεκασμοί για την ποικιλία {poikilia}."
+        }
+
+OLIVE_GDD_THRESHOLDS = {
+    'Αθηνοελιά': {'stop_spray': 430, 'start_spray': 830},
+    'Κορωνέικη': {'stop_spray': 480, 'start_spray': 880},
+    'Καλαμών': {'stop_spray': 530, 'start_spray': 930}
+}
+
+def check_spraying_status(current_gdd, poikilia):
+    if current_gdd is None:
+        return {"can_spray": True, "reason": "Δεν υπάρχουν επαρκή δεδομένα GDD.", "stage_name": "Άγνωστο"}
+        
+    varieties = [v.strip() for v in poikilia.split(',')] if poikilia else ['Κορωνέικη']
+    valid_varieties = [v for v in varieties if v in OLIVE_GDD_THRESHOLDS]
+    
+    if not valid_varieties:
+        valid_varieties = ['Κορωνέικη']
+        
+    avg_stop = sum(OLIVE_GDD_THRESHOLDS[v]['stop_spray'] for v in valid_varieties) / len(valid_varieties)
+    avg_start = sum(OLIVE_GDD_THRESHOLDS[v]['start_spray'] for v in valid_varieties) / len(valid_varieties)
+    
+    if current_gdd < avg_stop - 50:
+        stage_name = "Βλαστική Ανάπτυξη"
+    elif avg_stop - 50 <= current_gdd <= avg_stop:
+        stage_name = "Κρόκιασμα (Προ-Άνθιση)"
+    elif avg_stop < current_gdd < avg_start:
+        stage_name = "Άνθιση"
+    else:
+        stage_name = "Καρπόδεση"
+
+    if current_gdd < avg_stop:
+        can_spray, reason = True, "Βρίσκεστε πριν την άνθιση. Επιτρέπονται οι ψεκασμοί."
+    elif avg_stop <= current_gdd < avg_start:
+        can_spray, reason = False, "Περίοδος άνθισης. Απαγορεύονται οι ψεκασμοί."
+    else:
+        can_spray, reason = True, "Ολοκληρώθηκε η καρπόδεση. Επιτρέπονται οι ψεκασμοί."
+        
+    if len(valid_varieties) > 1:
+        reason += " Προσοχή: Εντοπίστηκαν πολλαπλές ποικιλίες στο κτήμα. Τα όρια ψεκασμού υπολογίστηκαν με βάση τον μέσο όρο τους για την προστασία όλων των δέντρων."
+        
+    return {"can_spray": can_spray, "reason": reason, "stage_name": stage_name}

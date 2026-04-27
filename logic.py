@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 from core import vasi, efarmogi, ai_client
 from models import Ktima, Ergasia, Exodo, Xrhsths, AnalysiEdafous
-from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, steile_email, get_epoxikes_ergasies, get_agro_soil_data, get_agro_uvi, ypologismos_anagkon_nerou, pare_istoriko_kairou
+from geoponika import pare_kairo, pare_prognosi_kairou, geoponikos_elegxos, steile_email, get_epoxikes_ergasies, get_agro_soil_data, get_agro_uvi, ypologismos_anagkon_nerou, pare_istoriko_kairou, evaluate_spraying_window, check_spraying_status
 from google.genai import types
 
 # Προληπτικός Σύμβουλος (Εγκυκλοπαίδεια)
@@ -233,6 +233,12 @@ def paragwgi_protasewn(ktima, thermokrasia, ygrasia, perigrafi):
     if gdd < target_anth and forecasted_gdd >= target_anth - 15 and ktima.fainologiko_stadio != 'Άνθιση':
         protaseis.append(f"🌺 Πρόβλεψη Άνθισης (GDD): Βάσει της πρόγνωσης θερμοκρασιών, τα δέντρα θα πιάσουν τον στόχο άνθισης στις επόμενες 5 ημέρες! Προγραμματίστε ή σταματήστε ΑΜΕΣΑ τους όποιους ψεκασμούς.")
 
+    # --- ΝΕΟ: Αξιολόγηση Παραθύρου Ψεκασμού βάσει Ποικιλίας & GDD ---
+    poikilia_display = ktima.poikilia if ktima.poikilia else 'Άγνωστη'
+    spray_status = evaluate_spraying_window(gdd, poikilia_display)
+    if not spray_status["can_spray"]:
+        protaseis.append(f"🛑 ΑΠΑΓΟΡΕΥΣΗ ΨΕΚΑΣΜΩΝ (GDD): {spray_status['reason']}")
+
     # Smart Fertilization Logic
     if ktima.analuseis_edafous:
         teleytaia_analysi = ktima.analuseis_edafous[-1]
@@ -391,6 +397,16 @@ def xtise_plires_context(ktima):
         f"Διαχείριση: {diacheirisi_edafous_str}, Άρδευση: {ardefsi_str}\n"
         f"Στάδιο: {stadio}{stadio_odigia}, Τρέχοντα GDD: {ktima.gdd_accumulated if ktima.gdd_accumulated else 0:.0f} (Στόχος Άνθισης GDD: ~{ktima.gdd_target_anthisi}, Στόχος Συγκομιδής GDD: ~{ktima.gdd_target_sygkomidi})\n"
         f"ΟΔΗΓΙΑ GDD & ΣΤΑΔΙΟΥ: Διασταύρωσε υποχρεωτικά αν το δηλωμένο 'Στάδιο' συμβαδίζει με τα 'Τρέχοντα GDD'. Αν υπάρχει προφανής αναντιστοιχία (π.χ. τα GDD δείχνουν άνθιση αλλά το στάδιο είναι Λήθαργος), επισήμανέ το ξεκάθαρα.\n\n"
+    )
+
+    # --- ΝΕΟ: Ενσωμάτωση δυναμικού GDD Context στο System Prompt των AI Agents ---
+    gdd_val = ktima.gdd_accumulated if ktima.gdd_accumulated else 0.0
+    poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
+    spray_status = check_spraying_status(gdd_val, poikilia_val)
+    ctx += (
+        f"SYSTEM CONTEXT UPDATE: The current farm has {poikilia_val}. The current GDD is {gdd_val:.1f}. "
+        f"Spraying allowed: {spray_status['can_spray']}. Reason: {spray_status['reason']}. "
+        f"Advise the user strictly based on this agronomic data if they ask about spraying.\n\n"
     )
 
     kairos = getattr(ktima, 'kairos', None) or pare_kairo(ktima.geografiko_platos, ktima.geografiko_mikos)
@@ -749,10 +765,14 @@ def aytomatizomenos_elegxos():
                     try:
                         now = datetime.now()
                         start_date = f"{now.year}-01-01"
-                        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+                        # 5 ημέρες πριν για να μην σκάει το API με 400 Bad Request
+                        safe_end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
                         
-                        # Ανάκτηση ιστορικού καιρού για όλη τη χρονιά μέχρι χθες
-                        hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={yesterday}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                        if safe_end_date < start_date:
+                            continue
+                        
+                        # Ανάκτηση ιστορικού καιρού για όλη τη χρονιά
+                        hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={safe_end_date}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
                         resp = requests.get(hist_url, timeout=10)
                         
                         if resp.status_code == 200:
@@ -762,6 +782,16 @@ def aytomatizomenos_elegxos():
                             
                             # Υπολογισμός Accumulation (Base 10C για ελιά)
                             total_gdd = sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
+                            
+                            # Κλείσιμο τρύπας 4 ημερών με το Forecast API
+                            recent_url = f"https://api.open-meteo.com/v1/forecast?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
+                            resp_recent = requests.get(recent_url, timeout=10)
+                            if resp_recent.status_code == 200:
+                                data_rec = resp_recent.json().get('daily', {})
+                                t_max_rec = data_rec.get('temperature_2m_max', [])[:-1]
+                                t_min_rec = data_rec.get('temperature_2m_min', [])[:-1]
+                                total_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max_rec, t_min_rec) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
+                                
                             ktima.gdd_accumulated = total_gdd
                             vasi.session.commit()
                     except Exception as e:

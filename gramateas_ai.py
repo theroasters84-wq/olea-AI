@@ -60,11 +60,20 @@ def ai_secretary():
             # Κάνουμε μια πολύ γρήγορη, ελαφριά κλήση στο AI χωρίς κανένα context
             quick_prompt = f"Είσαι ο φιλικός AI Γραμματέας της Olea. Απάντα σύντομα και φιλικά στο εξής: '{text}'. ΠΡΟΣΟΧΗ: Σεβάσου απόλυτα την ταυτότητα που δηλώνει ο χρήστης στο ιστορικό (π.χ. αν είπε 'δεν είμαι αγρότης'). Ιστορικό: {history_str[-500:]}. Επίστρεψε ΑΥΣΤΗΡΑ JSON: {{\"reply\": \"...\", \"action\": \"ADVICE\"}}"
             
-            quick_response = client.models.generate_content(
-                model='gemini-2.5-flash', 
-                contents=quick_prompt,
-                config=types.GenerateContentConfig() # Χωρίς internet, χωρίς τίποτα
-            )
+            try:
+                quick_response = client.models.generate_content(
+                    model='gemini-2.5-flash', 
+                    contents=quick_prompt,
+                    config=types.GenerateContentConfig() # Χωρίς internet, χωρίς τίποτα
+                )
+            except Exception as e:
+                print(f"AI API Error: {e}")
+                return jsonify({
+                    'success': True, 
+                    'reply': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.', 
+                    'action': 'ADVICE', 
+                    'target_ktima_id': ktima_id
+                })
             
             try:
                 # Καθαρισμός του JSON (όπως κάνουμε και παρακάτω)
@@ -352,8 +361,9 @@ def ai_secretary():
                 response = client.models.generate_content(model='gemini-2.5-flash', contents=contents, config=config)
                 break
             except Exception as e:
+                print(f"AI API Error: {e}")
                 if attempt == 2:
-                    raise e
+                    return jsonify({'success': True, 'reply': 'Αυτή τη στιγμή υπάρχει μεγάλος φόρτος στο σύστημα του Γεωπόνου. Παρακαλώ δοκιμάστε ξανά σε λίγα δευτερόλεπτα.', 'action': 'ADVICE'})
                 time.sleep(3 * (attempt + 1)) # Backoff: περιμένει 3s, μετά 6s αν αποτύχει
         
         # Δικλείδα Ασφαλείας: Αν το AI επιστρέψει κενό (π.χ. λόγω safety filters)
