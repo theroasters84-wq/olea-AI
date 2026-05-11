@@ -2,8 +2,7 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Αρχική - Olea AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">    <title>{% if is_geoponos_view %}Προβολή Πελάτη - Portal Γεωπόνου{% else %}Αρχική - Olea AI{% endif %}</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.svg">    
     <link rel="manifest" href="/manifest.json">
@@ -52,7 +51,20 @@
     </style>
 </head>
 <body>
-    {% include '_navbar.html' %}
+    {% if is_geoponos_view %}
+        <nav class="navbar navbar-dark shadow-sm mb-4" style="background-color: #2c3e50;">
+            <div class="container-fluid px-4">
+                <a class="navbar-brand fw-bold" href="{{ url_for('core_app.dashboard_geoponou') }}"><i class="fas fa-user-md me-2"></i> Portal Γεωπόνου</a>
+                <span class="navbar-text text-white">Προβολή Πελάτη: {{ xrhsths.onoma or xrhsths.email }}</span>
+                <div class="ms-auto d-flex align-items-center">
+                    <a href="{{ url_for('core_app.dashboard_geoponou') }}" class="btn btn-outline-primary btn-sm me-2"><i class="fas fa-arrow-left"></i> Αναζήτηση ΑΦΜ</a>
+                    <a href="/eksodos" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Έξοδος</a>
+                </div>
+            </div>
+        </nav>
+    {% else %}
+        {% include '_navbar.html' %}
+    {% endif %}
 
     <!-- Toast Container for Notifications -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
@@ -96,8 +108,16 @@
     {% endwith %}
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="mb-0"><i class="fas fa-map-marked-alt"></i> Τα Κτήματά μου</h3>
-        <a href="{{ url_for('core_app.hmerologio') }}" class="btn btn-outline-success shadow-sm"><strong><i class="fas fa-calendar-alt"></i> Ημερολόγιο</strong></a>
+        {% if is_geoponos_view %}
+            <div>
+                <h3 class="mb-0 text-success"><i class="fas fa-tractor"></i> Κτήματα Πελάτη</h3>
+                <span class="badge bg-success shadow-sm">Portal Γεωπόνου</span>
+            </div>
+            <a href="{{ url_for('core_app.dashboard_geoponou') }}" class="btn btn-outline-primary shadow-sm"><i class="fas fa-arrow-left"></i> Αναζήτηση ΑΦΜ</a>
+        {% else %}
+            <h3 class="mb-0"><i class="fas fa-map-marked-alt"></i> Τα Κτήματά μου</h3>
+            <a href="{{ url_for('core_app.hmerologio') }}" class="btn btn-outline-success shadow-sm"><strong><i class="fas fa-calendar-alt"></i> Ημερολόγιο</strong></a>
+        {% endif %}
     </div>
     {% if ktimata|length > 1 %}
     <div class="d-md-none text-end mb-2 text-muted small">
@@ -327,11 +347,13 @@
         <p class="text-muted mt-3">Δεν έχετε αποθηκεύσει ακόμα κτήματα.</p>
     {% endif %}
 
-    <!-- Global Modals -->
-    {% include 'modal_add_ktima.html' %}
-    {% include 'modal_share.html' %}
-    {% include 'modal_map_legend.html' %}
-    {% include 'modal_guide.html' %}
+    <!-- Global Modals (Only for Farmer View) -->
+    {% if not is_geoponos_view %}
+        {% include 'modal_add_ktima.html' %}
+        {% include 'modal_share.html' %}
+        {% include 'modal_map_legend.html' %}
+        {% include 'modal_guide.html' %}
+    {% endif %}
     
     <!-- Όμορφο Modal Επιβεβαίωσης Εργασιών AI -->
     <div class="modal fade" id="modalConfirmAIErgasies" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -355,13 +377,17 @@
         </div>
     </div>
 
-    {% include '_secretary.html' %}
+    {% if not is_geoponos_view %}
+        {% include '_secretary.html' %}
+    {% endif %}
 
     <!-- Floating Action Button (FAB) - Κάτω Δεξιά -->
+    {% if not is_geoponos_view %}
     <button class="btn btn-success rounded-circle shadow" data-bs-toggle="modal" data-bs-target="#addKtimaModal" title="Προσθήκη Νέου Κτήματος" 
             style="position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; z-index: 1050; display: flex; align-items: center; justify-content: center;">
         <i class="fas fa-plus fa-2x"></i>
     </button>
+    {% endif %}
 
     </div> <!-- End Container -->
 

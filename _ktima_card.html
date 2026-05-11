@@ -89,13 +89,14 @@
                     <h6 class="text-success border-bottom border-success pb-1"><i class="fas fa-history"></i> Ιστορικό Εκδοθέντων Συνταγών</h6>
                     <div class="collapse show d-block" id="collapseSyntages{{ ktima.id }}">
                         <div id="syntagesContainerGeoponos{{ ktima.id }}" style="max-height: 350px; overflow-y: auto;" class="p-1">
-                            {% for syntagh in ktima.syntages|sort(attribute='imerominia', reverse=True) %}
-                                <div class="card border-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} mb-3 shadow-sm">
-                                    <div class="card-header bg-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }} text-white py-2 small d-flex justify-content-between align-items-center">
-                                        <span><i class="fas fa-{{ 'user-md' if syntagh.proelevsi == 'Γεωπόνος' else 'robot' }}"></i> {{ syntagh.proelevsi }}</span>
+                            {% set geoponos_syntages = ktima.syntages | selectattr('proelevsi', 'equalto', 'Γεωπόνος') | list %}
+                            {% for syntagh in geoponos_syntages|sort(attribute='imerominia', reverse=True) %}
+                                <div class="card border-primary mb-3 shadow-sm">
+                                    <div class="card-header bg-primary text-white py-2 small d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-user-md"></i> {{ syntagh.proelevsi }}</span>
                                         <div>
                                             <span class="me-2">{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}</span>
-                                            <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-{{ 'primary' if syntagh.proelevsi == 'Γεωπόνος' else 'success' }}"></i></button>
+                                            <button class="btn btn-sm btn-light py-0 px-1 shadow-sm" data-ktima="{{ ktima.onoma_ktimatos }}" data-date="{{ syntagh.imerominia.strftime('%d/%m/%Y %H:%M') }}" data-proelevsi="{{ syntagh.proelevsi }}" onclick="printSyntagh(this)" title="Εκτύπωση"><i class="fas fa-print text-primary"></i></button>
                                         </div>
                                     </div>
                                     <div class="card-body p-3 syntagh-content bg-white" style="white-space: pre-wrap; font-size: 0.95em;">{{ syntagh.keimeno }}</div>
@@ -251,12 +252,12 @@
                         </div>
                         {% endif %}
 
+                        {% if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' %}
                         <div class="bg-white p-3 border border-warning rounded shadow-sm small mb-4">
-                            <strong class="text-dark"><i class="fas fa-microscope text-warning"></i> Συμπεράσματα Ανάλυσης:</strong><br><br>
-                            <span class="text-muted">
-                            {{ ktima.analysi_dedomena if ktima.analysi_dedomena and ktima.analysi_dedomena != 'None' else 'Δεν υπάρχουν καταγεγραμμένα δεδομένα αναλύσεων για αυτό το κτήμα.' }}
-                            </span>
+                            <strong class="text-dark"><i class="fas fa-list-ul text-warning"></i> Αναλυτικά Στοιχεία (από το φύλλο):</strong><br><br>
+                            <span class="text-muted" style="white-space: pre-wrap;">{{ ktima.analysi_dedomena }}</span>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

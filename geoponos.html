@@ -56,6 +56,24 @@
                                     <p class="mb-1"><i class="fas fa-ruler-combined"></i> <strong>Έκταση:</strong> {{ ktima.stremmata }} στρ. ({{ ktima.arithmos_dentron }} δέντρα)</p>
                                     <p class="mb-1"><i class="fas fa-leaf"></i> <strong>Ποικιλία:</strong> {{ ktima.poikilia }}</p>
                                     <p class="mb-1"><i class="fas fa-seedling"></i> <strong>Στάδιο:</strong> {{ ktima.fainologiko_stadio }}</p>
+
+                                    <hr class="my-2">
+                                    <p class="mb-1"><strong><i class="fas fa-flask"></i> Ανάλυση Εδάφους:</strong></p>
+                                    {% if ktima.analuseis_edafous %}
+                                        {% set teleytaia_analysi = ktima.analuseis_edafous[0] %}
+                                        <div class="small text-muted">
+                                            <p class="mb-1 ps-3"><i class="fas fa-calendar-alt me-1"></i> {{ teleytaia_analysi.imerominia.strftime('%d/%m/%Y') }}</p>
+                                            <ul class="list-unstyled mb-0 ps-4">
+                                                <li><strong>pH:</strong> {{ teleytaia_analysi.ph if teleytaia_analysi.ph is not none else 'N/A' }}</li>
+                                                <li><strong>Οργ. Ουσία:</strong> {{ teleytaia_analysi.organiki_ousia if teleytaia_analysi.organiki_ousia is not none else 'N/A' }} %</li>
+                                                <li><strong>N:</strong> {{ teleytaia_analysi.azwto if teleytaia_analysi.azwto is not none else 'N/A' }} ppm</li>
+                                                <li><strong>P:</strong> {{ teleytaia_analysi.fwsforos if teleytaia_analysi.fwsforos is not none else 'N/A' }} ppm</li>
+                                                <li><strong>K:</strong> {{ teleytaia_analysi.kalio if teleytaia_analysi.kalio is not none else 'N/A' }} ppm</li>
+                                            </ul>
+                                        </div>
+                                    {% else %}
+                                        <p class="small text-muted mb-1 ps-3"><em>Δεν υπάρχει ανάλυση.</em></p>
+                                    {% endif %}
                                 </div>
                                 <div class="card-footer bg-white border-0 text-center pb-3">
                                     <a href="/?pelatis_id={{ pelatis.id }}" class="btn btn-outline-success w-100">
