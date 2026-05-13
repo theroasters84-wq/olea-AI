@@ -1779,5 +1779,26 @@ def diagrafi_geniko_exodo(id):
         flash('Μη εξουσιοδοτημένη ενέργεια.', 'danger')
     return redirect(url_for('core_app.esoda_exoda'))
 
+# --- DEVELOPER / ADMIN PANEL ---
+@core_bp.route('/dev/users')
+def dev_users():
+    kwdikos = request.args.get('code')
+    if kwdikos != '1992':
+        return "Μη Εξουσιοδοτημένη Πρόσβαση", 403
+        
+    oloi_oi_xrhstes = vasi.session.query(Xrhsths).all()
+    
+    html = "<h3 style='font-family: sans-serif; color: #4A7C59;'>Λίστα Εγγεγραμμένων Χρηστών (Developer View)</h3>"
+    html += "<table border='1' cellpadding='8' cellspacing='0' style='font-family: sans-serif; width: 100%; border-collapse: collapse;'>"
+    html += "<tr style='background-color: #f4f7f6;'><th>ID</th><th>Email</th><th>Όνομα</th><th>Ρόλος</th><th>ΑΦΜ</th><th>Αρ. Κτημάτων</th></tr>"
+    
+    for u in oloi_oi_xrhstes:
+        ktimata_count = len([k for k in u.ktimata if getattr(k, 'is_active', False)])
+        html += f"<tr><td>{u.id}</td><td>{u.email}</td><td>{u.onoma or '-'}</td><td>{u.rolos}</td><td>{u.afm or '-'}</td><td>{ktimata_count}</td></tr>"
+        
+    html += "</table><br><a href='/' style='font-family: sans-serif;'>Επιστροφή στην Αρχική</a>"
+    
+    return html
+
 # Import routes to register them with the blueprint before the blueprint is registered with the app
 import routes

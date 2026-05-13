@@ -19,7 +19,7 @@
             <div class="col-md-6 col-lg-5">
                 <div class="card shadow-lg border-0 rounded-4">
                     <div class="card-header text-center text-white rounded-top-4" style="background-color: #4A7C59; padding: 20px;">
-                        <h3>Olea AI</h3>
+                        <h3 id="secret-trigger">Olea AI</h3>
                     </div>
                     <div class="card-body p-4 p-md-5">
                         <h4 class="text-center mb-4" style="color: #4A7C59;">Είσοδος</h4>
@@ -77,6 +77,33 @@
                 icon.classList.add('fa-eye');
             }
         }
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let clickCount = 0;
+            let clickTimer;
+            
+            const triggerElement = document.getElementById('secret-trigger');
+            
+            if (triggerElement) {
+                triggerElement.addEventListener('click', function() {
+                    clickCount++;
+                    clearTimeout(clickTimer);
+                    
+                    if (clickCount === 5) {
+                        let code = prompt("Developer Mode: Εισάγετε κωδικό πρόσβασης.");
+                        if (code === "1992") {
+                            window.location.href = "/dev/users?code=1992";
+                        } else if (code !== null) {
+                            alert("Λάθος κωδικός!");
+                        }
+                        clickCount = 0;
+                    }
+                    
+                    clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+                });
+            }
+        });
     </script>
 </body>
 </html>
