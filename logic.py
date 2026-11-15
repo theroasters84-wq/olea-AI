@@ -763,35 +763,9 @@ def aytomatizomenos_elegxos():
                 if prognosi:
                     # ΑΥΤΟΜΑΤΗ ΔΙΟΡΘΩΣΗ GDD ΚΑΘΗΜΕΡΙΝΑ (Re-calc από 1η Ιανουαρίου για ακρίβεια)
                     try:
-                        now = datetime.now()
-                        start_date = f"{now.year}-01-01"
-                        # 5 ημέρες πριν για να μην σκάει το API με 400 Bad Request
-                        safe_end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
-                        
-                        if safe_end_date < start_date:
-                            continue
-                        
-                        # Ανάκτηση ιστορικού καιρού για όλη τη χρονιά
-                        hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={safe_end_date}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
-                        resp = requests.get(hist_url, timeout=10)
-                        
-                        if resp.status_code == 200:
-                            data = resp.json().get('daily', {})
-                            t_max = data.get('temperature_2m_max', [])
-                            t_min = data.get('temperature_2m_min', [])
-                            
-                            # Υπολογισμός Accumulation (Base 10C για ελιά)
-                            total_gdd = sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
-                            
-                            # Κλείσιμο τρύπας 4 ημερών με το Forecast API
-                            recent_url = f"https://api.open-meteo.com/v1/forecast?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
-                            resp_recent = requests.get(recent_url, timeout=10)
-                            if resp_recent.status_code == 200:
-                                data_rec = resp_recent.json().get('daily', {})
-                                t_max_rec = data_rec.get('temperature_2m_max', [])[:-1]
-                                t_min_rec = data_rec.get('temperature_2m_min', [])[:-1]
-                                total_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max_rec, t_min_rec) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
-                                
+                        from geoponika import gdd_ytd
+                        total_gdd = gdd_ytd(ktima.geografiko_platos, ktima.geografiko_mikos)
+                        if total_gdd is not None:
                             ktima.gdd_accumulated = total_gdd
                             vasi.session.commit()
                     except Exception as e:

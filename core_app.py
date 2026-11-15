@@ -207,14 +207,6 @@ def arxikh():
                 poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
                 ktima.spray_status = check_spraying_status(gdd_val, poikilia_val)
                 ktima.dynamic_stage = ktima.spray_status.get('stage_name') if ktima.spray_status else None
-                ktima.phase_gdd = gdd_val
-                try:
-                    st = ktima.spray_status.get('stage_start')
-                    if st and st.month != 1 or (st and st.day != 1):
-                        pg = gdd_apo_imerominia(ktima.geografiko_platos, ktima.geografiko_mikos, st.strftime('%Y-%m-%d'))
-                        if pg is not None: ktima.phase_gdd = pg
-                except Exception as e:
-                    print(f"Phase GDD error: {e}")
                 now_dt = datetime.now()
                 ai_needs_update = not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date()
                 tasks_need_update = not (ktima.teleftaia_enimerosi_ergasion and ktima.teleftaia_enimerosi_ergasion.date() == now_dt.date() and ktima.topikes_ergasies)
@@ -1256,39 +1248,14 @@ def trexe_doriforo(ktima_id):
 @core_bp.route('/diorthosi_gdd')
 @login_required
 def diorthosi_gdd():
-    import requests
-    ktimata = current_user.ktimata
+    from geoponika import gdd_ytd
     count = 0
-    
-    now = datetime.now()
-    start_date = f"{now.year}-01-01"
-    safe_end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
-    
-    for ktima in ktimata:
+    for ktima in current_user.ktimata:
         try:
-            total_gdd = 0.0
-            if safe_end_date >= start_date:
-                # 1. Ιστορικό από 1η Ιανουαρίου μέχρι 5 μέρες πριν
-                hist_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&start_date={start_date}&end_date={safe_end_date}&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
-                resp = requests.get(hist_url, timeout=5)
-                if resp.status_code == 200:
-                    data = resp.json().get('daily', {})
-                    t_max = data.get('temperature_2m_max', [])
-                    t_min = data.get('temperature_2m_min', [])
-                    total_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max, t_min) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
-            
-            # 2. Κλείσιμο "τρύπας" 4 ημερών με το Forecast API
-            recent_url = f"https://api.open-meteo.com/v1/forecast?latitude={ktima.geografiko_platos}&longitude={ktima.geografiko_mikos}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto"
-            resp_recent = requests.get(recent_url, timeout=5)
-            if resp_recent.status_code == 200:
-                data_rec = resp_recent.json().get('daily', {})
-                # Αφαιρούμε το τελευταίο στοιχείο που είναι η σημερινή πρόγνωση
-                t_max_rec = data_rec.get('temperature_2m_max', [])[:-1]
-                t_min_rec = data_rec.get('temperature_2m_min', [])[:-1]
-                total_gdd += sum([((mx + mn)/2.0 - 10.0) for mx, mn in zip(t_max_rec, t_min_rec) if mx is not None and mn is not None and ((mx + mn)/2.0 > 10.0)])
-                
-            ktima.gdd_accumulated = total_gdd
-            count += 1
+            total_gdd = gdd_ytd(ktima.geografiko_platos, ktima.geografiko_mikos)
+            if total_gdd is not None:
+                ktima.gdd_accumulated = total_gdd
+                count += 1
         except Exception as e:
             print(f"Σφάλμα GDD Update για κτήμα {ktima.id}: {e}")
             

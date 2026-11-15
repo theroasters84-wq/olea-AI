@@ -449,3 +449,33 @@ def gdd_apo_imerominia(lat, lng, start_str):
     except Exception as e:
         print(f"Phase GDD Error: {e}")
         return None
+
+def gdd_ytd(lat, lng, timeout=10):
+    """GDD (βάση 10°C) από 1η Ιανουαρίου του τρέχοντος έτους μέχρι χθες.
+    Μηδενίζεται αυτόματα την 1/1. Archive API (έως -5 ημέρες) + Forecast API (τελευταίες μέρες),
+    με φίλτρο ημερομηνίας ώστε να μην μπαίνουν μέρες του προηγούμενου έτους."""
+    from datetime import timedelta
+    now = datetime.now()
+    year_start = datetime(now.year, 1, 1).strftime('%Y-%m-%d')
+    hist_end = (now - timedelta(days=5)).strftime('%Y-%m-%d')
+    total = 0.0
+    def add(dates, mx_l, mn_l, lo, hi):
+        s = 0.0
+        for d, mx, mn in zip(dates, mx_l, mn_l):
+            if mx is None or mn is None or d < lo or d > hi: continue
+            m = (mx + mn) / 2.0 - 10.0
+            if m > 0: s += m
+        return s
+    if hist_end >= year_start:
+        r = requests.get(f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lng}&start_date={year_start}&end_date={hist_end}&daily=temperature_2m_max,temperature_2m_min&timezone=auto", timeout=timeout)
+        if r.status_code != 200: return None
+        d = r.json().get('daily', {})
+        total += add(d.get('time', []), d.get('temperature_2m_max', []), d.get('temperature_2m_min', []), year_start, hist_end)
+    yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+    lo = max(year_start, (now - timedelta(days=4)).strftime('%Y-%m-%d'))
+    if yesterday >= lo:
+        r2 = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto", timeout=timeout)
+        if r2.status_code != 200: return None
+        d = r2.json().get('daily', {})
+        total += add(d.get('time', []), d.get('temperature_2m_max', []), d.get('temperature_2m_min', []), lo, yesterday)
+    return total

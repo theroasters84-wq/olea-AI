@@ -48,7 +48,7 @@
                                     </td>
                                     <th class="bg-light align-middle">Στάδιο <br><small class="text-muted">(GDD)</small></th>
                                     <td class="align-middle">
-                                        {{ ktima.dynamic_stage or ktima.fainologiko_stadio or 'Άγνωστο' }} <br><small class="text-muted">({{ "%.0f"|format(ktima.phase_gdd) if ktima.phase_gdd else 0 }})</small>
+                                        {{ ktima.dynamic_stage or ktima.fainologiko_stadio or 'Άγνωστο' }} <br><small class="text-muted">({{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else 0 }})</small>
                                         {% if ktima.spray_status %}
                                             <br>
                                             {% if ktima.spray_status.can_spray %}
@@ -286,7 +286,7 @@
                 </div>
                 <p class="text-muted mb-1 small">
                     🌱 Στάδιο: <strong>{{ ktima.dynamic_stage or ktima.fainologiko_stadio or 'Άγνωστο' }}</strong>
-                    <span class="badge bg-danger ms-1" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#gddInfoModal{{ ktima.id }}" title="Τι είναι αυτό; Πατήστε για επεξήγηση."><i class="fas fa-temperature-high"></i> {{ "%.0f"|format(ktima.phase_gdd) if ktima.phase_gdd else '0' }} GDD <i class="fas fa-question-circle text-white-50 ms-1"></i></span>
+                    <span class="badge bg-danger ms-1" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#gddInfoModal{{ ktima.id }}" title="Τι είναι αυτό; Πατήστε για επεξήγηση."><i class="fas fa-temperature-high"></i> {{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else '0' }} GDD <i class="fas fa-question-circle text-white-50 ms-1"></i></span>
                     {% if ktima.spray_status %}
                         {% if ktima.spray_status.can_spray %}
                             <span class="badge bg-success ms-1" title="{{ ktima.spray_status.reason }}">✅ Ασφαλής Ψεκασμός</span>
