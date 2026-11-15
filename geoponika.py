@@ -361,7 +361,10 @@ OLIVE_GDD_THRESHOLDS = {
     'Καλαμών': {'stop_spray': 530, 'start_spray': 930}
 }
 
-def check_spraying_status(current_gdd, poikilia):
+def check_spraying_status(current_gdd, poikilia, today=None):
+    """Στάδιο & παράθυρο ψεκασμού με συνδυασμό GDD (από 1/1) ΚΑΙ ημερομηνίας.
+    Τα GDD ορίζουν το στάδιο μόνο Φεβ-Ιούν (έως την καρπόδεση). Μετά ακολουθεί το ημερολόγιο."""
+    month = (today or datetime.now()).month
     if current_gdd is None:
         return {"can_spray": True, "reason": "Δεν υπάρχουν επαρκή δεδομένα GDD.", "stage_name": "Άγνωστο"}
         
@@ -374,23 +377,75 @@ def check_spraying_status(current_gdd, poikilia):
     avg_stop = sum(OLIVE_GDD_THRESHOLDS[v]['stop_spray'] for v in valid_varieties) / len(valid_varieties)
     avg_start = sum(OLIVE_GDD_THRESHOLDS[v]['start_spray'] for v in valid_varieties) / len(valid_varieties)
     
-    if current_gdd < avg_stop - 50:
-        stage_name = "Βλαστική Ανάπτυξη"
-    elif avg_stop - 50 <= current_gdd <= avg_stop:
-        stage_name = "Κρόκιασμα (Προ-Άνθιση)"
-    elif avg_stop < current_gdd < avg_start:
-        stage_name = "Άνθιση"
+    gdd_period = 2 <= month <= 6
+    if month in (12, 1):
+        stage_name = "Λήθαργος (Χειμερινή Ανάπαυση)"
+    elif gdd_period:
+        if current_gdd < avg_stop - 50:
+            stage_name = "Βλαστική Ανάπτυξη" if month <= 3 else "Σχηματισμός Ταξιανθιών"
+        elif current_gdd <= avg_stop:
+            stage_name = "Κρόκιασμα (Προ-Άνθιση)"
+        elif current_gdd < avg_start:
+            stage_name = "Άνθιση"
+        else:
+            stage_name = "Καρπόδεση"
+    elif month == 7:
+        stage_name = "Σκλήρυνση Πυρήνα"
+    elif month == 8:
+        stage_name = "Σκλήρυνση Πυρήνα"
+    elif month in (9, 10):
+        stage_name = "Ανάπτυξη Καρπού / Ελαιογένεση"
     else:
-        stage_name = "Καρπόδεση"
+        stage_name = "Ωρίμανση / Συγκομιδή"
 
-    if current_gdd < avg_stop:
+    if gdd_period and current_gdd < avg_stop:
         can_spray, reason = True, "Βρίσκεστε πριν την άνθιση. Επιτρέπονται οι ψεκασμοί."
-    elif avg_stop <= current_gdd < avg_start:
+    elif gdd_period and avg_stop <= current_gdd < avg_start:
         can_spray, reason = False, "Περίοδος άνθισης. Απαγορεύονται οι ψεκασμοί."
-    else:
+    elif gdd_period:
         can_spray, reason = True, "Ολοκληρώθηκε η καρπόδεση. Επιτρέπονται οι ψεκασμοί."
+    else:
+        can_spray, reason = True, "Εκτός περιόδου άνθισης. Επιτρέπονται οι ψεκασμοί."
         
     if len(valid_varieties) > 1:
         reason += " Προσοχή: Εντοπίστηκαν πολλαπλές ποικιλίες στο κτήμα. Τα όρια ψεκασμού υπολογίστηκαν με βάση τον μέσο όρο τους για την προστασία όλων των δέντρων."
         
-    return {"can_spray": can_spray, "reason": reason, "stage_name": stage_name}
+    # Αρχή της τρέχουσας φάσης (για μέτρηση GDD ανά φάση)
+    year = (today or datetime.now()).year
+    if month == 12: start = datetime(year, 12, 1)
+    elif month == 1: start = datetime(year - 1, 12, 1)
+    elif gdd_period: start = datetime(year, 1, 1)
+    elif month in (7, 8): start = datetime(year, 7, 1)
+    elif month in (9, 10): start = datetime(year, 9, 1)
+    else: start = datetime(year, 11, 1)
+
+    return {"can_spray": can_spray, "reason": reason, "stage_name": stage_name, "stage_start": start}
+
+
+@cache.memoize(timeout=21600)
+def gdd_apo_imerominia(lat, lng, start_str):
+    """GDD (βάση 10°C) από start_str (YYYY-MM-DD) μέχρι σήμερα. Archive API + Forecast για τις τελευταίες 5 μέρες."""
+    from datetime import timedelta
+    try:
+        now = datetime.now()
+        start = datetime.strptime(start_str, '%Y-%m-%d')
+        total = 0.0
+        def acc(mx_l, mn_l):
+            return sum((mx + mn) / 2.0 - 10.0 for mx, mn in zip(mx_l, mn_l)
+                       if mx is not None and mn is not None and (mx + mn) / 2.0 > 10.0)
+        end_hist = now - timedelta(days=5)
+        if end_hist >= start:
+            r = requests.get(f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lng}&start_date={start_str}&end_date={end_hist.strftime('%Y-%m-%d')}&daily=temperature_2m_max,temperature_2m_min&timezone=auto", timeout=8)
+            if r.status_code == 200:
+                d = r.json().get('daily', {})
+                total += acc(d.get('temperature_2m_max', []), d.get('temperature_2m_min', []))
+        r2 = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&past_days=4&forecast_days=1&daily=temperature_2m_max,temperature_2m_min&timezone=auto", timeout=8)
+        if r2.status_code == 200:
+            d = r2.json().get('daily', {})
+            mx, mn = d.get('temperature_2m_max', [])[:-1], d.get('temperature_2m_min', [])[:-1]
+            if end_hist >= start:
+                total += acc(mx, mn)
+        return total
+    except Exception as e:
+        print(f"Phase GDD Error: {e}")
+        return None

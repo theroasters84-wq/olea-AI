@@ -11,7 +11,7 @@ from flask_caching import Cache
 cache = Cache(config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 900})
 from models import Ktima, Ergasia, Exodo, KatagrafiUgrasias, Apothiki, ArxeioSygkomidis, KtimaPoikilia, Diagnosi, AnalysiEdafous, Xrhsths, GenikoExodo
 from logic import paragwgi_protasewn, generate_local_tasks_via_ai, generate_smart_tasks, ypologismos_isozugiou_npk, calculate_dynamic_npk
-from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro, check_spraying_status, get_agro_ndvi_trend
+from geoponika import pare_kairo, steile_email, geoponikos_elegxos, get_agro_soil_data, get_agro_uvi, get_agro_forecast, get_agro_gdd, pare_ypsometro, check_spraying_status, get_agro_ndvi_trend, gdd_apo_imerominia
 
 core_bp = Blueprint('core_app', __name__)
 
@@ -207,6 +207,14 @@ def arxikh():
                 poikilia_val = ktima.poikilia if ktima.poikilia else "Κορωνέικη"
                 ktima.spray_status = check_spraying_status(gdd_val, poikilia_val)
                 ktima.dynamic_stage = ktima.spray_status.get('stage_name') if ktima.spray_status else None
+                ktima.phase_gdd = gdd_val
+                try:
+                    st = ktima.spray_status.get('stage_start')
+                    if st and st.month != 1 or (st and st.day != 1):
+                        pg = gdd_apo_imerominia(ktima.geografiko_platos, ktima.geografiko_mikos, st.strftime('%Y-%m-%d'))
+                        if pg is not None: ktima.phase_gdd = pg
+                except Exception as e:
+                    print(f"Phase GDD error: {e}")
                 now_dt = datetime.now()
                 ai_needs_update = not ktima.ai_sumvouli_date or ktima.ai_sumvouli_date.date() < now_dt.date()
                 tasks_need_update = not (ktima.teleftaia_enimerosi_ergasion and ktima.teleftaia_enimerosi_ergasion.date() == now_dt.date() and ktima.topikes_ergasies)
