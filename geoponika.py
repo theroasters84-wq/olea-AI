@@ -50,8 +50,28 @@ def pare_kairo(lat, lng):
             elif wind_speed >= 1.6: bf = 2
             elif wind_speed >= 0.3: bf = 1
             
+            t_curr = data['main']['temp']
+            t_min = data['main'].get('temp_min')
+            t_max = data['main'].get('temp_max')
+            mesi_temp = round((t_max + t_min) / 2.0, 1) if (t_min is not None and t_max is not None) else round(t_curr, 1)
+            try:
+                om_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto"
+                om_data = _cached_get(om_url, ttl_seconds=1800)
+                if om_data and 'daily' in om_data:
+                    d_max = (om_data['daily'].get('temperature_2m_max') or [None])[0]
+                    d_min = (om_data['daily'].get('temperature_2m_min') or [None])[0]
+                    if d_max is not None and d_min is not None:
+                        t_max = d_max
+                        t_min = d_min
+                        mesi_temp = round((d_max + d_min) / 2.0, 1)
+            except Exception as om_e:
+                print(f"Open-Meteo daily avg temp warning: {om_e}")
+
             return {
-                'thermokrasia': data['main']['temp'],
+                'thermokrasia': t_curr,
+                'mesi_thermokrasia': mesi_temp,
+                'temp_min': t_min,
+                'temp_max': t_max,
                 'perigrafi': data['weather'][0]['description'],
                 'ygrasia': data['main']['humidity'],
                 'anemos_taxytita': wind_speed,

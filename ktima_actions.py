@@ -563,6 +563,16 @@ def epeksergasia_topothesias(ktima_id):
     if mikos and platos:
         ktima.geografiko_mikos = float(mikos)
         ktima.geografiko_platos = float(platos)
+        try:
+            yps_val = pare_ypsometro(ktima.geografiko_platos, ktima.geografiko_mikos)
+            if yps_val is not None:
+                ktima.ypsometro = yps_val
+            from geoponika import gdd_ytd
+            gdd_val = gdd_ytd(ktima.geografiko_platos, ktima.geografiko_mikos, timeout=5)
+            if gdd_val is not None:
+                ktima.gdd_accumulated = gdd_val
+        except Exception as e:
+            print(f"Σφάλμα ενημέρωσης υψομέτρου/GDD στην επεξεργασία τοποθεσίας: {e}")
         if stremmata: 
             ktima.stremmata = float(stremmata.replace(',', '.'))
         if poly_json: 

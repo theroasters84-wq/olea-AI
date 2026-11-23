@@ -262,29 +262,20 @@
                 </div>
             </div>
         {% else %}
-            <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός) -->
+            <!-- Σταθερό Τμήμα (Πληροφορίες & Καιρός - Κάρτα Επισκόπησης) -->
             <div class="flex-shrink-0">
-                <div class="d-flex justify-content-between align-items-start">
-                    <h4 class="mb-1" style="word-break: break-word;">{{ ktima.onoma_ktimatos }}</h4>
-                    <div class="d-flex">
-                        <button type="button" class="btn btn-primary rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalRenameKtima{{ ktima.id }}" title="Μετονομασία Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-pencil-alt"></i>
-                        </button>
-                        {% if not ktima.polygon_geojson %}
-                        <button type="button" class="btn btn-warning text-dark rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalEditLocation{{ ktima.id }}" title="Επεξεργασία Τοποθεσίας / Χάρτη" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </button>
-                        {% endif %}
-                        <button type="button" class="btn btn-danger rounded-circle shadow-sm ms-2" data-bs-toggle="modal" data-bs-target="#modalDeleteArchive{{ ktima.id }}" title="Διαχείριση Κτήματος" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <h4 class="mb-0" style="word-break: break-word;">{{ ktima.onoma_ktimatos }}</h4>
+                    <span class="badge {% if ktima.kalliergeia_typos == 'Βιολογική' %}bg-success{% else %}bg-primary{% endif %} shadow-sm">
+                        <i class="fas {% if ktima.kalliergeia_typos == 'Βιολογική' %}fa-leaf{% else %}fa-tractor{% endif %}"></i> 
+                        <span class="text-label">{{ ktima.kalliergeia_typos|default('Συμβατική') }}</span>
+                    </span>
                 </div>
-                <div class="d-flex justify-content-between small text-muted mb-1">
+                <div class="d-flex justify-content-between small text-muted mb-1 flex-wrap gap-1">
                     <span><i class="fas fa-map-pin"></i> {{ ktima.geografiko_platos|round(3) }}, {{ ktima.geografiko_mikos|round(3) }}{% if ktima.ypsometro %} | ⛰️ {{ ktima.ypsometro }}m{% endif %}</span>
                     <span><i class="fas fa-ruler-combined"></i> {{ ktima.stremmata }} στρ. | 🌳 {{ ktima.arithmos_dentron }} δέντρα</span>
                 </div>
-                <p class="text-muted mb-1 small">
+                <p class="text-muted mb-2 small">
                     🌱 Στάδιο: <strong>{{ ktima.dynamic_stage or ktima.fainologiko_stadio or 'Άγνωστο' }}</strong>
                     <span class="badge bg-danger ms-1" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#gddInfoModal{{ ktima.id }}" title="Τι είναι αυτό; Πατήστε για επεξήγηση."><i class="fas fa-temperature-high"></i> {{ "%.0f"|format(ktima.gdd_accumulated) if ktima.gdd_accumulated else '0' }} GDD <i class="fas fa-question-circle text-white-50 ms-1"></i></span>
                     {% if ktima.spray_status %}
@@ -296,29 +287,30 @@
                     {% endif %}
                 </p>
                 
+                <!-- Πλήρη Αγρονομικά Στοιχεία Χωραφιού (Read-Only Badges) -->
                 <div class="mb-2 d-flex flex-wrap gap-1 align-items-center">
-                    <button type="button" class="btn btn-sm btn-outline-success border-0 p-1 d-flex align-items-center flex-wrap" data-bs-toggle="modal" data-bs-target="#modalEditVarieties{{ ktima.id }}" title="Πατήστε για επεξεργασία δέντρων">
-                        {% if ktima.poikilies_details %}
-                            {% for detail in ktima.poikilies_details %}
-                                <span class="badge bg-success me-1"><i class="fas fa-leaf"></i> {{ detail.poikilia_onoma }} ({{ detail.arithmos_dentron }})</span>
-                            {% endfor %}
-                        {% elif ktima.poikilia and ktima.poikilia not in ['Δεν γνωρίζω', 'Άλλη', 'Δεν ορίστηκε', 'Ανάμεικτο'] %}
-                            <span class="badge bg-success me-1"><i class="fas fa-leaf"></i> {{ ktima.poikilia }}</span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark me-1"><i class="fas fa-exclamation-triangle"></i> Ορίστε Δέντρα</span>
-                        {% endif %}
-                        <i class="fas fa-pencil-alt small text-muted ms-1"></i>
-                    </button>
+                    {% if ktima.poikilies_details %}
+                        {% for detail in ktima.poikilies_details %}
+                            <span class="badge bg-success"><i class="fas fa-leaf"></i> {{ detail.poikilia_onoma }} ({{ detail.arithmos_dentron }}{% if detail.ilikia_dentron %}, {{ detail.ilikia_dentron }}{% endif %})</span>
+                        {% endfor %}
+                    {% elif ktima.poikilia and ktima.poikilia not in ['Δεν γνωρίζω', 'Άλλη', 'Δεν ορίστηκε', 'Ανάμεικτο'] %}
+                        <span class="badge bg-success"><i class="fas fa-leaf"></i> {{ ktima.poikilia }} ({{ ktima.arithmos_dentron }})</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Ποικιλία: Δεν ορίστηκε</span>
+                    {% endif %}
 
-                    <!-- Toggle Καλλιέργειας (Συμβατική / Βιολογική) -->
-                    <button type="button" onclick="toggleKalliergeia('{{ ktima.id }}', this)" class="badge border-0 {% if ktima.kalliergeia_typos == 'Βιολογική' %}bg-success{% else %}bg-primary{% endif %} shadow-sm" style="cursor: pointer;" title="Αλλαγή Τύπου Καλλιέργειας">
-                        <i class="fas {% if ktima.kalliergeia_typos == 'Βιολογική' %}fa-leaf{% else %}fa-tractor{% endif %}"></i> 
-                        <span class="text-label">{{ ktima.kalliergeia_typos|default('Συμβατική') }}</span>
-                    </button>
-
+                    {% if ktima.ilikia_dentron and ktima.ilikia_dentron != 'Άγνωστη' %}
+                        <span class="badge bg-light text-dark border"><i class="fas fa-seedling text-success"></i> {{ ktima.ilikia_dentron }}</span>
+                    {% endif %}
+                    {% if ktima.puknotita_dentron %}
+                        <span class="badge bg-light text-dark border"><i class="fas fa-th text-secondary"></i> Πυκνότητα: {{ ktima.puknotita_dentron }}</span>
+                    {% endif %}
                     {% if ktima.ardefsi %}<span class="badge bg-info text-dark"><i class="fas fa-tint"></i> {{ ktima.ardefsi }}</span>{% endif %}
                     {% if ktima.klisi %}<span class="badge bg-warning text-dark"><i class="fas fa-mountain"></i> {{ ktima.klisi }}</span>{% endif %}
                     {% if ktima.typos_edafous %}<span class="badge bg-secondary"><i class="fas fa-gem"></i> {{ ktima.typos_edafous }}</span>{% endif %}
+                    {% if ktima.diacheirisi_edafous and ktima.diacheirisi_edafous != 'Άγνωστη' %}
+                        <span class="badge bg-light text-dark border"><i class="fas fa-spa text-success"></i> {{ ktima.diacheirisi_edafous }}</span>
+                    {% endif %}
                     
                     <!-- Εμφάνιση NPK Τελευταίας Ανάλυσης -->
                     {% if ktima.current_npk %}
@@ -329,10 +321,10 @@
                     {% endif %}
                 </div>
 
-                <!-- Placeholder για ασύγχρονη φόρτωση Καιρού (AJAX) -->
+                <!-- Placeholder για ασύγχρονη φόρτωση Καιρού, Υγρασίας, Μέσης Θερμοκρασίας & NDVI (AJAX) -->
                 <div class="weather-async-top" data-ktima-id="{{ ktima.id }}" data-is-geoponos="{{ 'true' if is_geoponos_view else 'false' }}">
                     <div class="text-center text-muted small py-3 bg-light rounded mb-2 border border-light shadow-sm">
-                        <i class="fas fa-spinner fa-spin text-primary mb-1 fs-5"></i><br>Φόρτωση Καιρού & Δεδομένων...
+                        <i class="fas fa-spinner fa-spin text-primary mb-1 fs-5"></i><br>Φόρτωση Καιρού, Υγρασίας & NDVI...
                     </div>
                 </div>
             </div>
@@ -342,19 +334,21 @@
             {% set current_ai_question = ktima.ekkremis_erotisi_ai if ktima.ekkremis_erotisi_ai else (default_onb if completed_tasks_count == 0 else None) %}
 
             {% if current_ai_question and not is_geoponos_view %}
-            <div class="mb-2 mt-2">
+            <div class="mb-2 mt-1">
                 <button class="btn btn-outline-warning text-dark w-100 text-start shadow-sm d-flex justify-content-between align-items-center collapsed" style="font-weight: 600; background-color: #fff3cd; border-color: #ffecb5;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAiQuestion{{ ktima.id }}" aria-expanded="false">
-                    <span><i class="fas fa-robot text-danger fa-bounce me-2"></i> <strong>Το AI ρωτάει...</strong> <span class="badge bg-danger rounded-circle ms-1 border border-light shadow-sm"><i class="fas fa-exclamation"></i></span></span>
+                    <span><i class="fas fa-robot text-danger fa-bounce me-2"></i> <strong>Εκκρεμής Ερώτηση AI...</strong> <span class="badge bg-danger rounded-circle ms-1 border border-light shadow-sm"><i class="fas fa-exclamation"></i></span></span>
                     <i class="fas fa-chevron-down transition-icon text-muted"></i>
                 </button>
                 <div class="collapse" id="collapseAiQuestion{{ ktima.id }}">
                     <div class="card card-body mt-1 p-3 border-warning shadow-sm" style="background-color: #fffaf0;">
-                        <div class="text-dark mb-3 text-break" style="font-size: 0.95em; line-height: 1.5;">{{ current_ai_question }}</div>
-                        <div class="text-end border-top border-warning pt-2 mt-2"><button type="button" class="btn btn-sm btn-danger px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAiReply{{ ktima.id }}">Απάντηση <i class="fas fa-arrow-right ms-1"></i></button></div>
+                        <div class="text-dark mb-2 text-break" style="font-size: 0.95em; line-height: 1.5;">{{ current_ai_question }}</div>
+                        <small class="text-muted fst-italic"><i class="fas fa-headset text-success me-1"></i> Απαντήστε απευθείας στον AI Γραμματέα κάτω δεξιά.</small>
                     </div>
                 </div>
             </div>
-            
+            {% endif %}
+
+            <!-- Διατήρηση του modalAiReply στο DOM για συμβατότητα JS -->
             <div class="modal fade" id="modalAiReply{{ ktima.id }}" tabindex="-1" data-bs-backdrop="static">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -385,11 +379,10 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
 
             <!-- Οδηγός Βελτιστοποίησης (Setup Wizard) -->
             {% if ktima.elleipseis %}
-            <div class="mb-2 mt-2">
+            <div class="mb-2 mt-1">
                 <button class="btn btn-outline-info text-dark w-100 text-start shadow-sm d-flex justify-content-between align-items-center collapsed" style="font-weight: 600; background-color: #e0f7fa; border-color: #b8daff;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSetupWizard{{ ktima.id }}" aria-expanded="false">
                     <span><i class="fas fa-info-circle text-primary me-2"></i> <strong>Για μέγιστη ακρίβεια AI</strong> <span class="badge bg-danger rounded-circle ms-1 border border-light shadow-sm"><i class="fas fa-exclamation"></i></span></span>
                     <i class="fas fa-chevron-down transition-icon text-muted"></i>
@@ -397,41 +390,65 @@
                 <div class="collapse" id="collapseSetupWizard{{ ktima.id }}">
                     <div class="card card-body mt-1 border-info shadow-sm p-2" style="font-size: 0.9em; background-color: #f0f8ff;">
                         <ul class="mb-0 ps-3 text-muted small">
-                            {% for elleipsi in ktima.elleipseis %}<li>Προσθέστε: <strong>{{ elleipsi }}</strong></li>{% endfor %}
+                            {% for elleipsi in ktima.elleipseis %}<li>Προσθέστε (μέσω Γραμματέα): <strong>{{ elleipsi }}</strong></li>{% endfor %}
                         </ul>
                     </div>
                 </div>
             </div>
             {% endif %}
 
-            <!-- Placeholder για ασύγχρονη φόρτωση Προληπτικού Συμβούλου -->
+            <!-- Placeholder για ασύγχρονη φόρτωση Προληπτικού Συμβούλου (ktima.protaseis) -->
             <div class="weather-async-bottom" id="weather-bottom-{{ ktima.id }}"></div>
 
-            <!-- ΝΕΟ: Quick Action Button (Mobile Friendly) -->
-            <div class="mt-3 mb-3 d-grid">
-                <button type="button" class="btn btn-primary btn-lg shadow-sm fw-bold rounded-pill py-3" data-bs-toggle="modal" data-bs-target="#modalErgasies{{ ktima.id }}">
-                    <i class="fas fa-plus-circle fa-lg me-2"></i> Νέα Εργασία
-                </button>
+            <!-- Επισκόπηση Αναμενόμενων / Εκκρεμών Εργασιών & Προτάσεων Εργασιών Κτήματος (Read-Only) -->
+            <div class="card border-0 bg-light shadow-sm mb-3 mt-1">
+                <div class="card-body p-2">
+                    <h6 class="fw-bold text-dark mb-2 small border-bottom pb-1 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-clipboard-list text-primary me-1"></i> Προτάσεις & Αναμενόμενες Εργασίες</span>
+                        <span class="badge bg-secondary rounded-pill">{{ (ktima.manual_pending_tasks|length) + (ktima.pending_tasks|length) }}</span>
+                    </h6>
+
+                    {% if ktima.manual_pending_tasks or ktima.pending_tasks %}
+                        <ul class="list-group list-group-flush rounded-2" style="max-height: 220px; overflow-y: auto;">
+                            {% for db_task in ktima.manual_pending_tasks %}
+                                <li class="list-group-item bg-white px-2 py-2 d-flex justify-content-between align-items-start small task-item-{{ ktima.id }}" data-proelevsi="{{ db_task.proelevsi }}">
+                                    <div class="me-2">
+                                        <div class="fw-bold text-dark">
+                                            <i class="fas fa-clock text-warning me-1"></i> {{ db_task.eidos_ergasias }}
+                                        </div>
+                                        {% if db_task.farmaka_lipasmata %}
+                                            <div class="text-muted" style="font-size: 0.85em;"><i class="fas fa-prescription-bottle-alt"></i> {{ db_task.farmaka_lipasmata }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end flex-shrink-0">
+                                        <span class="badge bg-primary d-block mb-1">{{ db_task.imerominia.strftime('%d/%m/%Y') if db_task.imerominia else 'Εκκρεμεί' }}</span>
+                                        <span class="badge bg-light text-dark border" style="font-size: 0.75em;">{{ db_task.proelevsi or 'Αγρότης' }}</span>
+                                    </div>
+                                </li>
+                            {% endfor %}
+
+                            {% for task in ktima.pending_tasks %}
+                                <li class="list-group-item bg-white px-2 py-2 d-flex justify-content-between align-items-center small task-item-{{ ktima.id }}" data-proelevsi="AI Γεωπόνος">
+                                    <div class="fw-semibold text-dark me-2">
+                                        <i class="fas fa-magic text-success me-1"></i> {{ task }}
+                                    </div>
+                                    <span class="badge bg-warning text-dark flex-shrink-0">Πρόταση AI</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="small text-muted mb-0 text-center py-2 fst-italic">
+                            <i class="fas fa-check-circle text-success me-1"></i> Δεν υπάρχουν εκκρεμείς ή προτεινόμενες εργασίες αυτή τη στιγμή.
+                        </p>
+                    {% endif %}
+                </div>
             </div>
 
-            <!-- Κουμπιά Ενεργειών - Mobile First Grid -->
-            <div class="flex-shrink-0">
-                <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <button type="button" class="btn btn-outline-success btn-lg w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAnaluseis{{ ktima.id }}"><i class="fas fa-flask mb-1 d-block"></i> <span class="fs-6">Αναλύσεις</span></button>
-                    </div>
-                    <div class="col-6">
-                        <button type="button" class="btn btn-outline-warning btn-lg w-100 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#modalOikonomika{{ ktima.id }}"><i class="fas fa-euro-sign mb-1 d-block"></i> <span class="fs-6">Οικονομικά</span></button>
-                    </div>
-                    {% if not is_geoponos_view %}
-                    <div class="col-12">
-                        <button type="button" class="btn btn-outline-info btn-lg w-100 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#modalAI{{ ktima.id }}"><i class="fas fa-robot mb-1 d-block"></i> <span class="fs-6">AI Εργαλεία</span></button>
-                    </div>
-                    {% endif %}
-                    <div class="col-12 mt-1">
-                        <button type="button" class="btn btn-dark btn-lg w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAnalytiki{{ ktima.id }}"><i class="fas fa-file-invoice"></i> Αναλυτική Καρτέλα & Συνταγή</button>
-                    </div>
-                </div>
+            <!-- Ενημερωτικό Κουμπί Αναλυτικής Καρτέλας (Συνταγή & Δορυφορικός Χάρτης) -->
+            <div class="flex-shrink-0 mt-auto">
+                <button type="button" class="btn btn-dark btn-lg w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAnalytiki{{ ktima.id }}">
+                    <i class="fas fa-file-invoice"></i> Αναλυτική Καρτέλα & Συνταγή
+                </button>
             </div>
         {% endif %}
     </div>

@@ -161,7 +161,8 @@ def arxikh():
                 selectinload(Ktima.poikilies_details),
                 selectinload(Ktima.exoda),
                 selectinload(Ktima.diagnoseis),
-                selectinload(Ktima.analuseis_edafous)
+                selectinload(Ktima.analuseis_edafous),
+                selectinload(Ktima.ugrasies)
             ).filter_by(xrhsths_id=current_user.id, is_active=True).all()
 
         ktimata_gia_ananeosi = []
@@ -279,17 +280,19 @@ def arxikh():
                 if ktima.diagnoseis:
                     for d in ktima.diagnoseis:
                         res = d.apotelesma or ""
-                        if "📄 Έγγραφο Ανάλυσης" in res or "Εργαστηριακή Ανάλυση" in res:
+                        if "📄 Έγγραφο Ανάλυσης" in res or "Εργαστηριακή Ανάλυση" in res or "Ανάλυση Φύλλων" in res:
                             if not last_leaf or d.imerominia > last_leaf: last_leaf = d.imerominia
-                        elif "💧 Ανάλυση Νερού" in res:
+                        elif "💧 Ανάλυση Νερού" in res or ("💧 AI Γραμματέας" in res and ("pH Νερού" in res or "Αγωγιμότητα" in res)):
                             if not last_water or d.imerominia > last_water: last_water = d.imerominia
-                        elif "🌿 Αναγνώριση Σταδίου" in res:
+                        elif "🌿 Αναγνώριση Σταδίου" in res or ("⚙️ Ενημέρωση Προφίλ από AI" in res and "Στάδιο (" in res):
                             if not last_stage or d.imerominia > last_stage: last_stage = d.imerominia
-                        elif not any(k in res for k in ["Δορυφόρος", "Chat", "Answered", "📄", "💧", "🌿"]):
+                        elif not any(k in res for k in ["Δορυφόρος", "Chat", "Answered", "📄", "💧", "🌿", "🗑️", "✏️", "💶", "📦", "⚙️", "🫒", "🗂️", "🤖", "⚠️"]):
                             # Γενική Φωτογραφία (Εντοπισμός Χόρτων ή Ασθενειών)
                             if any(w in res.lower() for w in ["χόρτ", "ζιζάν", "έδαφος"]):
                                 if not last_weeds or d.imerominia > last_weeds: last_weeds = d.imerominia
                             if not last_disease or d.imerominia > last_disease: last_disease = d.imerominia
+                            if ktima.fainologiko_stadio and ktima.fainologiko_stadio != 'Άγνωστο':
+                                if not last_stage or d.imerominia > last_stage: last_stage = d.imerominia
 
                 # 1. Ανάλυση Εδάφους
                 if not last_soil: ktima.elleipseis.append("Ανάλυση Εδάφους (Εκκρεμεί - Ανεβάστε αρχείο)")
