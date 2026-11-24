@@ -7,6 +7,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer
 from google import genai
+from google.genai import types
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
@@ -46,4 +47,4 @@ else:
     print(f"✅ Το AI API Key φορτώθηκε επιτυχώς: {api_key_ai[:5]}...{api_key_ai[-4:]}")
 print("="*50 + "\n")
 
-ai_client = genai.Client(api_key=api_key_ai)
+ai_client = genai.Client(api_key=api_key_ai, http_options=types.HttpOptions(api_version='v1beta'))

@@ -484,8 +484,9 @@ def prosthes_ktima():
             if not found_known and display_poikilia and display_poikilia not in ['Δεν ορίστηκε', 'Ανάμεικτο']:
                 try:
                     from google import genai
+                    from google.genai import types
                     import json
-                    client = genai.Client(api_key=os.getenv('AI_API_KEY'))
+                    client = genai.Client(api_key=os.getenv('AI_API_KEY'), http_options=types.HttpOptions(api_version='v1beta'))
                     prompt = f"What are the approximate Growing Degree Days (GDD) targets for flowering and harvest for the olive variety '{display_poikilia}'? Return ONLY a valid JSON format like this: {{\"anthisi\": 600, \"sygkomidi\": 2500}}. Do not include any other text."
                     response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     ai_text = response.text.strip().replace('```json', '').replace('```', '')
@@ -539,6 +540,7 @@ def prosthes_ktima():
                         import io
                         import PIL.Image
                         from google import genai
+                        from google.genai import types
 
                         # 1. Εγγραφή στο Agromonitoring
                         headers = {'Content-Type': 'application/json'}
@@ -568,7 +570,7 @@ def prosthes_ktima():
                                     # Ανάλυση με Gemini Vision
                                     img_content = requests.get(ndvi_url).content
                                     image_file = PIL.Image.open(io.BytesIO(img_content))
-                                    client_ai = genai.Client(api_key=os.getenv('AI_API_KEY'))
+                                    client_ai = genai.Client(api_key=os.getenv('AI_API_KEY'), http_options=types.HttpOptions(api_version='v1beta'))
                                     prompt = "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. Δώσε μια σύντομη αναφορά (2-3 γραμμές) για την υγεία της βλάστησης."
                                     response = client_ai.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                                     

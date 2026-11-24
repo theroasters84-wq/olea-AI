@@ -122,6 +122,7 @@ def prosthes_ktima():
                 if api_key:
                     try:
                         from google import genai
+                        from google.genai import types
                         import PIL.Image
                         import io
                         headers = {'Content-Type': 'application/json'}
@@ -140,7 +141,7 @@ def prosthes_ktima():
                                 if ndvi_url:
                                     img_content = requests.get(ndvi_url).content
                                     image_file = PIL.Image.open(io.BytesIO(img_content))
-                                    client_ai = genai.Client(api_key=os.getenv('AI_API_KEY'))
+                                    client_ai = genai.Client(api_key=os.getenv('AI_API_KEY'), http_options=types.HttpOptions(api_version='v1beta'))
                                     prompt = "Είσαι ειδικός γεωπόνος. Ανάλυσε αυτόν τον δορυφορικό χάρτη NDVI. Δώσε μια σύντομη αναφορά (2-3 γραμμές) για την υγεία της βλάστησης."
                                     response = client_ai.models.generate_content(model='gemini-2.5-flash', contents=[prompt, image_file])
                                     nea_diagnosi = Diagnosi(ktima_id=neo.id, apotelesma=f"🛰️ Δορυφόρος: {response.text}", imerominia=datetime.now())

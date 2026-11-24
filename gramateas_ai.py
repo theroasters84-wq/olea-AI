@@ -114,11 +114,12 @@ def ai_secretary():
     if ktima and ktima.idioktitis != current_user:
         return jsonify({'error': 'Μη εξουσιοδοτημένη πρόσβαση'}), 403
 
-    api_key_to_use = getattr(current_user, 'gemini_api_key', None) or os.getenv('AI_API_KEY')
+    api_key_raw = getattr(current_user, 'gemini_api_key', None) or os.getenv('AI_API_KEY')
+    api_key_to_use = api_key_raw.strip() if api_key_raw else None
     if not api_key_to_use:
         return jsonify({'error': 'Δεν έχει ρυθμιστεί κλειδί AI.'}), 500
 
-    client = genai.Client(api_key=api_key_to_use)
+    client = genai.Client(api_key=api_key_to_use, http_options=types.HttpOptions(api_version='v1beta'))
 
     try:
         # --- ΕΞΥΠΝΟΣ ΕΛΕΓΚΤΗΣ ΓΡΗΓΟΡΩΝ ΑΠΑΝΤΗΣΕΩΝ (Pre-filter) ---

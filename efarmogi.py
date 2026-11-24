@@ -14,6 +14,7 @@ def aytomatizomenos_elegxos_ndvi(app_context):
         import PIL.Image
         from datetime import datetime
         from google import genai
+        from google.genai import types
         
         api_key = os.getenv('AGROMONITORING_API_KEY')
         ai_key = os.getenv('AI_API_KEY')
@@ -21,7 +22,7 @@ def aytomatizomenos_elegxos_ndvi(app_context):
         from sqlalchemy import or_
 
         ktimata = Ktima.query.filter(Ktima.agromonitoring_poly_id.isnot(None)).all()
-        client = genai.Client(api_key=ai_key)
+        client = genai.Client(api_key=ai_key, http_options=types.HttpOptions(api_version='v1beta'))
 
         for ktima in ktimata:
             try:

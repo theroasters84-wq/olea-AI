@@ -354,7 +354,7 @@ def ai_vision():
 def ndvi_chat(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     data = request.get_json()
-    client = genai.Client(api_key=api_key_ai)
+    client = genai.Client(api_key=api_key_ai, http_options=types.HttpOptions(api_version='v1beta'))
     
     prompt = (
         f"Είσαι επαγγελματίας γεωπόνος (AI) και συνομιλείς με τον αγρότη σχετικά με τον δορυφορικό χάρτη NDVI του κτήματός του.\n"
@@ -382,7 +382,7 @@ def ndvi_chat(ktima_id):
 def apantisi_sto_ai(ktima_id):
     ktima = vasi.session.get(Ktima, ktima_id)
     user_reply = request.form.get('user_reply')
-    client = genai.Client(api_key=api_key_ai)
+    client = genai.Client(api_key=api_key_ai, http_options=types.HttpOptions(api_version='v1beta'))
     prompt = (
         f"Ο γεωπόνος (AI) ρώτησε τον αγρότη: '{ktima.ekkremis_erotisi_ai}'.\nΟ αγρότης απάντησε: '{user_reply}'.\n"
         f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου. Αν ο αγρότης γράψει κάτι εντελώς ακατανόητο, απάντησε 'Συγγνώμη, δεν σας κατάλαβα.'.\n"
@@ -559,7 +559,7 @@ def apantisi_sto_ai_ajax(ktima_id):
     user_reply = req_data.get('user_reply', '')
     current_question = req_data.get('current_question', ktima.ekkremis_erotisi_ai)
     
-    client = genai.Client(api_key=api_key_ai)
+    client = genai.Client(api_key=api_key_ai, http_options=types.HttpOptions(api_version='v1beta'))
     prompt = (
         f"Ο γεωπόνος (AI) ρώτησε τον αγρότη: '{current_question}'.\nΟ αγρότης απάντησε: '{user_reply}'.\n"
         f"ΟΔΗΓΙΑ 1: Βγάλε ένα ΣΥΝΟΛΙΚΟ συμπέρασμα (2-3 προτάσεις) που να περιέχει ΟΛΕΣ τις πληροφορίες που έδωσε ο χρήστης (π.χ. για περσινές ασθένειες, δάκο, έλλειψη αναλύσεων). Αυτή θα είναι η μόνιμη 'μνήμη' σου. Αν ο αγρότης γράψει κάτι εντελώς ακατανόητο, απάντησε 'Συγγνώμη, δεν σας κατάλαβα.'.\n"
