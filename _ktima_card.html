@@ -57,6 +57,13 @@
                                                 <span class="badge bg-danger mt-1" title="{{ ktima.spray_status.reason }}">⛔ Απαγορεύεται ο Ψεκασμός</span>
                                             {% endif %}
                                         {% endif %}
+                                        {% if ktima.recent_harvest %}
+                                            {% set last_syg = ktima.recent_harvest %}
+                                            <br>
+                                            <span class="badge bg-light text-success border border-success mt-1" title="Καταγεγραμμένη συγκομιδή{% if last_syg.imerominia %} στις {{ last_syg.imerominia.strftime('%d/%m/%Y') }}{% endif %}{% if last_syg.tonoi is not none and last_syg.tonoi > 0 %} | Παραγωγή: {{ last_syg.tonoi }}{% endif %}{% if last_syg.kila_ladi is not none and last_syg.kila_ladi > 0 %} | Λάδι: {{ last_syg.kila_ladi }} kg{% endif %}">
+                                                🫒 Συγκομιδή{% if last_syg.imerominia %}: {{ last_syg.imerominia.strftime('%d/%m/%Y') }}{% endif %}{% if last_syg.tonoi is not none and last_syg.tonoi > 0 %} ({{ last_syg.tonoi }}{% if last_syg.kila_ladi is not none and last_syg.kila_ladi > 0 %} | 🍾 {{ last_syg.kila_ladi }} kg{% endif %}){% elif last_syg.kila_ladi is not none and last_syg.kila_ladi > 0 %} (🍾 {{ last_syg.kila_ladi }} kg){% endif %}
+                                            </span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 <tr>
@@ -284,6 +291,12 @@
                         {% else %}
                             <span class="badge bg-danger ms-1" title="{{ ktima.spray_status.reason }}">⛔ Απαγορεύεται ο Ψεκασμός</span>
                         {% endif %}
+                    {% endif %}
+                    {% if ktima.recent_harvest %}
+                        {% set last_syg = ktima.recent_harvest %}
+                        <span class="badge bg-light text-success border border-success ms-1" title="Καταγεγραμμένη συγκομιδή{% if last_syg.imerominia %} στις {{ last_syg.imerominia.strftime('%d/%m/%Y') }}{% endif %}{% if last_syg.tonoi is not none and last_syg.tonoi > 0 %} | Παραγωγή: {{ last_syg.tonoi }}{% endif %}{% if last_syg.kila_ladi is not none and last_syg.kila_ladi > 0 %} | Λάδι: {{ last_syg.kila_ladi }} kg{% endif %}">
+                            🫒 Συγκομιδή{% if last_syg.imerominia %}: {{ last_syg.imerominia.strftime('%d/%m/%Y') }}{% endif %}{% if last_syg.tonoi is not none and last_syg.tonoi > 0 %} ({{ last_syg.tonoi }}{% if last_syg.kila_ladi is not none and last_syg.kila_ladi > 0 %} | 🍾 {{ last_syg.kila_ladi }} kg{% endif %}){% elif last_syg.kila_ladi is not none and last_syg.kila_ladi > 0 %} (🍾 {{ last_syg.kila_ladi }} kg){% endif %}
+                        </span>
                     {% endif %}
                 </p>
                 

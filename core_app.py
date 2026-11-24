@@ -148,7 +148,8 @@ def arxikh():
                     selectinload(Ktima.poikilies_details),
                     selectinload(Ktima.exoda),
                     selectinload(Ktima.diagnoseis),
-                    selectinload(Ktima.analuseis_edafous)
+                    selectinload(Ktima.analuseis_edafous),
+                    selectinload(Ktima.arxeia_sygkomidis)
                 ).filter_by(xrhsths_id=provalomenos_xrhsths.id, is_active=True).all()
                 is_geoponos_view = True
             except ValueError:
@@ -162,7 +163,8 @@ def arxikh():
                 selectinload(Ktima.exoda),
                 selectinload(Ktima.diagnoseis),
                 selectinload(Ktima.analuseis_edafous),
-                selectinload(Ktima.ugrasies)
+                selectinload(Ktima.ugrasies),
+                selectinload(Ktima.arxeia_sygkomidis)
             ).filter_by(xrhsths_id=current_user.id, is_active=True).all()
 
         ktimata_gia_ananeosi = []
@@ -266,6 +268,14 @@ def arxikh():
                             latest_spray = ergasia
                 ktima.meres_apo_psekasmo = (datetime.now() - latest_spray.imerominia).days if latest_spray else None
 
+                # Έλεγχος πρόσφατης συγκομιδής (εμφάνιση badge μόνο για 30 ημέρες)
+                ktima.recent_harvest = None
+                if ktima.arxeia_sygkomidis:
+                    last_syg = ktima.arxeia_sygkomidis[0]
+                    if last_syg and getattr(last_syg, 'imerominia', None):
+                        if 0 <= (datetime.now() - last_syg.imerominia).days <= 30:
+                            ktima.recent_harvest = last_syg
+
                 # --- ΟΔΗΓΟΣ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗΣ (Ελλείψεις Δεδομένων) ---
                 ktima.elleipseis = []
                 now = datetime.now()
@@ -336,6 +346,7 @@ def arxikh():
                 if not hasattr(ktima, 'meres_apo_psekasmo'): ktima.meres_apo_psekasmo = None
                 if not hasattr(ktima, 'elleipseis'): ktima.elleipseis = []
                 if not hasattr(ktima, 'agro_data'): ktima.agro_data = None
+                if not hasattr(ktima, 'recent_harvest'): ktima.recent_harvest = None
                 
         # --- Ομαδική Εκτέλεση AI Background Task (Για εξοικονόμηση μνήμης) ---
         if ktimata_gia_ananeosi:
